@@ -15,6 +15,16 @@ import com.kalo.partner.enums.PaymentMethod;
 import com.kalo.partner.enums.VerificationStatus;
 import com.kalo.partner.repository.CompanyOperatingHoursRepository;
 import com.kalo.partner.repository.TaxiCompanyRepository;
+import com.kalo.rating.entity.RideRating;
+import com.kalo.rating.repository.RideRatingRepository;
+import com.kalo.ride.entity.Ride;
+import com.kalo.ride.entity.RideOffer;
+import com.kalo.ride.entity.RideRequest;
+import com.kalo.ride.enums.RideRequestStatus;
+import com.kalo.ride.enums.RideStatus;
+import com.kalo.ride.repository.RideOfferRepository;
+import com.kalo.ride.repository.RideRepository;
+import com.kalo.ride.repository.RideRequestRepository;
 import com.kalo.user.entity.User;
 import com.kalo.user.enums.UserRole;
 import com.kalo.user.enums.UserStatus;
@@ -34,20 +44,29 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 /**
  * Demo data for local frontend development.
  *
- * Guarded twice: the {@code dev} profile and {@code app.dev.seed.enabled}.
- * Neither is set in {@code application.properties}, so this class is never
- * instantiated in production. It is also idempotent — an existing admin phone
+ * Guarded twice — the {@code dev} profile and {@code app.dev.seed.enabled} —
+ * and neither is set in {@code application.properties}, so this class is never
+ * instantiated in production. It is also idempotent: an existing admin phone
  * means the dataset is already there and nothing is written.
+ *
+ * Everything is written through repositories. No production service is called
+ * and none of them know this class exists, so the real business flow is
+ * unchanged and no security rule is bypassed — the seeded rows are exactly
+ * what the normal flow would have produced.
  *
  * Credentials are listed in the README.
  */
@@ -63,9 +82,6 @@ import java.util.Set;
 public class DevDataSeeder implements ApplicationRunner {
 
     private static final String ADMIN_PHONE = "+355690000001";
-    private static final String CUSTOMER_PHONE = "+355690000002";
-    private static final String ABC_OWNER_PHONE = "+355690000003";
-    private static final String CITY_OWNER_PHONE = "+355690000004";
 
     private static final double TIRANA_LATITUDE = 41.3275;
     private static final double TIRANA_LONGITUDE = 19.8187;
@@ -77,6 +93,10 @@ public class DevDataSeeder implements ApplicationRunner {
     private final VehicleRepository vehicleRepository;
     private final DriverVehicleAssignmentRepository assignmentRepository;
     private final DriverLocationRepository driverLocationRepository;
+    private final RideRequestRepository rideRequestRepository;
+    private final RideOfferRepository rideOfferRepository;
+    private final RideRepository rideRepository;
+    private final RideRatingRepository rideRatingRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -92,30 +112,31 @@ public class DevDataSeeder implements ApplicationRunner {
         log.info("Seeding KALO dev demo data");
 
         createUser(
-                "Admin",
-                "KALO",
-                ADMIN_PHONE,
-                "admin@kalo.dev",
-                "Admin123!",
-                UserRole.ADMIN,
-                UserStatus.ACTIVE
+                "Admin", "KALO", ADMIN_PHONE, "admin@kalo.dev",
+                "Admin123!", UserRole.ADMIN, UserStatus.ACTIVE
         );
 
-        createUser(
-                "Ana",
-                "Customer",
-                CUSTOMER_PHONE,
-                "customer@kalo.dev",
-                "Customer123!",
-                UserRole.CUSTOMER,
-                UserStatus.ACTIVE
+        User ana = createUser(
+                "Ana", "Hoxha", "+355690000002", "ana@kalo.dev",
+                "Customer123!", UserRole.CUSTOMER, UserStatus.ACTIVE
+        );
+
+        User blerim = createUser(
+                "Blerim", "Krasniqi", "+355690000005", "blerim@kalo.dev",
+                "Customer123!", UserRole.CUSTOMER, UserStatus.ACTIVE
+        );
+
+        User elira = createUser(
+                "Elira", "Dervishi", "+355690000006", "elira@kalo.dev",
+                "Customer123!", UserRole.CUSTOMER, UserStatus.ACTIVE
         );
 
         TaxiCompany abc = createCompany(
                 "ABC Taxi SHPK",
                 "ABC Taxi",
                 "K12345678A",
-                ABC_OWNER_PHONE,
+                "Arben", "Marku",
+                "+355690000003",
                 "abc@kalo.dev",
                 "Rruga e Durresit 45, Tirane",
                 Set.of(PaymentMethod.CASH, PaymentMethod.CARD_IN_CAR)
@@ -125,26 +146,88 @@ public class DevDataSeeder implements ApplicationRunner {
                 "City Taxi SHPK",
                 "City Taxi",
                 "K87654321B",
-                CITY_OWNER_PHONE,
+                "Sokol", "Leka",
+                "+355690000004",
                 "city@kalo.dev",
                 "Bulevardi Bajram Curri 12, Tirane",
                 Set.of(PaymentMethod.CASH)
         );
 
         /*
-         * Offsets of roughly 0.5-1.5 km around the centre, so every driver
-         * falls inside the 10 km search radius.
+         * Five drivers and five vehicles, paired one to one. Offsets keep each
+         * driver roughly 0.5-2 km from the centre, inside the 10 km search
+         * radius. Two are left OFFLINE so the availability rules are visible:
+         * only the ONLINE ones appear in a passenger search.
          */
-        seedFleet(abc, "AA", 0.004, 0.005);
-        seedFleet(city, "CT", -0.006, 0.003);
+        List<Driver> abcDrivers = List.of(
+                createFleetMember(abc, "Ilir", "Balla", 1, "AA101TR",
+                        "Skoda", "Octavia", VehicleType.STANDARD,
+                        DriverAvailabilityStatus.ONLINE, 0.004, 0.005),
 
-        log.info("Dev demo data seeded");
+                createFleetMember(abc, "Gent", "Prifti", 2, "AA102TR",
+                        "Volkswagen", "Passat", VehicleType.STANDARD,
+                        DriverAvailabilityStatus.ONLINE, -0.007, 0.009),
+
+                createFleetMember(abc, "Mirela", "Hasa", 3, "AA103TR",
+                        "Toyota", "Prius", VehicleType.ELECTRIC,
+                        DriverAvailabilityStatus.OFFLINE, 0.011, -0.006)
+        );
+
+        List<Driver> cityDrivers = List.of(
+                createFleetMember(city, "Fatos", "Shehu", 4, "CT201TR",
+                        "Mercedes-Benz", "E-Class", VehicleType.PREMIUM,
+                        DriverAvailabilityStatus.ONLINE, -0.006, -0.008),
+
+                createFleetMember(city, "Lediana", "Cela", 5, "CT202TR",
+                        "Ford", "Tourneo", VehicleType.VAN,
+                        DriverAvailabilityStatus.OFFLINE, 0.013, 0.012)
+        );
+
+        /*
+         * A short history so ride lists, fares and ratings are not empty on a
+         * fresh database. All of these are terminal, so none of them blocks a
+         * demo passenger from starting a new ride.
+         */
+        seedCompletedRide(ana, abc, abcDrivers.get(0),
+                "Rruga e Durresit 45", "Sheshi Skenderbej",
+                new BigDecimal("850.00"), 6, 5, 5, "Quick and friendly.");
+
+        seedCompletedRide(ana, abc, abcDrivers.get(1),
+                "Sheshi Skenderbej", "Bulevardi Zogu I",
+                new BigDecimal("600.00"), 3, 5, 4, null);
+
+        seedCompletedRide(blerim, city, cityDrivers.get(0),
+                "Rruga Myslym Shyri", "Aeroporti i Tiranes",
+                new BigDecimal("2400.00"), 2, 4, 4, "Clean car, good driver.");
+
+        seedCompletedRide(elira, city, cityDrivers.get(1),
+                "Blloku", "Stacioni i Trenit",
+                new BigDecimal("750.00"), 1, 5, 5, null);
+
+        /*
+         * Rating aggregates are normally maintained by RideRatingServiceImpl.
+         * Recomputing them here keeps the seeded data self-consistent without
+         * the seeder reaching into a production service.
+         */
+        refreshRatingAggregates(
+                List.of(abc, city),
+                concat(abcDrivers, cityDrivers)
+        );
+
+        log.info(
+                "Dev demo data seeded: {} users, {} companies, {} drivers, {} vehicles, {} rides",
+                userRepository.count(),
+                taxiCompanyRepository.count(),
+                driverRepository.count(),
+                vehicleRepository.count(),
+                rideRepository.count()
+        );
     }
 
     /**
-     * Search only considers positions younger than two minutes, so without
-     * this the demo would stop returning taxis a couple of minutes after
-     * startup. Dev profile only.
+     * Taxi search only considers positions younger than two minutes, so
+     * without this the demo would stop returning taxis a couple of minutes
+     * after startup. Dev profile only.
      */
     @Scheduled(fixedDelay = 60_000)
     @Transactional
@@ -160,105 +243,216 @@ public class DevDataSeeder implements ApplicationRunner {
         Instant now = Instant.now();
 
         for (DriverLocation location : locations) {
-
             location.setLocationUpdatedAt(now);
         }
 
         driverLocationRepository.saveAll(locations);
     }
 
-    private void seedFleet(
+    /* ------------------------------------------------------------ fleet */
+
+    /**
+     * Creates one driver, the vehicle they drive, the active assignment
+     * between them and their current position.
+     */
+    private Driver createFleetMember(
             TaxiCompany company,
-            String platePrefix,
+            String firstName,
+            String lastName,
+            int index,
+            String plateNumber,
+            String brand,
+            String model,
+            VehicleType vehicleType,
+            DriverAvailabilityStatus availability,
             double latitudeOffset,
             double longitudeOffset
     ) {
 
-        for (int index = 1; index <= 2; index++) {
+        Driver driver = new Driver();
 
-            Driver driver = new Driver();
+        driver.setCompany(company);
+        driver.setFirstName(firstName);
+        driver.setLastName(lastName);
+        driver.setPhone(String.format("+35569100000%d", index));
+        driver.setLicenseNumber(String.format("AL-DRV-%04d", index));
+        driver.setLicenseExpiryDate(LocalDate.now().plusYears(3));
+        driver.setDateOfBirth(LocalDate.of(1988 + index, 3, 12));
+        driver.setStatus(DriverStatus.ACTIVE);
+        driver.setAvailabilityStatus(availability);
 
-            driver.setCompany(company);
-            driver.setFirstName("Driver" + index);
-            driver.setLastName(company.getDisplayName().replace(" ", ""));
-            driver.setPhone(
-                    "+3556911"
-                            + platePrefix.charAt(0)
-                            + company.getId()
-                            + index
+        Driver savedDriver = driverRepository.save(driver);
+
+        Vehicle vehicle = new Vehicle();
+
+        vehicle.setCompany(company);
+        vehicle.setPlateNumber(plateNumber);
+        vehicle.setBrand(brand);
+        vehicle.setModel(model);
+        vehicle.setManufactureYear(2019 + (index % 4));
+        vehicle.setSeats(vehicleType == VehicleType.VAN ? 7 : 4);
+        vehicle.setVehicleType(vehicleType);
+        vehicle.setRegistrationExpiryDate(LocalDate.now().plusYears(1));
+        vehicle.setInsuranceExpiryDate(LocalDate.now().plusYears(1));
+        vehicle.setTechnicalInspectionExpiryDate(LocalDate.now().plusMonths(8));
+        vehicle.setStatus(VehicleStatus.ACTIVE);
+
+        Vehicle savedVehicle = vehicleRepository.save(vehicle);
+
+        DriverVehicleAssignment assignment = new DriverVehicleAssignment();
+
+        assignment.setDriver(savedDriver);
+        assignment.setVehicle(savedVehicle);
+        assignment.setAssignedFrom(Instant.now().minus(Duration.ofDays(30)));
+        assignment.setAssignedUntil(null);
+        assignment.setActive(true);
+
+        assignmentRepository.save(assignment);
+
+        DriverLocation location = new DriverLocation();
+
+        location.setDriver(savedDriver);
+        location.setLatitude(TIRANA_LATITUDE + latitudeOffset);
+        location.setLongitude(TIRANA_LONGITUDE + longitudeOffset);
+        location.setLocationUpdatedAt(Instant.now());
+
+        driverLocationRepository.save(location);
+
+        return savedDriver;
+    }
+
+    /* ----------------------------------------------------------- history */
+
+    /**
+     * Writes the full row set a finished ride leaves behind: the request, the
+     * offer the passenger picked, the completed ride and its rating.
+     */
+    private void seedCompletedRide(
+            User customer,
+            TaxiCompany company,
+            Driver driver,
+            String pickupAddress,
+            String destinationAddress,
+            BigDecimal fare,
+            int daysAgo,
+            int driverRating,
+            int companyRating,
+            String comment
+    ) {
+
+        Instant requestedAt =
+                Instant.now().minus(Duration.ofDays(daysAgo));
+
+        Vehicle vehicle =
+                assignmentRepository
+                        .findByDriverIdAndActiveTrue(driver.getId())
+                        .orElseThrow()
+                        .getVehicle();
+
+        RideRequest rideRequest = new RideRequest();
+
+        rideRequest.setCustomer(customer);
+        rideRequest.setPickupLatitude(TIRANA_LATITUDE + 0.003);
+        rideRequest.setPickupLongitude(TIRANA_LONGITUDE + 0.002);
+        rideRequest.setPickupAddress(pickupAddress);
+        rideRequest.setDestinationLatitude(TIRANA_LATITUDE - 0.010);
+        rideRequest.setDestinationLongitude(TIRANA_LONGITUDE + 0.014);
+        rideRequest.setDestinationAddress(destinationAddress);
+        rideRequest.setStatus(RideRequestStatus.SELECTED);
+        rideRequest.setExpiresAt(requestedAt.plus(Duration.ofMinutes(5)));
+
+        RideRequest savedRequest =
+                rideRequestRepository.save(rideRequest);
+
+        RideOffer offer = new RideOffer();
+
+        offer.setRideRequest(savedRequest);
+        offer.setCompany(company);
+        offer.setNearestDriver(driver);
+        offer.setVehicle(vehicle);
+        offer.setDistanceKm(1.2);
+
+        rideOfferRepository.save(offer);
+
+        Ride ride = new Ride();
+
+        ride.setRideRequest(savedRequest);
+        ride.setCustomer(customer);
+        ride.setCompany(company);
+        ride.setDriver(driver);
+        ride.setVehicle(vehicle);
+        ride.setStatus(RideStatus.COMPLETED);
+        ride.setRequestedAt(requestedAt);
+        ride.setAcceptedAt(requestedAt.plus(Duration.ofSeconds(40)));
+        ride.setDriverArrivingAt(requestedAt.plus(Duration.ofSeconds(60)));
+        ride.setDriverArrivedAt(requestedAt.plus(Duration.ofMinutes(6)));
+        ride.setStartedAt(requestedAt.plus(Duration.ofMinutes(7)));
+        ride.setCompletedAt(requestedAt.plus(Duration.ofMinutes(23)));
+        ride.setFinalAmount(fare);
+
+        Ride savedRide = rideRepository.save(ride);
+
+        RideRating rating = new RideRating();
+
+        rating.setRide(savedRide);
+        rating.setCustomer(customer);
+        rating.setCompany(company);
+        rating.setDriver(driver);
+        rating.setDriverRating(driverRating);
+        rating.setCompanyRating(companyRating);
+        rating.setComment(comment);
+
+        rideRatingRepository.save(rating);
+    }
+
+    private void refreshRatingAggregates(
+            List<TaxiCompany> companies,
+            List<Driver> drivers
+    ) {
+
+        for (Driver driver : drivers) {
+
+            Double average =
+                    rideRatingRepository
+                            .calculateAverageDriverRating(driver.getId());
+
+            driver.setRating(round(average));
+
+            driver.setRatingCount(
+                    Math.toIntExact(
+                            rideRatingRepository.countByDriverId(driver.getId())
+                    )
             );
-            driver.setLicenseNumber(
-                    platePrefix + "-LIC-" + company.getId() + index
-            );
-            driver.setLicenseExpiryDate(
-                    LocalDate.now().plusYears(3)
-            );
-            driver.setDateOfBirth(
-                    LocalDate.of(1990, 5, index)
-            );
-            driver.setStatus(DriverStatus.ACTIVE);
-            driver.setAvailabilityStatus(
-                    DriverAvailabilityStatus.ONLINE
+
+            driverRepository.save(driver);
+        }
+
+        for (TaxiCompany company : companies) {
+
+            Double average =
+                    rideRatingRepository
+                            .calculateAverageCompanyRating(company.getId());
+
+            company.setRating(round(average));
+
+            company.setRatingCount(
+                    Math.toIntExact(
+                            rideRatingRepository.countByCompanyId(company.getId())
+                    )
             );
 
-            Driver savedDriver =
-                    driverRepository.save(driver);
-
-            Vehicle vehicle = new Vehicle();
-
-            vehicle.setCompany(company);
-            vehicle.setPlateNumber(
-                    platePrefix + company.getId() + index + "TR"
-            );
-            vehicle.setBrand(index == 1 ? "Skoda" : "Volkswagen");
-            vehicle.setModel(index == 1 ? "Octavia" : "Passat");
-            vehicle.setManufactureYear(2020);
-            vehicle.setSeats(4);
-            vehicle.setVehicleType(VehicleType.STANDARD);
-            vehicle.setRegistrationExpiryDate(
-                    LocalDate.now().plusYears(1)
-            );
-            vehicle.setInsuranceExpiryDate(
-                    LocalDate.now().plusYears(1)
-            );
-            vehicle.setTechnicalInspectionExpiryDate(
-                    LocalDate.now().plusYears(1)
-            );
-            vehicle.setStatus(VehicleStatus.ACTIVE);
-
-            Vehicle savedVehicle =
-                    vehicleRepository.save(vehicle);
-
-            DriverVehicleAssignment assignment =
-                    new DriverVehicleAssignment();
-
-            assignment.setDriver(savedDriver);
-            assignment.setVehicle(savedVehicle);
-            assignment.setAssignedFrom(Instant.now());
-            assignment.setAssignedUntil(null);
-            assignment.setActive(true);
-
-            assignmentRepository.save(assignment);
-
-            DriverLocation location = new DriverLocation();
-
-            location.setDriver(savedDriver);
-            location.setLatitude(
-                    TIRANA_LATITUDE + latitudeOffset * index
-            );
-            location.setLongitude(
-                    TIRANA_LONGITUDE + longitudeOffset * index
-            );
-            location.setLocationUpdatedAt(Instant.now());
-
-            driverLocationRepository.save(location);
+            taxiCompanyRepository.save(company);
         }
     }
+
+    /* ----------------------------------------------------------- company */
 
     private TaxiCompany createCompany(
             String legalName,
             String displayName,
             String nipt,
+            String ownerFirstName,
+            String ownerLastName,
             String ownerPhone,
             String email,
             String address,
@@ -266,8 +460,8 @@ public class DevDataSeeder implements ApplicationRunner {
     ) {
 
         User owner = createUser(
-                displayName.split(" ")[0],
-                "Owner",
+                ownerFirstName,
+                ownerLastName,
                 ownerPhone,
                 email,
                 "Partner123!",
@@ -285,17 +479,11 @@ public class DevDataSeeder implements ApplicationRunner {
         company.setEmail(email);
         company.setAddress(address);
         company.setLicenseNumber("TAXI-" + nipt);
-        company.setLicenseExpiryDate(
-                LocalDate.now().plusYears(2)
-        );
-        company.setVerificationStatus(
-                VerificationStatus.APPROVED
-        );
+        company.setLicenseExpiryDate(LocalDate.now().plusYears(2));
+        company.setVerificationStatus(VerificationStatus.APPROVED);
         company.setStatus(CompanyStatus.ACTIVE);
         company.setBookingEnabled(true);
-        company.setPaymentMethods(
-                new java.util.HashSet<>(paymentMethods)
-        );
+        company.setPaymentMethods(new HashSet<>(paymentMethods));
         company.setServiceCenterLatitude(TIRANA_LATITUDE);
         company.setServiceCenterLongitude(TIRANA_LONGITUDE);
         company.setServiceRadiusKm(25.0);
@@ -305,12 +493,13 @@ public class DevDataSeeder implements ApplicationRunner {
                 taxiCompanyRepository.save(company);
 
         /*
-         * Open around the clock so the demo works at any hour.
+         * Equal open and close times mean open all day, so the demo works at
+         * whatever hour it is run. Change a row here to see a company drop out
+         * of search on its closed days.
          */
         for (DayOfWeek day : DayOfWeek.values()) {
 
-            CompanyOperatingHours hours =
-                    new CompanyOperatingHours();
+            CompanyOperatingHours hours = new CompanyOperatingHours();
 
             hours.setCompany(savedCompany);
             hours.setDayOfWeek(day);
@@ -340,13 +529,30 @@ public class DevDataSeeder implements ApplicationRunner {
         user.setLastName(lastName);
         user.setPhone(phone);
         user.setEmail(email);
-        user.setPasswordHash(
-                passwordEncoder.encode(rawPassword)
-        );
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
         user.setRole(role);
         user.setStatus(status);
         user.setPhoneVerified(true);
 
         return userRepository.save(user);
+    }
+
+    private Double round(Double value) {
+
+        if (value == null) {
+            return null;
+        }
+
+        return Math.round(value * 100.0) / 100.0;
+    }
+
+    private List<Driver> concat(
+            List<Driver> first,
+            List<Driver> second
+    ) {
+
+        List<Driver> all = new ArrayList<>(first);
+        all.addAll(second);
+        return all;
     }
 }
