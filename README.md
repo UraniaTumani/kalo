@@ -192,11 +192,34 @@ because they cannot be seeded anywhere else.
 
 ## 10. Main API flows
 
+### Guest (no account)
+
+```
+POST /api/v1/public/taxi-availability     -> companies available near a point
+```
+
+Read-only and open to anonymous callers. It creates **no** `RideRequest` and
+**no** `RideOffer`, so a guest cannot fill those tables with rows that can never
+become rides, and every invariant around rides is untouched. Because nothing is
+persisted there is no offer id to select: booking needs an account, since a
+`Ride` requires a real customer.
+
+The response is deliberately narrower than the authenticated one — no driver
+id, vehicle id or plate number — so the live position and identity of a
+specific driver is never exposed to an unauthenticated caller.
+
+Both this endpoint and the customer search run through the same
+`TaxiAvailabilityFinder`, so a guest can never be shown a company that a
+signed-in customer would not be offered.
+
 ### Customer
 
 ```
 POST /api/v1/auth/register/customer
 POST /api/v1/auth/login
+
+GET  /api/v1/me                                    -> own profile (any role)
+PUT  /api/v1/me                                    -> edit own name and email
 
 POST /api/v1/rides/search                          -> ride request + one offer per company
 POST /api/v1/rides/requests/{id}/select            -> pick a company, creates the ride
@@ -309,7 +332,12 @@ Known and intentional for this milestone:
   `GET /api/v1/rides/current`.
 - **No Redis or caching layer.** Search hits PostgreSQL directly.
 - **No file storage.** Documents are stored as URLs; uploading is out of scope.
-- **No phone verification.** `phoneVerified` exists but nothing sets it.
+- **No phone verification.** `phoneVerified` exists but nothing sets it, and
+  because the phone number is the login identifier, `PUT /api/v1/me` does not
+  allow changing it.
+- **The public availability endpoint is unauthenticated and unthrottled.** It
+  is read-only and cheap, but it has no rate limiting; put one in front of it
+  before exposing the API to the internet.
 - **No advanced vehicle filtering** (vehicle class, seats, luggage, child
   seats), no passenger count, no promotions, no chat.
 - **Driver has no login.** The taxi company drives the ride lifecycle on the

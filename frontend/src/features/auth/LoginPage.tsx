@@ -43,10 +43,18 @@ export function LoginPage() {
       subtitle="Passengers, taxi companies and administrators sign in here."
       footer={
         <>
-          No account?{' '}
-          <Link to="/register" className="font-medium text-brand-700 hover:underline">
-            Create one
-          </Link>
+          <p>
+            No account?{' '}
+            <Link to="/register" className="font-medium text-brand-700 hover:underline">
+              Create one
+            </Link>
+          </p>
+          <p className="mt-1">
+            Or{' '}
+            <Link to="/" className="font-medium text-brand-700 hover:underline">
+              look around as a guest
+            </Link>
+          </p>
         </>
       }
     >

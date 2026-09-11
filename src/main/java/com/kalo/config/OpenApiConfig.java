@@ -59,6 +59,12 @@ public class OpenApiConfig {
                 )
                 .tags(List.of(
                         new Tag()
+                                .name("Public")
+                                .description(
+                                        "Open to anonymous visitors. Read-only: "
+                                                + "nothing here creates or changes data."
+                                ),
+                        new Tag()
                                 .name("Authentication")
                                 .description("Registration and login. Public."),
                         new Tag()

@@ -12,6 +12,7 @@ import {
   MapPin,
   Settings,
   ShieldCheck,
+  User,
   Users,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
@@ -67,7 +68,11 @@ export function AppLayout() {
 
   if (!user || !role) return null
 
-  const items = navByRole[role]
+  // Every role gets the profile entry, always last.
+  const items: NavItem[] = [
+    ...navByRole[role],
+    { to: '/profile', label: 'Profile', icon: User },
+  ]
 
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">

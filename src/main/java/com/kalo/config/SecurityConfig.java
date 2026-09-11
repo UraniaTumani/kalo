@@ -89,6 +89,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**")
                         .permitAll()
 
+                        /*
+                         * Anonymous, read-only. Nothing under this prefix may
+                         * create or modify data.
+                         */
+                        .requestMatchers("/api/v1/public/**")
+                        .permitAll()
+
                         .requestMatchers(
                                 "/v3/api-docs",
                                 "/v3/api-docs/**",

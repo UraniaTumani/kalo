@@ -13,6 +13,7 @@ import type {
   DriverResponse,
   DriverStatus,
   DriverVehicleAssignmentResponse,
+  GuestAvailabilityResponse,
   LoginResponse,
   OperatingHoursResponse,
   OperationalSettingsResponse,
@@ -75,6 +76,22 @@ export const authApi = {
     }),
 
   me: () => api.get<UserResponse>('/api/v1/me'),
+
+  updateMe: (body: { firstName: string; lastName: string; email?: string | null }) =>
+    api.put<UserResponse>('/api/v1/me', body),
+}
+
+/* ----------------------------------------------------------------- guest */
+
+export const publicApi = {
+  /**
+   * Anonymous, read-only. Creates no ride request and no offers, so there is
+   * nothing here to select — booking needs an account.
+   */
+  taxiAvailability: (body: { latitude: number; longitude: number }) =>
+    api.post<GuestAvailabilityResponse>('/api/v1/public/taxi-availability', body, {
+      skipAuthRedirect: true,
+    }),
 }
 
 /* -------------------------------------------------------------- customer */
