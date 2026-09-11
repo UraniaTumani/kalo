@@ -1,7 +1,9 @@
 package com.kalo.driver.dto;
 
+import com.kalo.common.validation.ValidationPatterns;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
@@ -18,6 +20,10 @@ public record CreateDriverRequest(
 
         @NotBlank(message = "Phone is required")
         @Size(max = 30)
+        @Pattern(
+                regexp = ValidationPatterns.PHONE,
+                message = ValidationPatterns.PHONE_MESSAGE
+        )
         String phone,
 
         @NotBlank(message = "License number is required")

@@ -51,7 +51,8 @@ public class JwtService {
         String username =
                 extractUsername(token);
 
-        return username.equals(userDetails.getUsername())
+        return username != null
+                && username.equals(userDetails.getUsername())
                 && !isTokenExpired(token);
     }
 
@@ -93,6 +94,13 @@ public class JwtService {
 
         byte[] keyBytes =
                 Decoders.BASE64.decode(jwtSecret);
+
+        if (keyBytes.length < 32) {
+
+            throw new IllegalStateException(
+                    "app.jwt.secret must be a Base64 value of at least 256 bits"
+            );
+        }
 
         return Keys.hmacShaKeyFor(keyBytes);
     }

@@ -1,5 +1,6 @@
 package com.kalo.location.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.location.dto.DriverLocationResponse;
 import com.kalo.location.dto.UpdateDriverLocationRequest;
 import com.kalo.location.service.DriverLocationService;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Partner - Fleet")
 @RestController
 @RequestMapping(
         "/api/v1/partner/drivers/{driverId}/location"

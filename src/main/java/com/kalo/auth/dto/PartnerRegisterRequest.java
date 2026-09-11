@@ -1,7 +1,9 @@
 package com.kalo.auth.dto;
 
+import com.kalo.common.validation.ValidationPatterns;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record PartnerRegisterRequest(
@@ -16,6 +18,10 @@ public record PartnerRegisterRequest(
 
         @NotBlank(message = "Phone is required")
         @Size(max = 30)
+        @Pattern(
+                regexp = ValidationPatterns.PHONE,
+                message = ValidationPatterns.PHONE_MESSAGE
+        )
         String phone,
 
         @Email(message = "Email is not valid")

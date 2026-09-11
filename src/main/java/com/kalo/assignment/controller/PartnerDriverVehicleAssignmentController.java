@@ -1,5 +1,6 @@
 package com.kalo.assignment.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.assignment.dto.CreateDriverVehicleAssignmentRequest;
 import com.kalo.assignment.dto.DriverVehicleAssignmentResponse;
 import com.kalo.assignment.service.DriverVehicleAssignmentService;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "Partner - Fleet")
 @RestController
 @RequestMapping(
         "/api/v1/partner/driver-vehicle-assignments"

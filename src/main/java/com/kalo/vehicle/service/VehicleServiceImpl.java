@@ -1,8 +1,12 @@
 package com.kalo.vehicle.service;
 
+import com.kalo.assignment.entity.DriverVehicleAssignment;
+import com.kalo.assignment.repository.DriverVehicleAssignmentRepository;
 import com.kalo.common.exception.ConflictException;
 import com.kalo.common.exception.InvalidOperationException;
 import com.kalo.common.exception.ResourceNotFoundException;
+import com.kalo.driver.entity.Driver;
+import com.kalo.driver.enums.DriverAvailabilityStatus;
 import com.kalo.partner.entity.TaxiCompany;
 import com.kalo.partner.enums.CompanyStatus;
 import com.kalo.partner.enums.VerificationStatus;
@@ -14,14 +18,17 @@ import com.kalo.vehicle.entity.Vehicle;
 import com.kalo.vehicle.enums.VehicleStatus;
 import com.kalo.vehicle.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VehicleServiceImpl
@@ -29,6 +36,7 @@ public class VehicleServiceImpl
 
     private final VehicleRepository vehicleRepository;
     private final TaxiCompanyRepository taxiCompanyRepository;
+    private final DriverVehicleAssignmentRepository assignmentRepository;
 
     @Override
     @Transactional
@@ -224,6 +232,11 @@ public class VehicleServiceImpl
                 request.technicalInspectionExpiryDate()
         );
 
+        if (request.status() != VehicleStatus.ACTIVE) {
+
+            takeOutOfService(vehicle);
+        }
+
         vehicle.setStatus(
                 request.status()
         );
@@ -234,6 +247,10 @@ public class VehicleServiceImpl
         return mapToResponse(savedVehicle);
     }
 
+    /**
+     * Vehicles are never removed from the database: historical rides and
+     * assignments reference them. Deletion is a soft deactivation.
+     */
     @Override
     @Transactional
     public void deleteVehicle(
@@ -251,7 +268,62 @@ public class VehicleServiceImpl
                         company.getId()
                 );
 
-        vehicleRepository.delete(vehicle);
+        takeOutOfService(vehicle);
+
+        vehicle.setStatus(
+                VehicleStatus.INACTIVE
+        );
+
+        vehicleRepository.save(vehicle);
+
+        log.info(
+                "Vehicle deactivated: vehicleId={} companyId={}",
+                vehicle.getId(),
+                company.getId()
+        );
+    }
+
+    /**
+     * Refuses while the assigned driver is on a ride, otherwise releases the
+     * active assignment so the driver is not left online without a vehicle.
+     */
+    private void takeOutOfService(
+            Vehicle vehicle
+    ) {
+
+        DriverVehicleAssignment assignment =
+                assignmentRepository
+                        .findByVehicleIdAndActiveTrue(
+                                vehicle.getId()
+                        )
+                        .orElse(null);
+
+        if (assignment == null) {
+            return;
+        }
+
+        Driver driver =
+                assignment.getDriver();
+
+        if (driver.getAvailabilityStatus()
+                == DriverAvailabilityStatus.BUSY) {
+
+            throw new InvalidOperationException(
+                    "Vehicle is currently on a ride and cannot be deactivated"
+            );
+        }
+
+        driver.setAvailabilityStatus(
+                DriverAvailabilityStatus.OFFLINE
+        );
+
+        assignment.setActive(false);
+
+        assignment.setAssignedUntil(
+                Instant.now()
+        );
+
+        assignmentRepository.save(assignment);
     }
 
     private TaxiCompany getCurrentCompany() {

@@ -1,5 +1,6 @@
 package com.kalo.ride.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.ride.dto.AcceptRideRequest;
 import com.kalo.ride.dto.CompleteRideRequest;
 import com.kalo.ride.dto.PartnerRideResponse;
@@ -8,11 +9,14 @@ import com.kalo.ride.enums.RideStatus;
 import com.kalo.ride.service.RideService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
+@Tag(name = "Partner - Rides")
 @RestController
 @RequestMapping("/api/v1/partner/rides")
 @RequiredArgsConstructor
@@ -21,15 +25,23 @@ public class PartnerRideController {
     private final RideService rideService;
 
     @GetMapping
-    public ResponseEntity<List<PartnerRideResponse>>
+    public ResponseEntity<Page<PartnerRideResponse>>
     getRides(
             @RequestParam(required = false)
-            RideStatus status
+            RideStatus status,
+
+            @PageableDefault(
+                    size = 20,
+                    sort = "requestedAt",
+                    direction = Sort.Direction.DESC
+            )
+            Pageable pageable
     ) {
 
         return ResponseEntity.ok(
                 rideService.getPartnerRides(
-                        status
+                        status,
+                        pageable
                 )
         );
     }

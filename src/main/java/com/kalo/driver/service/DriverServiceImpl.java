@@ -16,15 +16,17 @@ import com.kalo.partner.enums.CompanyStatus;
 import com.kalo.partner.enums.VerificationStatus;
 import com.kalo.partner.repository.TaxiCompanyRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.kalo.driver.enums.DriverAvailabilityStatus;
 import com.kalo.driver.dto.UpdateDriverAvailabilityRequest;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DriverServiceImpl
@@ -279,22 +281,25 @@ public class DriverServiceImpl
                 request.dateOfBirth()
         );
 
+        if (request.status() != DriverStatus.ACTIVE) {
+
+            takeOutOfService(driver);
+        }
+
         driver.setStatus(
                 request.status()
         );
-        if (request.status()
-                != DriverStatus.ACTIVE) {
 
-            driver.setAvailabilityStatus(
-                    DriverAvailabilityStatus.OFFLINE
-            );
-        }
         Driver savedDriver =
                 driverRepository.save(driver);
 
         return mapToResponse(savedDriver);
     }
 
+    /**
+     * Drivers are never removed from the database: historical rides, ratings
+     * and assignments reference them. Deletion is a soft deactivation.
+     */
     @Override
     @Transactional
     public void deleteDriver(
@@ -312,7 +317,53 @@ public class DriverServiceImpl
                         company.getId()
                 );
 
-        driverRepository.delete(driver);
+        takeOutOfService(driver);
+
+        driver.setStatus(
+                DriverStatus.INACTIVE
+        );
+
+        driverRepository.save(driver);
+
+        log.info(
+                "Driver deactivated: driverId={} companyId={}",
+                driver.getId(),
+                company.getId()
+        );
+    }
+
+    /**
+     * Takes a driver out of service: refuses while they are on a ride, forces
+     * them offline and releases the vehicle they were holding.
+     */
+    private void takeOutOfService(
+            Driver driver
+    ) {
+
+        if (driver.getAvailabilityStatus()
+                == DriverAvailabilityStatus.BUSY) {
+
+            throw new InvalidOperationException(
+                    "Driver is currently on a ride and cannot be deactivated"
+            );
+        }
+
+        driver.setAvailabilityStatus(
+                DriverAvailabilityStatus.OFFLINE
+        );
+
+        assignmentRepository
+                .findByDriverIdAndActiveTrue(driver.getId())
+                .ifPresent(assignment -> {
+
+                    assignment.setActive(false);
+
+                    assignment.setAssignedUntil(
+                            Instant.now()
+                    );
+
+                    assignmentRepository.save(assignment);
+                });
     }
 
     private TaxiCompany getCurrentCompany() {

@@ -4,6 +4,7 @@ import com.kalo.partner.entity.CompanyOperatingHours;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.DayOfWeek;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,6 +14,14 @@ public interface CompanyOperatingHoursRepository
     List<CompanyOperatingHours>
     findAllByCompanyIdOrderByDayOfWeek(
             Long companyId
+    );
+
+    /**
+     * Batch variant for taxi search, which evaluates many companies at once.
+     */
+    List<CompanyOperatingHours>
+    findAllByCompanyIdIn(
+            Collection<Long> companyIds
     );
 
     Optional<CompanyOperatingHours>

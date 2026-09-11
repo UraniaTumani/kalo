@@ -1,5 +1,6 @@
 package com.kalo.driver.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.driver.dto.CreateDriverRequest;
 import com.kalo.driver.dto.DriverResponse;
 import com.kalo.driver.dto.UpdateDriverAvailabilityRequest;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "Partner - Fleet")
 @RestController
 @RequestMapping("/api/v1/partner/drivers")
 @RequiredArgsConstructor

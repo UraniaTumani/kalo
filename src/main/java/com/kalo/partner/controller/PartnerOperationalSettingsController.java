@@ -1,5 +1,6 @@
 package com.kalo.partner.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.partner.dto.OperationalSettingsResponse;
 import com.kalo.partner.dto.UpdateOperationalSettingsRequest;
 import com.kalo.partner.service.PartnerOperationalSettingsService;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Partner - Company")
 @RestController
 @RequestMapping(
         "/api/v1/partner/operational-settings"

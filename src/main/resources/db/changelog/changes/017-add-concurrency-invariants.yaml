@@ -1,0 +1,106 @@
+databaseChangeLog:
+
+  # PostgreSQL partial unique indexes that back the Java-side concurrency
+  # checks. Without them two concurrent transactions can both pass an
+  # exists() check before either commits.
+  #
+  # Every index below matches an invariant the current state machine already
+  # enforces in code, so existing rows cannot violate them.
+
+  - changeSet:
+      id: 017-one-active-assignment-per-driver
+      author: kalo
+
+      changes:
+        - sql:
+            sql: >
+              CREATE UNIQUE INDEX IF NOT EXISTS uk_active_assignment_per_driver
+              ON driver_vehicle_assignments (driver_id)
+              WHERE active;
+
+      rollback:
+        - sql:
+            sql: DROP INDEX IF EXISTS uk_active_assignment_per_driver;
+
+  - changeSet:
+      id: 017-one-active-assignment-per-vehicle
+      author: kalo
+
+      changes:
+        - sql:
+            sql: >
+              CREATE UNIQUE INDEX IF NOT EXISTS uk_active_assignment_per_vehicle
+              ON driver_vehicle_assignments (vehicle_id)
+              WHERE active;
+
+      rollback:
+        - sql:
+            sql: DROP INDEX IF EXISTS uk_active_assignment_per_vehicle;
+
+  # A customer may try several companies for the same RideRequest, but only
+  # one of those attempts can be in a non-terminal status at a time.
+  - changeSet:
+      id: 017-one-active-ride-per-customer
+      author: kalo
+
+      changes:
+        - sql:
+            sql: >
+              CREATE UNIQUE INDEX IF NOT EXISTS uk_active_ride_per_customer
+              ON rides (customer_id)
+              WHERE status IN (
+                'REQUESTED',
+                'DRIVER_ASSIGNED',
+                'DRIVER_ARRIVING',
+                'DRIVER_ARRIVED',
+                'IN_PROGRESS'
+              );
+
+      rollback:
+        - sql:
+            sql: DROP INDEX IF EXISTS uk_active_ride_per_customer;
+
+  # A driver cannot be executing two rides at once. driver_id is NULL until a
+  # company accepts, and NULLs never collide in a unique index.
+  - changeSet:
+      id: 017-one-active-ride-per-driver
+      author: kalo
+
+      changes:
+        - sql:
+            sql: >
+              CREATE UNIQUE INDEX IF NOT EXISTS uk_active_ride_per_driver
+              ON rides (driver_id)
+              WHERE status IN (
+                'DRIVER_ASSIGNED',
+                'DRIVER_ARRIVING',
+                'DRIVER_ARRIVED',
+                'IN_PROGRESS'
+              );
+
+      rollback:
+        - sql:
+            sql: DROP INDEX IF EXISTS uk_active_ride_per_driver;
+
+  # Ride search filters drivers by company + status + availability before
+  # anything else.
+  - changeSet:
+      id: 017-index-drivers-search
+      author: kalo
+
+      changes:
+        - createIndex:
+            tableName: drivers
+            indexName: idx_drivers_company_status_availability
+            columns:
+              - column:
+                  name: company_id
+              - column:
+                  name: status
+              - column:
+                  name: availability_status
+
+      rollback:
+        - dropIndex:
+            tableName: drivers
+            indexName: idx_drivers_company_status_availability

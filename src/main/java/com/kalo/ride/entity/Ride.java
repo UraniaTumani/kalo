@@ -19,9 +19,17 @@ import java.time.Instant;
 @Table(
         name = "rides",
         uniqueConstraints = {
+                /*
+                 * A RideRequest may be attempted against several companies
+                 * (decline / no-response fallback), but never twice against
+                 * the same one. Mirrors migration 013.
+                 */
                 @UniqueConstraint(
-                        name = "uk_rides_ride_request",
-                        columnNames = "ride_request_id"
+                        name = "uk_rides_request_company",
+                        columnNames = {
+                                "ride_request_id",
+                                "company_id"
+                        }
                 )
         },
         indexes = {

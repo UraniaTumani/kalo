@@ -6,8 +6,8 @@ import com.kalo.ride.dto.PartnerRideResponse;
 import com.kalo.ride.dto.RideResponse;
 import com.kalo.ride.dto.SelectTaxiOfferRequest;
 import com.kalo.ride.enums.RideStatus;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface RideService {
 
@@ -16,8 +16,9 @@ public interface RideService {
             SelectTaxiOfferRequest request
     );
 
-    List<PartnerRideResponse> getPartnerRides(
-            RideStatus status
+    Page<PartnerRideResponse> getPartnerRides(
+            RideStatus status,
+            Pageable pageable
     );
 
     RideResponse acceptRide(
@@ -48,7 +49,9 @@ public interface RideService {
 
     RideResponse getCurrentRide();
 
-    List<RideResponse> getRideHistory();
+    Page<RideResponse> getRideHistory(
+            Pageable pageable
+    );
 
     RideResponse getRideById(
             Long rideId
