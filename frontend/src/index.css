@@ -1,0 +1,41 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand-50: #eef7ff;
+  --color-brand-100: #d9edff;
+  --color-brand-200: #bce0ff;
+  --color-brand-300: #8ecdff;
+  --color-brand-400: #59b0ff;
+  --color-brand-500: #3390fc;
+  --color-brand-600: #1d71f1;
+  --color-brand-700: #165ade;
+  --color-brand-800: #184ab4;
+  --color-brand-900: #19418e;
+
+  --color-ink-50: #f6f7f9;
+  --color-ink-100: #eceef2;
+  --color-ink-200: #d5dae3;
+  --color-ink-300: #b1bacb;
+  --color-ink-400: #8794ae;
+  --color-ink-500: #687694;
+  --color-ink-600: #535f7a;
+  --color-ink-700: #444d63;
+  --color-ink-800: #3b4253;
+  --color-ink-900: #343a47;
+  --color-ink-950: #23262f;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-ink-50 text-ink-900 antialiased;
+}
+
+/* Leaflet renders its own panes; keep them under our overlays. */
+.leaflet-container {
+  z-index: 0;
+}

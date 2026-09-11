@@ -2,6 +2,9 @@
 
 KALO is a **taxi-company marketplace**, not a taxi operator.
 
+> This repository holds both halves: the Spring Boot API at the root, and the
+> React frontend in [`frontend/`](frontend/README.md).
+
 ```
 Customer  ->  KALO  ->  Taxi Company  ->  Driver
 ```
@@ -52,6 +55,11 @@ Cross-cutting choices:
 - **Pessimistic row locks** on the ride lifecycle, backed by **PostgreSQL
   partial unique indexes** for the invariants that must hold under concurrency.
 
+The frontend in `frontend/` is a React 19 + TypeScript SPA (Vite, TanStack
+Query, Tailwind, Leaflet) covering all three surfaces. Its dev server proxies
+`/api` to port 8080, so the API needs no CORS configuration. See
+[`frontend/README.md`](frontend/README.md).
+
 ---
 
 ## 2. Requirements
@@ -59,6 +67,7 @@ Cross-cutting choices:
 - Java 17
 - Maven (use the bundled `./mvnw` wrapper)
 - PostgreSQL 14+
+- Node.js 20+ (frontend only)
 - Docker (only needed for the integration tests)
 
 ---
@@ -162,7 +171,7 @@ With the application running:
 - OpenAPI JSON — <http://localhost:8080/v3/api-docs>
 
 To call a secured endpoint from Swagger: `POST /api/v1/auth/login`, copy the
-`token` from the response, click **Authorize**, and paste the token (Swagger
+`accessToken` from the response, click **Authorize**, and paste it (Swagger
 adds the `Bearer ` prefix itself).
 
 ---
