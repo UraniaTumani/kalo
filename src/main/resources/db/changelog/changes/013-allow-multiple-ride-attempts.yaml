@@ -1,0 +1,23 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 013-allow-multiple-ride-attempts
+      author: kalo
+
+      changes:
+
+        - dropUniqueConstraint:
+            tableName: rides
+            constraintName: uk_rides_ride_request
+
+        - addUniqueConstraint:
+            tableName: rides
+            columnNames: ride_request_id, company_id
+            constraintName: uk_rides_request_company
+
+        - createIndex:
+            tableName: rides
+            indexName: idx_rides_ride_request_id
+            columns:
+              - column:
+                  name: ride_request_id

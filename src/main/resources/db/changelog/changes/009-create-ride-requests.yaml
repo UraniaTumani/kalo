@@ -1,0 +1,111 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 009-create-ride-requests
+      author: kalo
+
+      changes:
+
+        - createTable:
+            tableName: ride_requests
+
+            columns:
+
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_ride_requests
+                    nullable: false
+
+              - column:
+                  name: customer_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: pickup_latitude
+                  type: DOUBLE PRECISION
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: pickup_longitude
+                  type: DOUBLE PRECISION
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: pickup_address
+                  type: VARCHAR(500)
+
+              - column:
+                  name: destination_latitude
+                  type: DOUBLE PRECISION
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: destination_longitude
+                  type: DOUBLE PRECISION
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: destination_address
+                  type: VARCHAR(500)
+
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: expires_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+        - addForeignKeyConstraint:
+            baseTableName: ride_requests
+            baseColumnNames: customer_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_ride_requests_customer
+            onDelete: RESTRICT
+
+        - createIndex:
+            tableName: ride_requests
+            indexName: idx_ride_requests_customer
+            columns:
+              - column:
+                  name: customer_id
+
+        - createIndex:
+            tableName: ride_requests
+            indexName: idx_ride_requests_status
+            columns:
+              - column:
+                  name: status
+
+        - createIndex:
+            tableName: ride_requests
+            indexName: idx_ride_requests_expires_at
+            columns:
+              - column:
+                  name: expires_at

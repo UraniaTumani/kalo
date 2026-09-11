@@ -1,0 +1,261 @@
+package com.kalo.auth.service;
+
+import com.kalo.auth.dto.CustomerRegisterRequest;
+import com.kalo.auth.dto.UserResponse;
+import com.kalo.common.exception.ConflictException;
+import com.kalo.user.entity.User;
+import com.kalo.user.enums.UserRole;
+import com.kalo.user.enums.UserStatus;
+import com.kalo.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import com.kalo.auth.dto.LoginRequest;
+import com.kalo.auth.dto.LoginResponse;
+import com.kalo.auth.security.JwtService;
+import com.kalo.auth.dto.PartnerRegisterRequest;
+import com.kalo.auth.dto.PartnerRegisterResponse;
+import com.kalo.partner.entity.TaxiCompany;
+import com.kalo.partner.enums.CompanyStatus;
+import com.kalo.partner.enums.VerificationStatus;
+import com.kalo.partner.repository.TaxiCompanyRepository;
+
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import com.kalo.auth.security.CustomUserDetailsService;
+
+@Service
+@RequiredArgsConstructor
+public class AuthServiceImpl implements AuthService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
+    private final CustomUserDetailsService customUserDetailsService;
+    private final TaxiCompanyRepository taxiCompanyRepository;
+
+
+    @Override
+    @Transactional
+    public UserResponse registerCustomer(CustomerRegisterRequest request) {
+
+        String phone = request.phone().trim();
+
+        String email = request.email() == null
+                ? null
+                : request.email().trim().toLowerCase();
+
+        if (userRepository.existsByPhone(phone)) {
+            throw new ConflictException(
+                    "Phone number is already registered"
+            );
+        }
+
+        if (email != null
+                && !email.isBlank()
+                && userRepository.existsByEmail(email)) {
+
+            throw new ConflictException(
+                    "Email is already registered"
+            );
+        }
+
+        User user = new User();
+
+        user.setFirstName(request.firstName().trim());
+        user.setLastName(request.lastName().trim());
+        user.setPhone(phone);
+        user.setEmail(
+                email == null || email.isBlank()
+                        ? null
+                        : email
+        );
+
+        user.setPasswordHash(
+                passwordEncoder.encode(request.password())
+        );
+
+        user.setRole(UserRole.CUSTOMER);
+        user.setStatus(UserStatus.ACTIVE);
+        user.setPhoneVerified(false);
+
+        User savedUser = userRepository.save(user);
+
+        return new UserResponse(
+                savedUser.getId(),
+                savedUser.getFirstName(),
+                savedUser.getLastName(),
+                savedUser.getPhone(),
+                savedUser.getEmail(),
+                savedUser.getRole(),
+                savedUser.getStatus(),
+                savedUser.isPhoneVerified()
+        );
+    }
+
+    @Override
+    @Transactional
+    public PartnerRegisterResponse registerPartner(
+            PartnerRegisterRequest request
+    ) {
+
+        String phone =
+                request.phone().trim();
+
+        String email =
+                request.email() == null
+                        ? null
+                        : request.email()
+                        .trim()
+                        .toLowerCase();
+
+        String nipt =
+                request.nipt()
+                        .trim()
+                        .toUpperCase();
+
+        if (userRepository.existsByPhone(phone)) {
+
+            throw new ConflictException(
+                    "Phone number is already registered"
+            );
+        }
+
+        if (email != null
+                && !email.isBlank()
+                && userRepository.existsByEmail(email)) {
+
+            throw new ConflictException(
+                    "Email is already registered"
+            );
+        }
+
+        if (taxiCompanyRepository.existsByNipt(nipt)) {
+
+            throw new ConflictException(
+                    "A taxi company with this NIPT is already registered"
+            );
+        }
+
+        User user = new User();
+
+        user.setFirstName(
+                request.firstName().trim()
+        );
+
+        user.setLastName(
+                request.lastName().trim()
+        );
+
+        user.setPhone(phone);
+
+        user.setEmail(
+                email == null || email.isBlank()
+                        ? null
+                        : email
+        );
+
+        user.setPasswordHash(
+                passwordEncoder.encode(
+                        request.password()
+                )
+        );
+
+        user.setRole(
+                UserRole.PARTNER
+        );
+
+        user.setStatus(
+                UserStatus.PENDING
+        );
+
+        user.setPhoneVerified(false);
+
+        User savedUser =
+                userRepository.save(user);
+
+
+        TaxiCompany company =
+                new TaxiCompany();
+
+        company.setOwner(savedUser);
+
+        company.setLegalName(
+                request.legalName().trim()
+        );
+
+        company.setDisplayName(
+                request.displayName().trim()
+        );
+
+        company.setNipt(nipt);
+
+        company.setPhone(phone);
+
+        company.setEmail(
+                email == null || email.isBlank()
+                        ? null
+                        : email
+        );
+
+        company.setAddress(
+                request.address().trim()
+        );
+
+        company.setVerificationStatus(
+                VerificationStatus.DRAFT
+        );
+
+        company.setStatus(
+                CompanyStatus.INACTIVE
+        );
+
+        TaxiCompany savedCompany =
+                taxiCompanyRepository.save(company);
+
+
+        return new PartnerRegisterResponse(
+                savedUser.getId(),
+                savedCompany.getId(),
+
+                savedUser.getFirstName(),
+                savedUser.getLastName(),
+                savedUser.getPhone(),
+
+                savedCompany.getLegalName(),
+                savedCompany.getDisplayName(),
+                savedCompany.getNipt(),
+
+                savedUser.getStatus(),
+                savedCompany.getVerificationStatus(),
+                savedCompany.getStatus()
+        );
+    }
+
+    @Override
+    public LoginResponse login(LoginRequest request) {
+
+        String phone = request.phone().trim();
+
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        phone,
+                        request.password()
+                )
+        );
+
+        UserDetails userDetails =
+                customUserDetailsService.loadUserByUsername(phone);
+
+        String token =
+                jwtService.generateToken(userDetails);
+
+        return new LoginResponse(
+                token,
+                "Bearer"
+        );
+    }
+}

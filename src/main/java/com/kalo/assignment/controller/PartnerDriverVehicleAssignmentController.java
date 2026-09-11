@@ -1,0 +1,64 @@
+package com.kalo.assignment.controller;
+
+import com.kalo.assignment.dto.CreateDriverVehicleAssignmentRequest;
+import com.kalo.assignment.dto.DriverVehicleAssignmentResponse;
+import com.kalo.assignment.service.DriverVehicleAssignmentService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping(
+        "/api/v1/partner/driver-vehicle-assignments"
+)
+@RequiredArgsConstructor
+public class PartnerDriverVehicleAssignmentController {
+
+    private final DriverVehicleAssignmentService assignmentService;
+
+    @PostMapping
+    public ResponseEntity<DriverVehicleAssignmentResponse>
+    assignVehicle(
+            @Valid
+            @RequestBody
+            CreateDriverVehicleAssignmentRequest request
+    ) {
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(
+                        assignmentService
+                                .assignVehicle(request)
+                );
+    }
+
+    @GetMapping
+    public ResponseEntity<List<DriverVehicleAssignmentResponse>>
+    getAssignments() {
+
+        return ResponseEntity.ok(
+                assignmentService
+                        .getAssignments()
+        );
+    }
+
+    @DeleteMapping("/{assignmentId}")
+    public ResponseEntity<Void>
+    unassignVehicle(
+            @PathVariable Long assignmentId
+    ) {
+
+        assignmentService
+                .unassignVehicle(
+                        assignmentId
+                );
+
+        return ResponseEntity
+                .noContent()
+                .build();
+    }
+}

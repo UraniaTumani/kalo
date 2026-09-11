@@ -1,0 +1,148 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 011-create-rides
+      author: kalo
+
+      changes:
+
+        - createTable:
+            tableName: rides
+
+            columns:
+
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_rides
+                    nullable: false
+
+              - column:
+                  name: ride_request_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: customer_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: driver_id
+                  type: BIGINT
+
+              - column:
+                  name: vehicle_id
+                  type: BIGINT
+
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: requested_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: accepted_at
+                  type: TIMESTAMP WITH TIME ZONE
+
+              - column:
+                  name: declined_at
+                  type: TIMESTAMP WITH TIME ZONE
+
+              - column:
+                  name: cancelled_at
+                  type: TIMESTAMP WITH TIME ZONE
+
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+        - addForeignKeyConstraint:
+            baseTableName: rides
+            baseColumnNames: ride_request_id
+            referencedTableName: ride_requests
+            referencedColumnNames: id
+            constraintName: fk_rides_ride_request
+            onDelete: RESTRICT
+
+        - addForeignKeyConstraint:
+            baseTableName: rides
+            baseColumnNames: customer_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_rides_customer
+            onDelete: RESTRICT
+
+        - addForeignKeyConstraint:
+            baseTableName: rides
+            baseColumnNames: company_id
+            referencedTableName: taxi_companies
+            referencedColumnNames: id
+            constraintName: fk_rides_company
+            onDelete: RESTRICT
+
+        - addForeignKeyConstraint:
+            baseTableName: rides
+            baseColumnNames: driver_id
+            referencedTableName: drivers
+            referencedColumnNames: id
+            constraintName: fk_rides_driver
+            onDelete: RESTRICT
+
+        - addForeignKeyConstraint:
+            baseTableName: rides
+            baseColumnNames: vehicle_id
+            referencedTableName: vehicles
+            referencedColumnNames: id
+            constraintName: fk_rides_vehicle
+            onDelete: RESTRICT
+
+        - addUniqueConstraint:
+            tableName: rides
+            columnNames: ride_request_id
+            constraintName: uk_rides_ride_request
+
+        - createIndex:
+            tableName: rides
+            indexName: idx_rides_customer
+            columns:
+              - column:
+                  name: customer_id
+
+        - createIndex:
+            tableName: rides
+            indexName: idx_rides_company
+            columns:
+              - column:
+                  name: company_id
+
+        - createIndex:
+            tableName: rides
+            indexName: idx_rides_status
+            columns:
+              - column:
+                  name: status

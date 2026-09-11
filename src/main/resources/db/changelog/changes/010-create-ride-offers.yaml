@@ -1,0 +1,113 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 010-create-ride-offers
+      author: kalo
+
+      changes:
+
+        - createTable:
+            tableName: ride_offers
+
+            columns:
+
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_ride_offers
+                    nullable: false
+
+              - column:
+                  name: ride_request_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: nearest_driver_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: vehicle_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: distance_km
+                  type: DOUBLE PRECISION
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+        - addForeignKeyConstraint:
+            baseTableName: ride_offers
+            baseColumnNames: ride_request_id
+            referencedTableName: ride_requests
+            referencedColumnNames: id
+            constraintName: fk_ride_offers_request
+            onDelete: CASCADE
+
+        - addForeignKeyConstraint:
+            baseTableName: ride_offers
+            baseColumnNames: company_id
+            referencedTableName: taxi_companies
+            referencedColumnNames: id
+            constraintName: fk_ride_offers_company
+            onDelete: RESTRICT
+
+        - addForeignKeyConstraint:
+            baseTableName: ride_offers
+            baseColumnNames: nearest_driver_id
+            referencedTableName: drivers
+            referencedColumnNames: id
+            constraintName: fk_ride_offers_driver
+            onDelete: RESTRICT
+
+        - addForeignKeyConstraint:
+            baseTableName: ride_offers
+            baseColumnNames: vehicle_id
+            referencedTableName: vehicles
+            referencedColumnNames: id
+            constraintName: fk_ride_offers_vehicle
+            onDelete: RESTRICT
+
+        - addUniqueConstraint:
+            tableName: ride_offers
+            columnNames: ride_request_id, company_id
+            constraintName: uk_ride_offers_request_company
+
+        - createIndex:
+            tableName: ride_offers
+            indexName: idx_ride_offers_request
+            columns:
+              - column:
+                  name: ride_request_id
+
+        - createIndex:
+            tableName: ride_offers
+            indexName: idx_ride_offers_company
+            columns:
+              - column:
+                  name: company_id

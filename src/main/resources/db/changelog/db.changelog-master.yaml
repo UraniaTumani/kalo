@@ -1,0 +1,42 @@
+databaseChangeLog:
+
+  - include:
+      file: db/changelog/changes/001-create-users.yaml
+
+  - include:
+      file: db/changelog/changes/002-create-taxi-companies.yaml
+
+  - include:
+      file: db/changelog/changes/003-create-documents.yaml
+
+  - include:
+      file: db/changelog/changes/004-create-drivers.yaml
+
+  - include:
+      file: db/changelog/changes/005-create-vehicles.yaml
+
+  - include:
+      file: db/changelog/changes/006-create-driver-vehicle-assignments.yaml
+
+  - include:
+      file: db/changelog/changes/007-add-driver-availability.yaml
+
+  - include:
+      file: db/changelog/changes/008-create-driver-locations.yaml
+  - include:
+      file: db/changelog/changes/009-create-ride-requests.yaml
+  - include:
+      file: db/changelog/changes/010-create-ride-offers.yaml
+
+  - include:
+      file: db/changelog/changes/011-create-rides.yaml
+  - include:
+      file: db/changelog/changes/012-add-ride-execution-fields.yaml
+  - include:
+      file: db/changelog/changes/013-allow-multiple-ride-attempts.yaml
+  - include:
+      file: db/changelog/changes/014-create-ride-ratings.yaml
+  - include:
+      file: db/changelog/changes/015-add-company-operational-settings.yaml
+  - include:
+      file: db/changelog/changes/016-add-service-area-and-operating-hours.yaml

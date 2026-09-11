@@ -1,0 +1,83 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 008-create-driver-locations
+      author: kalo
+
+      changes:
+
+        - createTable:
+            tableName: driver_locations
+
+            columns:
+
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_driver_locations
+                    nullable: false
+
+              - column:
+                  name: driver_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: latitude
+                  type: DOUBLE PRECISION
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: longitude
+                  type: DOUBLE PRECISION
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: location_updated_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+        - addForeignKeyConstraint:
+            baseTableName: driver_locations
+            baseColumnNames: driver_id
+            referencedTableName: drivers
+            referencedColumnNames: id
+            constraintName: fk_driver_locations_driver
+            onDelete: RESTRICT
+
+        - addUniqueConstraint:
+            tableName: driver_locations
+            columnNames: driver_id
+            constraintName: uk_driver_locations_driver
+
+        - createIndex:
+            tableName: driver_locations
+            indexName: idx_driver_locations_driver
+            columns:
+              - column:
+                  name: driver_id
+
+        - createIndex:
+            tableName: driver_locations
+            indexName: idx_driver_locations_updated_at
+            columns:
+              - column:
+                  name: location_updated_at

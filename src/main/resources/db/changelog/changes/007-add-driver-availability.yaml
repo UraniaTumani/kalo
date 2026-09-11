@@ -1,0 +1,25 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 007-add-driver-availability
+      author: kalo
+
+      changes:
+
+        - addColumn:
+            tableName: drivers
+            columns:
+
+              - column:
+                  name: availability_status
+                  type: VARCHAR(30)
+                  defaultValue: OFFLINE
+                  constraints:
+                    nullable: false
+
+        - createIndex:
+            tableName: drivers
+            indexName: idx_drivers_availability_status
+            columns:
+              - column:
+                  name: availability_status
