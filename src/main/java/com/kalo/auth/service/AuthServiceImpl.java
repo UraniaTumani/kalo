@@ -8,6 +8,8 @@ import com.kalo.user.enums.UserRole;
 import com.kalo.user.enums.UserStatus;
 import com.kalo.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UserDetails;
 import com.kalo.auth.security.CustomUserDetailsService;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -240,12 +243,28 @@ public class AuthServiceImpl implements AuthService {
 
         String phone = request.phone().trim();
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        phone,
-                        request.password()
-                )
-        );
+        try {
+
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            phone,
+                            request.password()
+                    )
+            );
+
+        } catch (AuthenticationException exception) {
+
+            /*
+             * Reason only, never the submitted credentials.
+             */
+            log.warn(
+                    "Login failed for phone ending {}: {}",
+                    maskPhone(phone),
+                    exception.getClass().getSimpleName()
+            );
+
+            throw exception;
+        }
 
         UserDetails userDetails =
                 customUserDetailsService.loadUserByUsername(phone);
@@ -253,9 +272,29 @@ public class AuthServiceImpl implements AuthService {
         String token =
                 jwtService.generateToken(userDetails);
 
+        log.info(
+                "Login succeeded for phone ending {}",
+                maskPhone(phone)
+        );
+
         return new LoginResponse(
                 token,
                 "Bearer"
         );
+    }
+
+    /**
+     * Keeps only the last three digits, so logs stay useful for support
+     * without recording a full personal phone number.
+     */
+    private String maskPhone(
+            String phone
+    ) {
+
+        if (phone == null || phone.length() < 3) {
+            return "***";
+        }
+
+        return "***" + phone.substring(phone.length() - 3);
     }
 }

@@ -1,5 +1,6 @@
 package com.kalo.admin.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.admin.dto.AdminPartnerDetailResponse;
 import com.kalo.admin.dto.AdminPartnerResponse;
 import com.kalo.admin.dto.PartnerDecisionResponse;
@@ -16,6 +17,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Admin")
 @RestController
 @RequestMapping("/api/v1/admin/partners")
 @RequiredArgsConstructor

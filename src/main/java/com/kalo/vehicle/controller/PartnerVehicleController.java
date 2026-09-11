@@ -1,5 +1,6 @@
 package com.kalo.vehicle.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.vehicle.dto.CreateVehicleRequest;
 import com.kalo.vehicle.dto.UpdateVehicleRequest;
 import com.kalo.vehicle.dto.VehicleResponse;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "Partner - Fleet")
 @RestController
 @RequestMapping("/api/v1/partner/vehicles")
 @RequiredArgsConstructor

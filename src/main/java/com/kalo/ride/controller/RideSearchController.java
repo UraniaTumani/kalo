@@ -1,5 +1,6 @@
 package com.kalo.ride.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.ride.dto.CreateRideRequest;
 import com.kalo.ride.dto.RideSearchResponse;
 import com.kalo.ride.service.RideSearchService;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import com.kalo.ride.dto.RideResponse;
 import com.kalo.ride.dto.SelectTaxiOfferRequest;
 
+@Tag(name = "Customer - Rides")
 @RestController
 @RequestMapping("/api/v1/rides")
 @RequiredArgsConstructor

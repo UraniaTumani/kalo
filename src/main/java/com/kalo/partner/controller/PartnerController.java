@@ -1,5 +1,6 @@
 package com.kalo.partner.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.partner.dto.PartnerProfileResponse;
 import com.kalo.partner.dto.UpdatePartnerProfileRequest;
 import com.kalo.partner.service.PartnerService;
@@ -9,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.kalo.partner.dto.PartnerVerificationResponse;
 
+@Tag(name = "Partner - Company")
 @RestController
 @RequestMapping("/api/v1/partner")
 @RequiredArgsConstructor

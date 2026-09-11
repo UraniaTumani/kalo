@@ -1,5 +1,6 @@
 package com.kalo.admin.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.admin.dto.AdminRideDetailResponse;
 import com.kalo.admin.dto.AdminRideResponse;
 import com.kalo.admin.service.AdminRideService;
@@ -12,6 +13,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Admin")
 @RestController
 @RequestMapping("/api/v1/admin/rides")
 @RequiredArgsConstructor

@@ -7,6 +7,7 @@ import com.kalo.ride.enums.RideStatus;
 import com.kalo.ride.repository.RideRepository;
 import com.kalo.ride.repository.RideRequestRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RideTimeoutServiceImpl
@@ -109,6 +111,13 @@ public class RideTimeoutServiceImpl
 
             rideRepository.save(
                     ride
+            );
+
+            log.info(
+                    "Ride timed out with no company response: rideId={} companyId={} rideRequestStatus={}",
+                    ride.getId(),
+                    ride.getCompany().getId(),
+                    rideRequest.getStatus()
             );
         }
     }

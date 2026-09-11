@@ -1,5 +1,6 @@
 package com.kalo.partner.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.partner.dto.*;
 import com.kalo.partner.service.PartnerAvailabilitySettingsService;
 import jakarta.validation.Valid;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "Partner - Company")
 @RestController
 @RequestMapping(
         "/api/v1/partner/availability-settings"

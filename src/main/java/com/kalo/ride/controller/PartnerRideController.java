@@ -1,5 +1,6 @@
 package com.kalo.ride.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.ride.dto.AcceptRideRequest;
 import com.kalo.ride.dto.CompleteRideRequest;
 import com.kalo.ride.dto.PartnerRideResponse;
@@ -15,6 +16,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Partner - Rides")
 @RestController
 @RequestMapping("/api/v1/partner/rides")
 @RequiredArgsConstructor

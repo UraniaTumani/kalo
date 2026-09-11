@@ -1,5 +1,6 @@
 package com.kalo.auth.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.auth.dto.CustomerRegisterRequest;
 import com.kalo.auth.dto.UserResponse;
 import com.kalo.auth.service.AuthService;
@@ -12,6 +13,7 @@ import com.kalo.auth.dto.LoginRequest;
 import com.kalo.auth.dto.LoginResponse;import com.kalo.auth.dto.PartnerRegisterRequest;
 import com.kalo.auth.dto.PartnerRegisterResponse;
 
+@Tag(name = "Authentication")
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor

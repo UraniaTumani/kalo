@@ -1,5 +1,6 @@
 package com.kalo.document.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.document.dto.CreateCompanyDocumentRequest;
 import com.kalo.document.dto.DocumentResponse;
 import com.kalo.document.service.DocumentService;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "Partner - Company")
 @RestController
 @RequestMapping(
         "/api/v1/partner/documents"
