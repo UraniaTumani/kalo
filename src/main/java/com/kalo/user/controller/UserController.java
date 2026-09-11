@@ -2,10 +2,14 @@ package com.kalo.user.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.auth.dto.UserResponse;
+import com.kalo.user.dto.UpdateProfileRequest;
 import com.kalo.user.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -22,6 +26,20 @@ public class UserController {
 
         return ResponseEntity.ok(
                 userService.getCurrentUser()
+        );
+    }
+
+    /**
+     * Any signed-in user edits their own details here. Phone is not editable:
+     * it is the login identifier, so changing it needs a verification flow.
+     */
+    @PutMapping("/me")
+    public ResponseEntity<UserResponse> updateCurrentUser(
+            @Valid @RequestBody UpdateProfileRequest request
+    ) {
+
+        return ResponseEntity.ok(
+                userService.updateCurrentUser(request)
         );
     }
 }

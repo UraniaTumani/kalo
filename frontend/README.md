@@ -38,6 +38,8 @@ src/
   auth/           AuthContext (token + current user), ProtectedRoute
   components/     AppLayout, MapPicker, StatusBadge, Pagination, ui primitives
   features/
+    guest/        public landing page, no account needed
+    profile/      own details, shared by all three roles
     auth/         login, registration (passenger and company)
     customer/     book a taxi, current ride, history, rating
     partner/      dashboard, rides, drivers, vehicles, assignments,
@@ -47,6 +49,15 @@ src/
 
 ## Notes on behaviour
 
+- **Guests.** `/` is public: a visitor picks a point on the map (or uses their
+  browser location) and sees which companies could serve it, via the read-only
+  `POST /api/v1/public/taxi-availability`. Nothing is reserved and nothing is
+  bookable, so every result ends at a sign-up prompt rather than a button. A
+  signed-in user hitting `/` is redirected to their own surface.
+- **Profile.** `/profile` is available to all three roles. Name and email are
+  editable; the phone number is shown read-only because it is the login
+  identifier and changing it needs a verification flow the backend does not
+  have.
 - **Auth.** The token lives in `localStorage`. Any 401 from the API clears the
   session, so a token revoked server-side (suspension) logs the user out on
   their next action rather than leaving a broken shell.

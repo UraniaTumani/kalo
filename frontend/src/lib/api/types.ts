@@ -117,6 +117,29 @@ export interface TaxiOptionResponse {
   pricingNote: string
 }
 
+/**
+ * What an anonymous visitor gets back. Narrower than TaxiOptionResponse on
+ * purpose: no offer id (nothing is persisted, so nothing is selectable) and no
+ * driver or vehicle identity.
+ */
+export interface GuestTaxiOptionResponse {
+  companyId: number
+  companyName: string
+  companyRating: number | null
+  companyRatingCount: number | null
+  distanceKm: number
+  vehicleType: VehicleType
+  paymentMethods: PaymentMethod[]
+  pricingNote: string
+}
+
+export interface GuestAvailabilityResponse {
+  checkedAt: string
+  companiesAvailable: number
+  taxiOptions: GuestTaxiOptionResponse[]
+  note: string
+}
+
 export interface RideSearchResponse {
   rideRequestId: number
   status: RideRequestStatus

@@ -6,6 +6,7 @@ import { AppLayout } from '@/components/AppLayout'
 import { Spinner } from '@/components/ui/Spinner'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RegisterPage } from '@/features/auth/RegisterPage'
+import { GuestLandingPage } from '@/features/guest/GuestLandingPage'
 
 // Loaded on demand: no role pulls in another role's screens, and Leaflet only
 // reaches the browser on the pages that actually show a map.
@@ -68,6 +69,9 @@ const AdminUsersPage = lazy(() =>
 const AdminRidesPage = lazy(() =>
   import('@/features/admin/AdminRidesPage').then((m) => ({ default: m.AdminRidesPage })),
 )
+const ProfilePage = lazy(() =>
+  import('@/features/profile/ProfilePage').then((m) => ({ default: m.ProfilePage })),
+)
 
 /** Sends a signed-in user to their own surface, and everyone else to login. */
 function RootRedirect() {
@@ -94,9 +98,17 @@ export default function App() {
       }
     >
       <Routes>
-      <Route path="/" element={<RootRedirect />} />
+      {/* Public: a visitor with no account lands here. */}
+      <Route path="/" element={<GuestLandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+
+      {/* Available to every signed-in role. */}
+      <Route element={<ProtectedRoute allow={['CUSTOMER', 'PARTNER', 'ADMIN']} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/profile" element={<ProfilePage />} />
+        </Route>
+      </Route>
 
       <Route element={<ProtectedRoute allow={['CUSTOMER']} />}>
         <Route element={<AppLayout />}>
