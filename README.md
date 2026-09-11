@@ -139,11 +139,16 @@ The seeder is guarded twice — the `dev` profile **and**
 `app.dev.seed.enabled=true` — and skips entirely if the demo admin already
 exists. It never runs in production.
 
-It creates one admin, one customer, two approved and active taxi companies
-(ABC Taxi and City Taxi), two drivers and two vehicles per company with active
-assignments, all drivers `ONLINE` with fresh positions around Tirana, both
-companies open 24/7 with a 25 km service area. A dev-only scheduled job keeps
-those positions fresh, so taxi search keeps returning results while you work.
+It creates one admin, three customers, two partners each owning a taxi company,
+five drivers, five vehicles with active assignments, positions around Tirana,
+operating hours, payment methods and a few completed rides with ratings — the
+full list is in *Demo credentials* below. A dev-only scheduled job keeps the
+seeded positions fresh, so taxi search keeps returning results while you work.
+
+Everything is written through repositories. No production service is called and
+none of them know the seeder exists, so the real business flow is unchanged and
+no security rule is bypassed — the seeded rows are what the normal flow would
+have produced. To start over, drop the database and let Liquibase rebuild it.
 
 ---
 
@@ -178,15 +183,47 @@ adds the `Bearer ` prefix itself).
 
 ## 9. Demo credentials (dev profile only)
 
-| Role | Phone (username) | Password |
-| --- | --- | --- |
-| Admin | `+355690000001` | `Admin123!` |
-| Customer | `+355690000002` | `Customer123!` |
-| Partner — ABC Taxi | `+355690000003` | `Partner123!` |
-| Partner — City Taxi | `+355690000004` | `Partner123!` |
+The phone number is the username.
+
+| Role | Name | Phone (username) | Password |
+| --- | --- | --- | --- |
+| Admin | Admin KALO | `+355690000001` | `Admin123!` |
+| Customer | Ana Hoxha | `+355690000002` | `Customer123!` |
+| Customer | Blerim Krasniqi | `+355690000005` | `Customer123!` |
+| Customer | Elira Dervishi | `+355690000006` | `Customer123!` |
+| Partner — ABC Taxi | Arben Marku | `+355690000003` | `Partner123!` |
+| Partner — City Taxi | Sokol Leka | `+355690000004` | `Partner123!` |
 
 These exist only under the `dev` profile and are safe to publish precisely
 because they cannot be seeded anywhere else.
+
+### What else the seed creates
+
+**ABC Taxi** (NIPT `K12345678A`) — cash and card in car, approved and active.
+**City Taxi** (NIPT `K87654321B`) — cash only, approved and active.
+Both open 24/7 with a 25 km service area centred on Tirana, so a demo works at
+any hour. Change a row in `company_operating_hours` to watch a company drop out
+of search on its closed day.
+
+Five drivers, each with a vehicle, an active assignment and a fresh position
+around Tirana. Two are OFFLINE on purpose, so the availability rules are
+visible: only the ONLINE three can be offered to a passenger.
+
+| Company | Driver | Phone | Availability | Vehicle |
+| --- | --- | --- | --- | --- |
+| ABC Taxi | Ilir Balla | `+355691000001` | ONLINE | AA101TR — Skoda Octavia (standard) |
+| ABC Taxi | Gent Prifti | `+355691000002` | ONLINE | AA102TR — VW Passat (standard) |
+| ABC Taxi | Mirela Hasa | `+355691000003` | OFFLINE | AA103TR — Toyota Prius (electric) |
+| City Taxi | Fatos Shehu | `+355691000004` | ONLINE | CT201TR — Mercedes E-Class (premium) |
+| City Taxi | Lediana Cela | `+355691000005` | OFFLINE | CT202TR — Ford Tourneo (van) |
+
+Four completed rides with ratings, so history, fares and rating aggregates are
+not empty on a fresh database. All of them are terminal, so none blocks a demo
+passenger from starting a new ride.
+
+Drivers are seeded with no password and no login of their own: in this MVP the
+taxi company drives the ride lifecycle on the driver's behalf, so a driver is a
+fleet record rather than a user account.
 
 ---
 
