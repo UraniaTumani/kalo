@@ -3,12 +3,13 @@ package com.kalo.ride.repository;
 import com.kalo.ride.entity.Ride;
 import com.kalo.ride.enums.RideStatus;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -53,23 +54,50 @@ public interface RideRepository
     /*
      * All rides belonging to a taxi company.
      */
-    List<Ride> findAllByCompanyId(
-            Long companyId
+    Page<Ride> findAllByCompanyId(
+            Long companyId,
+            Pageable pageable
     );
 
     /*
      * Filter partner rides by status.
      */
-    List<Ride> findAllByCompanyIdAndStatus(
+    Page<Ride> findAllByCompanyIdAndStatus(
             Long companyId,
-            RideStatus status
+            RideStatus status,
+            Pageable pageable
     );
 
     /*
      * Customer ride history.
      */
-    List<Ride> findAllByCustomerIdOrderByRequestedAtDesc(
-            Long customerId
+    Page<Ride> findAllByCustomerId(
+            Long customerId,
+            Pageable pageable
+    );
+
+    /*
+     * Admin ride list. Both filters are optional.
+     */
+    @Query(value = """
+            SELECT r
+            FROM Ride r
+            JOIN FETCH r.customer
+            JOIN FETCH r.company
+            LEFT JOIN FETCH r.driver
+            WHERE (:status IS NULL OR r.status = :status)
+              AND (:companyId IS NULL OR r.company.id = :companyId)
+            """,
+            countQuery = """
+            SELECT COUNT(r)
+            FROM Ride r
+            WHERE (:status IS NULL OR r.status = :status)
+              AND (:companyId IS NULL OR r.company.id = :companyId)
+            """)
+    Page<Ride> findAllForAdmin(
+            @Param("status") RideStatus status,
+            @Param("companyId") Long companyId,
+            Pageable pageable
     );
 
     /*

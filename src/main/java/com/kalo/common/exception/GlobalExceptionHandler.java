@@ -1,18 +1,35 @@
 package com.kalo.common.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
 import java.util.stream.Collectors;
-import org.springframework.security.authentication.BadCredentialsException;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /*
+     * =========================================================
+     * 409 CONFLICT
+     * =========================================================
+     */
 
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ErrorResponse> handleConflictException(
@@ -20,18 +37,43 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
 
-        ErrorResponse response = new ErrorResponse(
-                HttpStatus.CONFLICT.value(),
-                HttpStatus.CONFLICT.getReasonPhrase(),
+        return build(
+                HttpStatus.CONFLICT,
                 exception.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+            DataIntegrityViolationException exception,
+            HttpServletRequest request
+    ) {
+
+        /*
+         * Database-level invariants (unique/partial indexes) are the last line
+         * of defence behind the service checks. The driver message is logged
+         * but never returned, to avoid leaking schema details.
+         */
+        log.warn(
+                "Database constraint violated on {} {}",
+                request.getMethod(),
                 request.getRequestURI(),
-                Instant.now()
+                exception
         );
 
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(response);
+        return build(
+                HttpStatus.CONFLICT,
+                "The request conflicts with the current state of the resource",
+                request
+        );
     }
+
+    /*
+     * =========================================================
+     * 400 BAD REQUEST
+     * =========================================================
+     */
 
     @ExceptionHandler(InvalidOperationException.class)
     public ResponseEntity<ErrorResponse> handleInvalidOperation(
@@ -39,17 +81,11 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
 
-        ErrorResponse response = new ErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+        return build(
+                HttpStatus.BAD_REQUEST,
                 exception.getMessage(),
-                request.getRequestURI(),
-                Instant.now()
+                request
         );
-
-        return ResponseEntity
-                .badRequest()
-                .body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -65,52 +101,218 @@ public class GlobalExceptionHandler {
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.joining(", "));
 
-        ErrorResponse response = new ErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                message,
-                request.getRequestURI(),
-                Instant.now()
+        return build(
+                HttpStatus.BAD_REQUEST,
+                message.isBlank()
+                        ? "Request validation failed"
+                        : message,
+                request
         );
-
-        return ResponseEntity
-                .badRequest()
-                .body(response);
     }
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleResourceNotFound(
-            ResourceNotFoundException exception,
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(
+            ConstraintViolationException exception,
             HttpServletRequest request
     ) {
 
-        ErrorResponse response = new ErrorResponse(
-                HttpStatus.NOT_FOUND.value(),
-                HttpStatus.NOT_FOUND.getReasonPhrase(),
-                exception.getMessage(),
+        String message = exception
+                .getConstraintViolations()
+                .stream()
+                .map(violation ->
+                        violation.getPropertyPath()
+                                + ": "
+                                + violation.getMessage()
+                )
+                .collect(Collectors.joining(", "));
+
+        return build(
+                HttpStatus.BAD_REQUEST,
+                message.isBlank()
+                        ? "Request validation failed"
+                        : message,
+                request
+        );
+    }
+
+    @ExceptionHandler({
+            HttpMessageNotReadableException.class,
+            MethodArgumentTypeMismatchException.class,
+            MissingServletRequestParameterException.class
+    })
+    public ResponseEntity<ErrorResponse> handleMalformedRequest(
+            Exception exception,
+            HttpServletRequest request
+    ) {
+
+        log.debug(
+                "Malformed request on {} {}",
+                request.getMethod(),
                 request.getRequestURI(),
-                Instant.now()
+                exception
         );
 
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(response);
+        return build(
+                HttpStatus.BAD_REQUEST,
+                "Request body or parameters are malformed",
+                request
+        );
     }
+
+    /*
+     * =========================================================
+     * 401 UNAUTHORIZED
+     * =========================================================
+     */
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(
             BadCredentialsException exception,
             HttpServletRequest request
     ) {
 
-        ErrorResponse response = new ErrorResponse(
-                HttpStatus.UNAUTHORIZED.value(),
-                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
+        return build(
+                HttpStatus.UNAUTHORIZED,
                 "Invalid phone or password",
+                request
+        );
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(
+            AuthenticationException exception,
+            HttpServletRequest request
+    ) {
+
+        /*
+         * Covers disabled/locked accounts as well. The reason is deliberately
+         * not echoed back, so the API does not confirm which accounts exist or
+         * what state they are in.
+         */
+        return build(
+                HttpStatus.UNAUTHORIZED,
+                "Authentication failed",
+                request
+        );
+    }
+
+    /*
+     * =========================================================
+     * 403 FORBIDDEN
+     * =========================================================
+     */
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(
+            AccessDeniedException exception,
+            HttpServletRequest request
+    ) {
+
+        return build(
+                HttpStatus.FORBIDDEN,
+                "You do not have permission to access this resource",
+                request
+        );
+    }
+
+    /*
+     * =========================================================
+     * 404 NOT FOUND
+     * =========================================================
+     */
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleResourceNotFound(
+            ResourceNotFoundException exception,
+            HttpServletRequest request
+    ) {
+
+        return build(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(
+            NoResourceFoundException exception,
+            HttpServletRequest request
+    ) {
+
+        return build(
+                HttpStatus.NOT_FOUND,
+                "Resource not found",
+                request
+        );
+    }
+
+    /*
+     * =========================================================
+     * 500 INTERNAL SERVER ERROR
+     * =========================================================
+     */
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLocking(
+            OptimisticLockingFailureException exception,
+            HttpServletRequest request
+    ) {
+
+        log.warn(
+                "Concurrent modification on {} {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                exception
+        );
+
+        return build(
+                HttpStatus.CONFLICT,
+                "The resource was modified concurrently, please retry",
+                request
+        );
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleUnexpectedException(
+            Exception exception,
+            HttpServletRequest request
+    ) {
+
+        /*
+         * Full detail server-side only. The client gets a generic message so
+         * stack traces, SQL and internals never reach the API surface.
+         */
+        log.error(
+                "Unexpected error on {} {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                exception
+        );
+
+        return build(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "An unexpected error occurred",
+                request
+        );
+    }
+
+    private ResponseEntity<ErrorResponse> build(
+            HttpStatus status,
+            String message,
+            HttpServletRequest request
+    ) {
+
+        ErrorResponse response = new ErrorResponse(
+                status.value(),
+                status.getReasonPhrase(),
+                message,
                 request.getRequestURI(),
                 Instant.now()
         );
 
         return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
+                .status(status)
                 .body(response);
     }
 }

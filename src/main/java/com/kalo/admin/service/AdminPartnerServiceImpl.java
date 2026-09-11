@@ -19,11 +19,15 @@ import com.kalo.user.entity.User;
 import com.kalo.user.enums.UserStatus;
 import com.kalo.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AdminPartnerServiceImpl
@@ -35,24 +39,19 @@ public class AdminPartnerServiceImpl
 
     @Override
     @Transactional(readOnly = true)
-    public List<AdminPartnerResponse> getPartners(
-            VerificationStatus status
+    public Page<AdminPartnerResponse> getPartners(
+            VerificationStatus status,
+            CompanyStatus companyStatus,
+            Pageable pageable
     ) {
 
-        List<TaxiCompany> companies;
-
-        if (status == null) {
-            companies = taxiCompanyRepository.findAll();
-        } else {
-            companies =
-                    taxiCompanyRepository
-                            .findByVerificationStatus(status);
-        }
-
-        return companies
-                .stream()
-                .map(this::mapToPartnerResponse)
-                .toList();
+        return taxiCompanyRepository
+                .findAllByOptionalStatuses(
+                        status,
+                        companyStatus,
+                        pageable
+                )
+                .map(this::mapToPartnerResponse);
     }
 
     @Override
@@ -227,6 +226,89 @@ public class AdminPartnerServiceImpl
                 company.getVerificationStatus(),
                 company.getStatus(),
                 "Partner rejected successfully"
+        );
+    }
+
+    /**
+     * A suspended company disappears from taxi search and can no longer accept
+     * rides, because both paths require CompanyStatus.ACTIVE. Its drivers,
+     * vehicles and historical rides are left untouched.
+     */
+    @Override
+    @Transactional
+    public PartnerDecisionResponse suspendPartner(
+            Long companyId
+    ) {
+
+        TaxiCompany company =
+                getCompany(companyId);
+
+        if (company.getStatus() == CompanyStatus.SUSPENDED) {
+
+            throw new InvalidOperationException(
+                    "Taxi company is already suspended"
+            );
+        }
+
+        company.setStatus(
+                CompanyStatus.SUSPENDED
+        );
+
+        taxiCompanyRepository.save(company);
+
+        log.info(
+                "Taxi company suspended by admin: companyId={}",
+                company.getId()
+        );
+
+        return new PartnerDecisionResponse(
+                company.getId(),
+                company.getVerificationStatus(),
+                company.getStatus(),
+                "Taxi company suspended successfully"
+        );
+    }
+
+    @Override
+    @Transactional
+    public PartnerDecisionResponse reactivatePartner(
+            Long companyId
+    ) {
+
+        TaxiCompany company =
+                getCompany(companyId);
+
+        if (company.getVerificationStatus()
+                != VerificationStatus.APPROVED) {
+
+            throw new InvalidOperationException(
+                    "Only an approved taxi company can be activated"
+            );
+        }
+
+        if (company.getStatus() == CompanyStatus.ACTIVE) {
+
+            throw new InvalidOperationException(
+                    "Taxi company is already active"
+            );
+        }
+
+        company.setStatus(
+                CompanyStatus.ACTIVE
+        );
+
+        taxiCompanyRepository.save(company);
+
+        log.info(
+                "Taxi company reactivated by admin: companyId={}",
+                company.getId()
+        );
+
+        return new PartnerDecisionResponse(
+                company.getId(),
+                company.getVerificationStatus(),
+                company.getStatus(),
+                "Taxi company reactivated successfully"
         );
     }
 

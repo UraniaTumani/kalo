@@ -34,6 +34,9 @@ import com.kalo.user.repository.UserRepository;
 import com.kalo.vehicle.entity.Vehicle;
 import com.kalo.vehicle.enums.VehicleStatus;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +44,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RideServiceImpl implements RideService {
@@ -70,20 +74,10 @@ public class RideServiceImpl implements RideService {
         User customer =
                 getCurrentCustomer();
 
-        List<RideStatus> activeStatuses =
-                List.of(
-                        RideStatus.REQUESTED,
-                        RideStatus.ACCEPTED,
-                        RideStatus.DRIVER_ASSIGNED,
-                        RideStatus.DRIVER_ARRIVING,
-                        RideStatus.DRIVER_ARRIVED,
-                        RideStatus.IN_PROGRESS
-                );
-
         if (rideRepository
                 .existsByCustomerIdAndStatusIn(
                         customer.getId(),
-                        activeStatuses
+                        RideStatus.ACTIVE_STATUSES
                 )) {
 
             throw new ConflictException(
@@ -222,6 +216,14 @@ public class RideServiceImpl implements RideService {
                 rideRequest
         );
 
+        log.info(
+                "Ride offer selected: rideId={} rideRequestId={} customerId={} companyId={}",
+                savedRide.getId(),
+                rideRequest.getId(),
+                customer.getId(),
+                company.getId()
+        );
+
         return mapToResponse(
                 savedRide
         );
@@ -345,6 +347,14 @@ public class RideServiceImpl implements RideService {
                         ride
                 );
 
+        log.info(
+                "Ride accepted: rideId={} companyId={} driverId={} vehicleId={}",
+                savedRide.getId(),
+                company.getId(),
+                driver.getId(),
+                vehicle.getId()
+        );
+
         return mapToResponse(
                 savedRide
         );
@@ -415,6 +425,13 @@ public class RideServiceImpl implements RideService {
                 rideRepository.save(
                         ride
                 );
+
+        log.info(
+                "Ride declined: rideId={} companyId={} rideRequestStatus={}",
+                savedRide.getId(),
+                company.getId(),
+                rideRequest.getStatus()
+        );
 
         return mapToResponse(
                 savedRide
@@ -657,6 +674,14 @@ public class RideServiceImpl implements RideService {
                         ride
                 );
 
+        log.info(
+                "Ride completed: rideId={} companyId={} driverId={} finalAmount={}",
+                savedRide.getId(),
+                company.getId(),
+                driver.getId(),
+                savedRide.getFinalAmount()
+        );
+
         return mapToResponse(
                 savedRide
         );
@@ -675,21 +700,11 @@ public class RideServiceImpl implements RideService {
         User customer =
                 getCurrentCustomer();
 
-        List<RideStatus> activeStatuses =
-                List.of(
-                        RideStatus.REQUESTED,
-                        RideStatus.ACCEPTED,
-                        RideStatus.DRIVER_ASSIGNED,
-                        RideStatus.DRIVER_ARRIVING,
-                        RideStatus.DRIVER_ARRIVED,
-                        RideStatus.IN_PROGRESS
-                );
-
         Ride ride =
                 rideRepository
                         .findFirstByCustomerIdAndStatusInOrderByRequestedAtDesc(
                                 customer.getId(),
-                                activeStatuses
+                                RideStatus.ACTIVE_STATUSES
                         )
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
@@ -710,18 +725,19 @@ public class RideServiceImpl implements RideService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<RideResponse> getRideHistory() {
+    public Page<RideResponse> getRideHistory(
+            Pageable pageable
+    ) {
 
         User customer =
                 getCurrentCustomer();
 
         return rideRepository
-                .findAllByCustomerIdOrderByRequestedAtDesc(
-                        customer.getId()
+                .findAllByCustomerId(
+                        customer.getId(),
+                        pageable
                 )
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
+                .map(this::mapToResponse);
     }
 
     /*
@@ -771,9 +787,13 @@ public class RideServiceImpl implements RideService {
         User customer =
                 getCurrentCustomer();
 
+        /*
+         * Locked: the partner may be accepting or completing this same ride
+         * concurrently, and both sides move the driver's availability.
+         */
         Ride ride =
                 rideRepository
-                        .findByIdAndCustomerId(
+                        .findForUpdateByIdAndCustomerId(
                                 rideId,
                                 customer.getId()
                         )
@@ -879,6 +899,13 @@ public class RideServiceImpl implements RideService {
                         ride
                 );
 
+        log.info(
+                "Ride cancelled by customer: rideId={} customerId={} previousStatus={}",
+                savedRide.getId(),
+                customer.getId(),
+                currentStatus
+        );
+
         return mapToResponse(
                 savedRide
         );
@@ -892,37 +919,27 @@ public class RideServiceImpl implements RideService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PartnerRideResponse> getPartnerRides(
-            RideStatus status
+    public Page<PartnerRideResponse> getPartnerRides(
+            RideStatus status,
+            Pageable pageable
     ) {
 
         TaxiCompany company =
                 getCurrentPartnerCompany();
 
-        List<Ride> rides;
+        Page<Ride> rides =
+                status == null
+                        ? rideRepository.findAllByCompanyId(
+                                company.getId(),
+                                pageable
+                        )
+                        : rideRepository.findAllByCompanyIdAndStatus(
+                                company.getId(),
+                                status,
+                                pageable
+                        );
 
-        if (status == null) {
-
-            rides =
-                    rideRepository
-                            .findAllByCompanyId(
-                                    company.getId()
-                            );
-
-        } else {
-
-            rides =
-                    rideRepository
-                            .findAllByCompanyIdAndStatus(
-                                    company.getId(),
-                                    status
-                            );
-        }
-
-        return rides
-                .stream()
-                .map(this::mapToPartnerResponse)
-                .toList();
+        return rides.map(this::mapToPartnerResponse);
     }
 
     /*

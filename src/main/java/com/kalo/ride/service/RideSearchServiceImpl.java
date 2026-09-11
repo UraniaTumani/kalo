@@ -1,7 +1,5 @@
 package com.kalo.ride.service;
 
-import com.kalo.assignment.entity.DriverVehicleAssignment;
-import com.kalo.assignment.repository.DriverVehicleAssignmentRepository;
 import com.kalo.common.exception.ConflictException;
 import com.kalo.common.exception.InvalidOperationException;
 import com.kalo.common.exception.ResourceNotFoundException;
@@ -9,11 +7,12 @@ import com.kalo.common.util.DistanceCalculator;
 import com.kalo.driver.entity.Driver;
 import com.kalo.driver.enums.DriverAvailabilityStatus;
 import com.kalo.driver.enums.DriverStatus;
-import com.kalo.location.entity.DriverLocation;
-import com.kalo.location.repository.DriverLocationRepository;
+import com.kalo.partner.entity.CompanyOperatingHours;
 import com.kalo.partner.entity.TaxiCompany;
 import com.kalo.partner.enums.CompanyStatus;
 import com.kalo.partner.enums.VerificationStatus;
+import com.kalo.partner.repository.CompanyOperatingHoursRepository;
+import com.kalo.partner.repository.TaxiCompanyRepository;
 import com.kalo.partner.service.CompanyAvailabilityChecker;
 import com.kalo.ride.dto.CreateRideRequest;
 import com.kalo.ride.dto.RideSearchResponse;
@@ -22,15 +21,19 @@ import com.kalo.ride.entity.RideOffer;
 import com.kalo.ride.entity.RideRequest;
 import com.kalo.ride.enums.RideRequestStatus;
 import com.kalo.ride.enums.RideStatus;
+import com.kalo.ride.repository.AvailableTaxiRow;
 import com.kalo.ride.repository.RideOfferRepository;
 import com.kalo.ride.repository.RideRepository;
 import com.kalo.ride.repository.RideRequestRepository;
+import com.kalo.ride.repository.TaxiSearchRepository;
 import com.kalo.user.entity.User;
 import com.kalo.user.enums.UserRole;
 import com.kalo.user.enums.UserStatus;
 import com.kalo.user.repository.UserRepository;
 import com.kalo.vehicle.entity.Vehicle;
+import com.kalo.vehicle.enums.VehicleStatus;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +46,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RideSearchServiceImpl
@@ -59,8 +64,9 @@ public class RideSearchServiceImpl
             10.0;
 
     private final RideRequestRepository rideRequestRepository;
-    private final DriverLocationRepository driverLocationRepository;
-    private final DriverVehicleAssignmentRepository assignmentRepository;
+    private final TaxiSearchRepository taxiSearchRepository;
+    private final TaxiCompanyRepository taxiCompanyRepository;
+    private final CompanyOperatingHoursRepository operatingHoursRepository;
     private final UserRepository userRepository;
     private final RideOfferRepository rideOfferRepository;
     private final RideRepository rideRepository;
@@ -79,20 +85,10 @@ public class RideSearchServiceImpl
          * Customer cannot create another search
          * while an active ride already exists.
          */
-        List<RideStatus> activeStatuses =
-                List.of(
-                        RideStatus.REQUESTED,
-                        RideStatus.ACCEPTED,
-                        RideStatus.DRIVER_ASSIGNED,
-                        RideStatus.DRIVER_ARRIVING,
-                        RideStatus.DRIVER_ARRIVED,
-                        RideStatus.IN_PROGRESS
-                );
-
         if (rideRepository
                 .existsByCustomerIdAndStatusIn(
                         customer.getId(),
-                        activeStatuses
+                        RideStatus.ACTIVE_STATUSES
                 )) {
 
             throw new ConflictException(
@@ -167,8 +163,13 @@ public class RideSearchServiceImpl
         /*
          * =====================================================
          * STEP 2
-         * LOAD AVAILABLE DRIVER LOCATIONS
+         * LOAD AVAILABLE DRIVERS WITH VEHICLE AND POSITION
          * =====================================================
+         *
+         * One query returns driver + active vehicle assignment + vehicle +
+         * company + last position. Everything that can be expressed in SQL
+         * (driver ACTIVE/ONLINE, vehicle ACTIVE, company APPROVED/ACTIVE,
+         * booking enabled, fresh GPS) is filtered by the database.
          */
 
         Instant minimumLocationTime =
@@ -176,11 +177,12 @@ public class RideSearchServiceImpl
                         MAX_LOCATION_AGE
                 );
 
-        List<DriverLocation> locations =
-                driverLocationRepository
-                        .findAvailableDriverLocations(
-                                DriverAvailabilityStatus.ONLINE,
+        List<AvailableTaxiRow> rows =
+                taxiSearchRepository
+                        .findAvailableTaxis(
                                 DriverStatus.ACTIVE,
+                                DriverAvailabilityStatus.ONLINE,
+                                VehicleStatus.ACTIVE,
                                 VerificationStatus.APPROVED,
                                 CompanyStatus.ACTIVE,
                                 minimumLocationTime
@@ -189,95 +191,35 @@ public class RideSearchServiceImpl
         /*
          * =====================================================
          * STEP 3
-         * BUILD AVAILABLE TAXI CANDIDATES
+         * DISTANCE PRE-FILTER (HAVERSINE)
          * =====================================================
+         *
+         * Straight-line distance, not a routed ETA.
          */
 
-        List<TaxiOptionCandidate> candidates =
+        List<TaxiOptionCandidate> withinRadius =
                 new ArrayList<>();
 
-        for (DriverLocation location : locations) {
+        for (AvailableTaxiRow row : rows) {
 
-            Driver driver =
-                    location.getDriver();
-
-            /*
-             * Calculate straight-line distance
-             * between pickup and driver location.
-             */
             double distanceKm =
                     DistanceCalculator
                             .calculateDistanceKm(
                                     request.pickupLatitude(),
                                     request.pickupLongitude(),
-                                    location.getLatitude(),
-                                    location.getLongitude()
+                                    row.latitude(),
+                                    row.longitude()
                             );
 
-            /*
-             * Ignore drivers outside search radius.
-             */
             if (distanceKm > MAX_SEARCH_RADIUS_KM) {
                 continue;
             }
 
-            /*
-             * Driver must have an active vehicle assignment.
-             */
-            DriverVehicleAssignment assignment =
-                    assignmentRepository
-                            .findActiveAssignmentWithVehicle(
-                                    driver.getId()
-                            )
-                            .orElse(null);
-
-            if (assignment == null) {
-                continue;
-            }
-
-            Vehicle vehicle =
-                    assignment.getVehicle();
-
-            TaxiCompany company =
-                    driver.getCompany();
-
-            /*
-             * Company must currently accept bookings.
-             */
-            if (!company.isBookingEnabled()) {
-                continue;
-            }
-
-            /*
-             * Company must expose at least one
-             * supported payment method.
-             */
-            if (company.getPaymentMethods() == null
-                    || company.getPaymentMethods().isEmpty()) {
-
-                continue;
-            }
-
-            /*
-             * Company must currently be operational
-             * according to its configured operating hours
-             * and service-area rules.
-             */
-            if (!companyAvailabilityChecker.isAvailable(
-                    company,
-                    request.pickupLatitude(),
-                    request.pickupLongitude(),
-                    now
-            )) {
-
-                continue;
-            }
-
-            candidates.add(
+            withinRadius.add(
                     new TaxiOptionCandidate(
-                            company,
-                            driver,
-                            vehicle,
+                            row.company(),
+                            row.driver(),
+                            row.vehicle(),
                             distanceKm
                     )
             );
@@ -286,6 +228,60 @@ public class RideSearchServiceImpl
         /*
          * =====================================================
          * STEP 4
+         * COMPANY-LEVEL RULES
+         * =====================================================
+         *
+         * Payment methods and operating hours are loaded for all surviving
+         * companies at once, then evaluated in memory.
+         */
+
+        Set<Long> companyIds =
+                withinRadius
+                        .stream()
+                        .map(candidate ->
+                                candidate.company().getId()
+                        )
+                        .collect(Collectors.toSet());
+
+        Map<Long, List<CompanyOperatingHours>> operatingHoursByCompany =
+                loadOperatingHours(companyIds);
+
+        /*
+         * Initialises the lazy payment-method collections on the same managed
+         * company instances the candidates already hold.
+         */
+        taxiCompanyRepository.findAllWithPaymentMethods(companyIds);
+
+        List<TaxiOptionCandidate> candidates =
+                new ArrayList<>();
+
+        for (TaxiOptionCandidate candidate : withinRadius) {
+
+            TaxiCompany company =
+                    candidate.company();
+
+            boolean available =
+                    companyAvailabilityChecker.isAvailable(
+                            company,
+                            operatingHoursByCompany.getOrDefault(
+                                    company.getId(),
+                                    List.of()
+                            ),
+                            request.pickupLatitude(),
+                            request.pickupLongitude(),
+                            now
+                    );
+
+            if (!available) {
+                continue;
+            }
+
+            candidates.add(candidate);
+        }
+
+        /*
+         * =====================================================
+         * STEP 5
          * SORT BY NEAREST DRIVER
          * =====================================================
          */
@@ -298,7 +294,7 @@ public class RideSearchServiceImpl
 
         /*
          * =====================================================
-         * STEP 5
+         * STEP 6
          * KEEP ONLY ONE RESULT PER COMPANY
          * =====================================================
          *
@@ -326,7 +322,7 @@ public class RideSearchServiceImpl
 
         /*
          * =====================================================
-         * STEP 6
+         * STEP 7
          * CREATE RIDE OFFERS
          * =====================================================
          */
@@ -424,10 +420,18 @@ public class RideSearchServiceImpl
 
         /*
          * =====================================================
-         * STEP 7
+         * STEP 8
          * RETURN SEARCH RESULT
          * =====================================================
          */
+
+        log.info(
+                "Taxi search completed: rideRequestId={} customerId={} candidates={} offers={}",
+                savedRideRequest.getId(),
+                customer.getId(),
+                candidates.size(),
+                taxiOptions.size()
+        );
 
         return new RideSearchResponse(
                 savedRideRequest.getId(),
@@ -435,6 +439,30 @@ public class RideSearchServiceImpl
                 savedRideRequest.getExpiresAt(),
                 taxiOptions
         );
+    }
+
+    /*
+     * =========================================================
+     * OPERATING HOURS FOR ALL CANDIDATE COMPANIES
+     * =========================================================
+     */
+
+    private Map<Long, List<CompanyOperatingHours>> loadOperatingHours(
+            Set<Long> companyIds
+    ) {
+
+        if (companyIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return operatingHoursRepository
+                .findAllByCompanyIdIn(companyIds)
+                .stream()
+                .collect(
+                        Collectors.groupingBy(hours ->
+                                hours.getCompany().getId()
+                        )
+                );
     }
 
     /*

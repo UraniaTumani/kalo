@@ -40,3 +40,5 @@ databaseChangeLog:
       file: db/changelog/changes/015-add-company-operational-settings.yaml
   - include:
       file: db/changelog/changes/016-add-service-area-and-operating-hours.yaml
+  - include:
+      file: db/changelog/changes/017-add-concurrency-invariants.yaml

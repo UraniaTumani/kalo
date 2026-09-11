@@ -1,28 +1,38 @@
 package com.kalo.partner.service;
 
+import com.kalo.common.util.DistanceCalculator;
 import com.kalo.partner.entity.CompanyOperatingHours;
 import com.kalo.partner.entity.TaxiCompany;
 import com.kalo.partner.repository.CompanyOperatingHoursRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.DateTimeException;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.Optional;
+import java.util.Collection;
+import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CompanyAvailabilityChecker {
 
-    private static final ZoneId DEFAULT_ZONE =
+    private static final ZoneId FALLBACK_ZONE =
             ZoneId.of("Europe/Tirane");
 
     private final CompanyOperatingHoursRepository
             companyOperatingHoursRepository;
 
+    /**
+     * Single-company check. Loads the company's operating hours itself, so it
+     * costs one query; callers evaluating many companies should preload the
+     * rows and use {@link #isAvailable(TaxiCompany, Collection, Double, Double, Instant)}.
+     */
     public boolean isAvailable(
             TaxiCompany company,
             Double pickupLatitude,
@@ -34,55 +44,124 @@ public class CompanyAvailabilityChecker {
             return false;
         }
 
-        /*
-         * Company must accept bookings.
-         */
+        List<CompanyOperatingHours> operatingHours =
+                companyOperatingHoursRepository
+                        .findAllByCompanyIdOrderByDayOfWeek(
+                                company.getId()
+                        );
+
+        return isAvailable(
+                company,
+                operatingHours,
+                pickupLatitude,
+                pickupLongitude,
+                now
+        );
+    }
+
+    /**
+     * Same rules, evaluated against already-loaded operating hours.
+     *
+     * @param operatingHours every configured row for this company; rows for
+     *                       other companies are ignored
+     */
+    public boolean isAvailable(
+            TaxiCompany company,
+            Collection<CompanyOperatingHours> operatingHours,
+            Double pickupLatitude,
+            Double pickupLongitude,
+            Instant now
+    ) {
+
+        if (company == null) {
+            return false;
+        }
+
         if (!company.isBookingEnabled()) {
             return false;
         }
 
-        /*
-         * Company must expose at least one
-         * payment method.
-         */
         if (company.getPaymentMethods() == null
                 || company.getPaymentMethods().isEmpty()) {
 
             return false;
         }
 
-        /*
-         * Company must be open according
-         * to today's operating hours.
-         */
-        if (!isInsideOperatingHours(
+        if (!isInsideServiceArea(
                 company,
-                now
+                pickupLatitude,
+                pickupLongitude
         )) {
 
             return false;
         }
 
-        /*
-         * Service-area validation will be added
-         * when TaxiCompany has service-area fields
-         * such as center latitude/longitude + radius.
-         *
-         * For now the coordinates are accepted
-         * but do not reject the company.
-         */
-        return true;
+        return isInsideOperatingHours(
+                company,
+                operatingHours,
+                now
+        );
+    }
+
+    /**
+     * A company that has not configured a service area serves everywhere the
+     * search radius reaches; the search radius itself is the outer bound.
+     */
+    private boolean isInsideServiceArea(
+            TaxiCompany company,
+            Double pickupLatitude,
+            Double pickupLongitude
+    ) {
+
+        Double centerLatitude =
+                company.getServiceCenterLatitude();
+
+        Double centerLongitude =
+                company.getServiceCenterLongitude();
+
+        Double radiusKm =
+                company.getServiceRadiusKm();
+
+        if (centerLatitude == null
+                || centerLongitude == null
+                || radiusKm == null) {
+
+            return true;
+        }
+
+        if (pickupLatitude == null
+                || pickupLongitude == null) {
+
+            return false;
+        }
+
+        double distanceKm =
+                DistanceCalculator.calculateDistanceKm(
+                        centerLatitude,
+                        centerLongitude,
+                        pickupLatitude,
+                        pickupLongitude
+                );
+
+        return distanceKm <= radiusKm;
     }
 
     private boolean isInsideOperatingHours(
             TaxiCompany company,
+            Collection<CompanyOperatingHours> operatingHours,
             Instant now
     ) {
+
+        if (operatingHours == null
+                || operatingHours.isEmpty()) {
+
+            return false;
+        }
 
         LocalDateTime currentDateTime =
                 LocalDateTime.ofInstant(
                         now,
-                        DEFAULT_ZONE
+                        resolveZone(company)
                 );
 
         DayOfWeek currentDay =
@@ -91,40 +170,32 @@ public class CompanyAvailabilityChecker {
         LocalTime currentTime =
                 currentDateTime.toLocalTime();
 
-        Optional<CompanyOperatingHours> operatingHoursOptional =
-                companyOperatingHoursRepository
-                        .findByCompanyIdAndDayOfWeek(
-                                company.getId(),
-                                currentDay
-                        );
+        CompanyOperatingHours today =
+                operatingHours
+                        .stream()
+                        .filter(hours ->
+                                hours.getDayOfWeek() == currentDay
+                        )
+                        .findFirst()
+                        .orElse(null);
 
         /*
-         * If there is no configuration for today,
-         * the company is considered unavailable.
+         * No configuration for today means the company is not open today.
          */
-        if (operatingHoursOptional.isEmpty()) {
+        if (today == null) {
             return false;
         }
 
-        CompanyOperatingHours operatingHours =
-                operatingHoursOptional.get();
-
-        /*
-         * Day explicitly marked as closed.
-         */
-        if (operatingHours.isClosed()) {
+        if (today.isClosed()) {
             return false;
         }
 
         LocalTime openTime =
-                operatingHours.getOpenTime();
+                today.getOpenTime();
 
         LocalTime closeTime =
-                operatingHours.getCloseTime();
+                today.getCloseTime();
 
-        /*
-         * Open day must have both times.
-         */
         if (openTime == null
                 || closeTime == null) {
 
@@ -132,10 +203,7 @@ public class CompanyAvailabilityChecker {
         }
 
         /*
-         * Normal operating hours.
-         *
-         * Example:
-         * 08:00 -> 22:00
+         * Normal hours, e.g. 08:00 -> 22:00
          */
         if (openTime.isBefore(closeTime)) {
 
@@ -144,10 +212,7 @@ public class CompanyAvailabilityChecker {
         }
 
         /*
-         * Overnight operating hours.
-         *
-         * Example:
-         * 20:00 -> 04:00
+         * Overnight hours, e.g. 20:00 -> 04:00
          */
         if (openTime.isAfter(closeTime)) {
 
@@ -156,11 +221,38 @@ public class CompanyAvailabilityChecker {
         }
 
         /*
-         * openTime == closeTime
-         *
-         * We treat this as open 24 hours
-         * for the configured day.
+         * openTime == closeTime is read as open all day.
          */
         return true;
+    }
+
+    private ZoneId resolveZone(
+            TaxiCompany company
+    ) {
+
+        String timezone =
+                company.getTimezone();
+
+        if (timezone == null
+                || timezone.isBlank()) {
+
+            return FALLBACK_ZONE;
+        }
+
+        try {
+
+            return ZoneId.of(timezone);
+
+        } catch (DateTimeException exception) {
+
+            log.warn(
+                    "Company {} has an unusable timezone '{}', falling back to {}",
+                    company.getId(),
+                    timezone,
+                    FALLBACK_ZONE
+            );
+
+            return FALLBACK_ZONE;
+        }
     }
 }

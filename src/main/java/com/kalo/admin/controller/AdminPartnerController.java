@@ -5,13 +5,16 @@ import com.kalo.admin.dto.AdminPartnerResponse;
 import com.kalo.admin.dto.PartnerDecisionResponse;
 import com.kalo.admin.dto.RejectPartnerRequest;
 import com.kalo.admin.service.AdminPartnerService;
+import com.kalo.partner.enums.CompanyStatus;
 import com.kalo.partner.enums.VerificationStatus;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin/partners")
@@ -21,15 +24,29 @@ public class AdminPartnerController {
     private final AdminPartnerService adminPartnerService;
 
     @GetMapping
-    public ResponseEntity<List<AdminPartnerResponse>>
+    public ResponseEntity<Page<AdminPartnerResponse>>
     getPartners(
             @RequestParam(required = false)
-            VerificationStatus status
+            VerificationStatus status,
+
+            @RequestParam(required = false)
+            CompanyStatus companyStatus,
+
+            @PageableDefault(
+                    size = 20,
+                    sort = "createdAt",
+                    direction = Sort.Direction.DESC
+            )
+            Pageable pageable
     ) {
 
         return ResponseEntity.ok(
                 adminPartnerService
-                        .getPartners(status)
+                        .getPartners(
+                                status,
+                                companyStatus,
+                                pageable
+                        )
         );
     }
 
@@ -73,6 +90,30 @@ public class AdminPartnerController {
                                 companyId,
                                 request
                         )
+        );
+    }
+
+    @PostMapping("/{companyId}/suspend")
+    public ResponseEntity<PartnerDecisionResponse>
+    suspendPartner(
+            @PathVariable Long companyId
+    ) {
+
+        return ResponseEntity.ok(
+                adminPartnerService
+                        .suspendPartner(companyId)
+        );
+    }
+
+    @PostMapping("/{companyId}/reactivate")
+    public ResponseEntity<PartnerDecisionResponse>
+    reactivatePartner(
+            @PathVariable Long companyId
+    ) {
+
+        return ResponseEntity.ok(
+                adminPartnerService
+                        .reactivatePartner(companyId)
         );
     }
 }
