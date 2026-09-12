@@ -243,6 +243,22 @@ public class AdminPartnerServiceImpl
         TaxiCompany company =
                 getCompany(companyId);
 
+        /*
+         * Suspension is the counterpart of reactivation and must be guarded
+         * the same way. Without this a DRAFT, PENDING or REJECTED company
+         * could be suspended, which produced states such as DRAFT +
+         * SUSPENDED: reactivation then refused it for not being approved, and
+         * approval refused it for not being pending, so the company was
+         * stuck with no way out.
+         */
+        if (company.getVerificationStatus()
+                != VerificationStatus.APPROVED) {
+
+            throw new InvalidOperationException(
+                    "Only an approved taxi company can be suspended"
+            );
+        }
+
         if (company.getStatus() == CompanyStatus.SUSPENDED) {
 
             throw new InvalidOperationException(

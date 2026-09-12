@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/lib/api/endpoints'
 import { readPage } from '@/lib/api/page'
-import type { CompanyStatus, VerificationStatus } from '@/lib/api/types'
+import type { AdminPartnerResponse, CompanyStatus, VerificationStatus } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Pagination } from '@/components/Pagination'
@@ -144,24 +144,11 @@ export function AdminCompaniesPage() {
                       <StatusBadge status={company.companyStatus} />
                     </Td>
                     <Td>
-                      {company.companyStatus === 'SUSPENDED' ? (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => reactivateMutation.mutate(company.companyId)}
-                        >
-                          Reactivate
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-red-600 hover:bg-red-50"
-                          onClick={() => suspendMutation.mutate(company.companyId)}
-                        >
-                          Suspend
-                        </Button>
-                      )}
+                      <CompanyActions
+                        company={company}
+                        onSuspend={() => suspendMutation.mutate(company.companyId)}
+                        onReactivate={() => reactivateMutation.mutate(company.companyId)}
+                      />
                     </Td>
                   </tr>
                 ))}
@@ -174,9 +161,58 @@ export function AdminCompaniesPage() {
 
       <div className="mt-4">
         <Alert tone="info">
-          Reactivating only works for companies that are already approved.
+          Suspension applies only to approved companies. A company still in
+          onboarding is approved or rejected from the Verification page.
         </Alert>
       </div>
     </>
+  )
+}
+
+/**
+ * Mirrors the backend state machine rather than reading companyStatus alone.
+ * Suspension means "an approved company has been switched off", so it is only
+ * offered for APPROVED companies — previously Suspend was shown for anything
+ * not already suspended, which let an admin push a DRAFT company into
+ * DRAFT + SUSPENDED, a state nothing could undo.
+ */
+function CompanyActions({
+  company,
+  onSuspend,
+  onReactivate,
+}: {
+  company: AdminPartnerResponse
+  onSuspend: () => void
+  onReactivate: () => void
+}) {
+  if (company.verificationStatus !== 'APPROVED') {
+    return (
+      <span className="text-xs text-ink-400">
+        {company.verificationStatus === 'PENDING'
+          ? 'Awaiting review'
+          : company.verificationStatus === 'REJECTED'
+            ? 'Rejected — partner can resubmit'
+            : 'In onboarding'}
+      </span>
+    )
+  }
+
+  if (company.companyStatus === 'SUSPENDED') {
+    return (
+      <Button size="sm" variant="secondary" onClick={onReactivate}>
+        Reactivate
+      </Button>
+    )
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="text-red-600 hover:bg-red-50"
+      onClick={onSuspend}
+    >
+      Suspend
+    </Button>
   )
 }

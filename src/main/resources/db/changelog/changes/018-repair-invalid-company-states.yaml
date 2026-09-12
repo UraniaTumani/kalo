@@ -1,0 +1,43 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 018-repair-suspended-without-approval
+      author: kalo
+      comment: >
+        Suspension was reachable without an approval check, so companies could
+        end up SUSPENDED while still DRAFT, PENDING or REJECTED. Those rows are
+        unreachable by any admin action: reactivation requires APPROVED and
+        review requires PENDING. Suspension only ever means "an approved
+        company has been switched off", so a company that was never approved is
+        returned to INACTIVE, which is the correct resting state for every
+        pre-approval verification status. No verification status is changed, so
+        a partner's progress through onboarding is preserved.
+      changes:
+        - sql:
+            sql: >
+              UPDATE taxi_companies
+              SET status = 'INACTIVE'
+              WHERE status = 'SUSPENDED'
+                AND verification_status <> 'APPROVED';
+
+  - changeSet:
+      id: 018-enforce-suspended-requires-approved
+      author: kalo
+      comment: >
+        Keeps the invariant at the database level so no future code path can
+        recreate the invalid combination, the same approach used for the
+        concurrency invariants in 017.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE taxi_companies
+              ADD CONSTRAINT ck_suspended_requires_approved
+              CHECK (
+                status <> 'SUSPENDED'
+                OR verification_status = 'APPROVED'
+              );
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE taxi_companies
+              DROP CONSTRAINT IF EXISTS ck_suspended_requires_approved;
