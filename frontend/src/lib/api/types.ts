@@ -68,7 +68,11 @@ export const isActiveRide = (status: RideStatus) => ACTIVE_RIDE_STATUSES.include
 
 export interface LoginResponse {
   accessToken: string
+  /** Rotated on every use: store the new one and discard the old. */
+  refreshToken: string
   tokenType: string
+  /** Access token lifetime in seconds. */
+  expiresIn: number
 }
 
 export interface UserResponse {

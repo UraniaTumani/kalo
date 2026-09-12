@@ -52,11 +52,19 @@ public class RateLimitFilter extends OncePerRequestFilter {
     /** Generous enough for a visitor tapping around the map, not for a script. */
     private static final Limit PUBLIC = new Limit(30, 60);
 
+    /**
+     * Looser than login because a legitimate client refreshes on a timer and
+     * may have several tabs open, but still bounded: the endpoint takes an
+     * unauthenticated credential and hits the database on every call.
+     */
+    private static final Limit REFRESH = new Limit(20, 60);
+
     private static final Map<String, Limit> LIMITED_PATHS = Map.of(
             "/api/v1/auth/login", LOGIN,
             "/api/v1/auth/register/customer", REGISTER,
             "/api/v1/auth/register/partner", REGISTER,
-            "/api/v1/public/taxi-availability", PUBLIC
+            "/api/v1/public/taxi-availability", PUBLIC,
+            "/api/v1/auth/refresh", REFRESH
     );
 
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();

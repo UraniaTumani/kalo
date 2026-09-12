@@ -22,13 +22,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const logout = useCallback(() => {
+    const refreshToken = tokenStorage.getRefresh()
+
+    /*
+     * Fire-and-forget: the session is over locally either way, and a failed
+     * revoke should not keep someone staring at a dashboard they asked to
+     * leave. The token expires on its own if this never lands.
+     */
+    if (refreshToken) {
+      void authApi.logout(refreshToken).catch(() => {})
+    }
+
     tokenStorage.clear()
     setUser(null)
     queryClient.clear()
   }, [queryClient])
 
-  // A token can be revoked server-side (suspension) or simply expire, so a
-  // 401 on any call ends the session rather than leaving a broken shell.
+  // Reached only once a refresh has already failed: the client retries an
+  // expired access token transparently, so a 401 arriving here means the
+  // session is genuinely over — revoked, suspended, or long past expiry.
   useEffect(() => {
     setUnauthorizedHandler(logout)
   }, [logout])
@@ -59,8 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = useCallback(async (phone: string, password: string) => {
-    const { accessToken } = await authApi.login({ phone, password })
-    tokenStorage.set(accessToken)
+    const { accessToken, refreshToken } = await authApi.login({ phone, password })
+    tokenStorage.set(accessToken, refreshToken)
 
     const me = await authApi.me()
     setUser(me)

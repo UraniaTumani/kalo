@@ -6,6 +6,7 @@ import com.kalo.common.exception.ResourceNotFoundException;
 import com.kalo.user.entity.User;
 import com.kalo.user.enums.UserRole;
 import com.kalo.user.enums.UserStatus;
+import com.kalo.auth.service.RefreshTokenService;
 import com.kalo.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,7 @@ public class AdminUserServiceImpl
         implements AdminUserService {
 
     private final UserRepository userRepository;
+    private final RefreshTokenService refreshTokenService;
 
     @Override
     @Transactional(readOnly = true)
@@ -54,7 +56,8 @@ public class AdminUserServiceImpl
     /**
      * Suspension is reversible and keeps every historical ride, rating and
      * company relationship intact. A suspended user can no longer authenticate
-     * and existing tokens stop working on the next request.
+     * and both halves of an existing session are dropped: access tokens fail on
+     * the next request, and every refresh token is revoked.
      */
     @Override
     @Transactional
@@ -82,10 +85,18 @@ public class AdminUserServiceImpl
 
         User saved = userRepository.save(user);
 
+        /*
+         * Access tokens die on the next request because the filter reloads the
+         * user, but a refresh token would otherwise keep minting new ones for
+         * thirty days. Suspension has to reach both halves of the session.
+         */
+        int revoked = refreshTokenService.revokeAllForUser(saved.getId());
+
         log.info(
-                "User suspended by admin: userId={} role={}",
+                "User suspended by admin: userId={} role={} sessionsRevoked={}",
                 saved.getId(),
-                saved.getRole()
+                saved.getRole(),
+                revoked
         );
 
         return mapToResponse(saved);
