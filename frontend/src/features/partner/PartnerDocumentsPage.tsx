@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -89,6 +90,31 @@ export function PartnerDocumentsPage() {
   const canSubmit = verificationStatus === 'DRAFT' || verificationStatus === 'REJECTED'
   const documents = documentsQuery.data ?? []
 
+  /*
+   * The company fields the backend checks in validateCompanyProfile live on
+   * the Settings page, so without this a partner only discovers a missing one
+   * as a rejection from Submit, with no hint of where to fix it.
+   */
+  const profile = profileQuery.data
+  const missingProfileFields = profile
+    ? [
+        !profile.legalName?.trim() && 'Legal name',
+        !profile.displayName?.trim() && 'Display name',
+        !profile.nipt?.trim() && 'NIPT',
+        !profile.phone?.trim() && 'Company phone',
+        !profile.address?.trim() && 'Company address',
+        !profile.licenseNumber?.trim() && 'Taxi licence number',
+        !profile.licenseExpiryDate && 'Taxi licence expiry date',
+      ].filter((field): field is string => Boolean(field))
+    : []
+
+  const requiredDocumentTypes: DocumentType[] = ['BUSINESS_REGISTRATION', 'TAXI_LICENSE']
+  const missingDocuments = requiredDocumentTypes.filter(
+    (type) => !documents.some((document) => document.documentType === type),
+  )
+
+  const readyToSubmit = missingProfileFields.length === 0 && missingDocuments.length === 0
+
   return (
     <>
       <PageHeader
@@ -97,7 +123,7 @@ export function PartnerDocumentsPage() {
         action={
           canSubmit ? (
             <Button
-              disabled={documents.length === 0}
+              disabled={!readyToSubmit}
               loading={submitMutation.isPending}
               onClick={() => submitMutation.mutate()}
             >
@@ -117,6 +143,28 @@ export function PartnerDocumentsPage() {
         <div className="mb-4">
           <Alert tone="success" title="Submitted">
             {submitMutation.data.message}
+          </Alert>
+        </div>
+      )}
+
+      {canSubmit && !readyToSubmit && !profileQuery.isLoading && (
+        <div className="mb-4">
+          <Alert tone="warning" title="Not ready to submit yet">
+            {missingProfileFields.length > 0 && (
+              <p>
+                Missing from your{' '}
+                <Link to="/partner/settings" className="font-medium underline">
+                  company profile
+                </Link>
+                : {missingProfileFields.join(', ')}.
+              </p>
+            )}
+            {missingDocuments.length > 0 && (
+              <p className={missingProfileFields.length > 0 ? 'mt-1' : undefined}>
+                Missing document{missingDocuments.length > 1 ? 's' : ''}:{' '}
+                {missingDocuments.map((type) => humanise(type)).join(', ')}.
+              </p>
+            )}
           </Alert>
         </div>
       )}
