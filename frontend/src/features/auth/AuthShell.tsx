@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 
 export function AuthShell({
   title,
@@ -15,6 +16,9 @@ export function AuthShell({
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-ink-50 px-4 py-10">
       <div className="w-full max-w-md">
+        <div className="mb-4 flex justify-end">
+          <LanguageSwitcher />
+        </div>
         <Link to="/" className="mb-6 flex items-center justify-center gap-2">
           <span className="grid size-9 place-items-center rounded-xl bg-brand-600 text-base font-bold text-white">
             K
