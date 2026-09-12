@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -103,11 +104,20 @@ public class PartnerOperationalSettingsServiceImpl
             TaxiCompany company
     ) {
 
+        /*
+         * paymentMethods is a LAZY @ElementCollection and open-in-view is off,
+         * so handing the raw collection to the DTO left it to be serialised
+         * after the transaction had closed — a LazyInitializationException that
+         * surfaced as a 500. Copying here forces it to load while the session
+         * is still open.
+         */
         return new OperationalSettingsResponse(
                 company.getId(),
                 company.getDisplayName(),
                 company.isBookingEnabled(),
-                company.getPaymentMethods()
+                company.getPaymentMethods() == null
+                        ? Set.of()
+                        : Set.copyOf(company.getPaymentMethods())
         );
     }
 }
