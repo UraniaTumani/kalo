@@ -1,0 +1,80 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 019-normalize-user-phones
+      author: kalo
+      comment: >
+        Phone numbers are login identifiers and are already unique per table,
+        but uniqueness only holds if every number is spelled the same way:
+        +355691234567, 355691234567 and 0691234567 are one person to a human
+        and three separate rows to PostgreSQL. Application code now normalises
+        on the way in; this brings existing rows to the same form.
+
+        Only separators and the country-code prefix change — no digits of the
+        subscriber number are altered, and rows that are already in +355 form
+        or belong to another country are left untouched.
+
+        Checked before writing this: no pair of rows in users or drivers
+        collides once normalised, so the existing unique constraints still
+        hold afterwards. If a future environment does contain such a pair this
+        changeset fails rather than silently merging two accounts, which is the
+        safe outcome — the duplicates must be resolved by hand first.
+      changes:
+        - sql:
+            sql: >
+              UPDATE users
+              SET phone = CASE
+                WHEN regexp_replace(phone, '[\s()\-.]', '', 'g') LIKE '00%'
+                  THEN '+' || substring(regexp_replace(phone, '[\s()\-.]', '', 'g') from 3)
+                WHEN regexp_replace(phone, '[\s()\-.]', '', 'g') LIKE '+%'
+                  THEN regexp_replace(phone, '[\s()\-.]', '', 'g')
+                WHEN regexp_replace(phone, '[\s()\-.]', '', 'g') LIKE '0%'
+                  THEN '+355' || substring(regexp_replace(phone, '[\s()\-.]', '', 'g') from 2)
+                WHEN regexp_replace(phone, '[\s()\-.]', '', 'g') LIKE '355%'
+                  THEN '+' || regexp_replace(phone, '[\s()\-.]', '', 'g')
+                ELSE regexp_replace(phone, '[\s()\-.]', '', 'g')
+              END
+              WHERE phone <> CASE
+                WHEN regexp_replace(phone, '[\s()\-.]', '', 'g') LIKE '00%'
+                  THEN '+' || substring(regexp_replace(phone, '[\s()\-.]', '', 'g') from 3)
+                WHEN regexp_replace(phone, '[\s()\-.]', '', 'g') LIKE '+%'
+                  THEN regexp_replace(phone, '[\s()\-.]', '', 'g')
+                WHEN regexp_replace(phone, '[\s()\-.]', '', 'g') LIKE '0%'
+                  THEN '+355' || substring(regexp_replace(phone, '[\s()\-.]', '', 'g') from 2)
+                WHEN regexp_replace(phone, '[\s()\-.]', '', 'g') LIKE '355%'
+                  THEN '+' || regexp_replace(phone, '[\s()\-.]', '', 'g')
+                ELSE regexp_replace(phone, '[\s()\-.]', '', 'g')
+              END;
+
+  - changeSet:
+      id: 019-normalize-driver-phones
+      author: kalo
+      comment: >
+        Same normalisation for driver records, which carry their own unique
+        phone constraint.
+      changes:
+        - sql:
+            sql: >
+              UPDATE drivers
+              SET phone = CASE
+                WHEN regexp_replace(phone, '[\s()\-.]', '', 'g') LIKE '00%'
+                  THEN '+' || substring(regexp_replace(phone, '[\s()\-.]', '', 'g') from 3)
+                WHEN regexp_replace(phone, '[\s()\-.]', '', 'g') LIKE '+%'
+                  THEN regexp_replace(phone, '[\s()\-.]', '', 'g')
+                WHEN regexp_replace(phone, '[\s()\-.]', '', 'g') LIKE '0%'
+                  THEN '+355' || substring(regexp_replace(phone, '[\s()\-.]', '', 'g') from 2)
+                WHEN regexp_replace(phone, '[\s()\-.]', '', 'g') LIKE '355%'
+                  THEN '+' || regexp_replace(phone, '[\s()\-.]', '', 'g')
+                ELSE regexp_replace(phone, '[\s()\-.]', '', 'g')
+              END
+              WHERE phone <> CASE
+                WHEN regexp_replace(phone, '[\s()\-.]', '', 'g') LIKE '00%'
+                  THEN '+' || substring(regexp_replace(phone, '[\s()\-.]', '', 'g') from 3)
+                WHEN regexp_replace(phone, '[\s()\-.]', '', 'g') LIKE '+%'
+                  THEN regexp_replace(phone, '[\s()\-.]', '', 'g')
+                WHEN regexp_replace(phone, '[\s()\-.]', '', 'g') LIKE '0%'
+                  THEN '+355' || substring(regexp_replace(phone, '[\s()\-.]', '', 'g') from 2)
+                WHEN regexp_replace(phone, '[\s()\-.]', '', 'g') LIKE '355%'
+                  THEN '+' || regexp_replace(phone, '[\s()\-.]', '', 'g')
+                ELSE regexp_replace(phone, '[\s()\-.]', '', 'g')
+              END;

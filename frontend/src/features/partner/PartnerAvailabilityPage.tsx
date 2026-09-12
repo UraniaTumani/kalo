@@ -1,23 +1,14 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { partnerApi } from '@/lib/api/endpoints'
-import type { DayOfWeek, OperatingHoursResponse } from '@/lib/api/types'
+import type { OperatingHoursResponse } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { MapView, TIRANA, type LatLng } from '@/components/MapPicker'
 import { Spinner } from '@/components/ui/Spinner'
 import { Alert, Button, Card, CardBody, CardHeader, Field, Input } from '@/components/ui'
-import { humanise } from '@/lib/utils'
-
-const DAYS: DayOfWeek[] = [
-  'MONDAY',
-  'TUESDAY',
-  'WEDNESDAY',
-  'THURSDAY',
-  'FRIDAY',
-  'SATURDAY',
-  'SUNDAY',
-]
+import { WeeklyScheduleEditor, DAYS } from './WeeklyScheduleEditor'
 
 const defaultHours = (): OperatingHoursResponse[] =>
   DAYS.map((dayOfWeek) => ({
@@ -28,6 +19,7 @@ const defaultHours = (): OperatingHoursResponse[] =>
   }))
 
 export function PartnerAvailabilityPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
 
   const serviceAreaQuery = useQuery({
@@ -44,7 +36,7 @@ export function PartnerAvailabilityPage() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['partner'] })
 
-  /* ------------------------------------------------------- service area */
+  /* --------------------------------------------------------- service area */
 
   const [center, setCenter] = useState<LatLng | null>(null)
   const [radiusKm, setRadiusKm] = useState('15')
@@ -72,14 +64,15 @@ export function PartnerAvailabilityPage() {
     onSuccess: invalidate,
   })
 
-  /* ----------------------------------------------------- operating hours */
+  /* ------------------------------------------------------- operating hours */
 
   const [hours, setHours] = useState<OperatingHoursResponse[]>(defaultHours)
 
   useEffect(() => {
     if (!hoursQuery.data || hoursQuery.data.length === 0) return
 
-    // Backfill any day the company has not configured yet.
+    // Backfill any day the company has not configured yet, so the editor always
+    // shows a full week rather than a partial one.
     setHours(
       DAYS.map(
         (day) =>
@@ -98,53 +91,49 @@ export function PartnerAvailabilityPage() {
     onSuccess: invalidate,
   })
 
-  function updateDay(day: DayOfWeek, patch: Partial<OperatingHoursResponse>) {
-    setHours((previous) =>
-      previous.map((entry) => (entry.dayOfWeek === day ? { ...entry, ...patch } : entry)),
-    )
-  }
+  const hoursIncomplete = hours.some(
+    (entry) => !entry.closed && (!entry.openTime || !entry.closeTime),
+  )
 
   if (serviceAreaQuery.isLoading || hoursQuery.isLoading) {
-    return <Spinner label="Loading availability" />
+    return <Spinner label={t('common.loading')} />
   }
 
-  const notApproved =
-    serviceAreaQuery.error !== null && serviceAreaQuery.data === undefined
+  const notApproved = serviceAreaQuery.error !== null && serviceAreaQuery.data === undefined
 
   return (
     <>
-      <PageHeader
-        title="Availability"
-        description="Where you operate and when you are open. Both are checked at search time."
-      />
+      <PageHeader title={t('availability.title')} description={t('availability.subtitle')} />
 
       {notApproved && (
         <div className="mb-4">
-          <Alert tone="warning">
-            These settings become available once your company is approved.
-          </Alert>
+          <Alert tone="warning">{t('availability.notApprovedYet')}</Alert>
         </div>
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader
-            title="Service area"
-            description="Click the map to set the centre. Pickups outside the radius are not offered."
+            title={t('availability.serviceArea')}
+            description={t('availability.setCentre')}
           />
           <CardBody className="space-y-3">
             {areaMutation.error && <ErrorMessage error={areaMutation.error} />}
-            {areaMutation.isSuccess && <Alert tone="success">Service area saved.</Alert>}
+            {areaMutation.isSuccess && (
+              <Alert tone="success">{t('availability.serviceAreaSaved')}</Alert>
+            )}
 
             <MapView
               center={center ?? TIRANA}
               onPick={setCenter}
               className="h-56 w-full rounded-lg"
-              markers={center ? [{ position: center, label: 'Service centre' }] : []}
+              markers={center ? [{ position: center, label: t('availability.serviceArea') }] : []}
             />
 
+            <p className="text-xs text-ink-500">{t('availability.serviceAreaHint')}</p>
+
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Radius (km)" required hint="Between 1 and 100">
+              <Field label={t('availability.radius')} required hint={t('availability.radiusHint')}>
                 <Input
                   type="number"
                   min="1"
@@ -154,7 +143,7 @@ export function PartnerAvailabilityPage() {
                   onChange={(event) => setRadiusKm(event.target.value)}
                 />
               </Field>
-              <Field label="Timezone" required>
+              <Field label={t('availability.timezone')} required>
                 <Input
                   value={timezone}
                   onChange={(event) => setTimezone(event.target.value)}
@@ -168,72 +157,34 @@ export function PartnerAvailabilityPage() {
               loading={areaMutation.isPending}
               onClick={() => areaMutation.mutate()}
             >
-              Save service area
+              {t('availability.saveServiceArea')}
             </Button>
           </CardBody>
         </Card>
 
         <Card>
           <CardHeader
-            title="Operating hours"
-            description="A day with no configuration counts as closed."
+            title={t('availability.operatingHours')}
+            description={t('availability.operatingHoursHint')}
           />
           <CardBody className="space-y-3">
             {hoursMutation.error && <ErrorMessage error={hoursMutation.error} />}
-            {hoursMutation.isSuccess && <Alert tone="success">Operating hours saved.</Alert>}
+            {hoursMutation.isSuccess && (
+              <Alert tone="success">{t('availability.hoursSaved')}</Alert>
+            )}
 
-            <div className="space-y-2">
-              {hours.map((entry) => (
-                <div
-                  key={entry.dayOfWeek}
-                  className="flex flex-wrap items-center gap-2 rounded-lg border border-ink-200 px-3 py-2"
-                >
-                  <span className="w-24 text-sm font-medium text-ink-800">
-                    {humanise(entry.dayOfWeek)}
-                  </span>
+            <WeeklyScheduleEditor
+              hours={hours}
+              onChange={setHours}
+              disabled={hoursMutation.isPending}
+            />
 
-                  <label className="flex items-center gap-1.5 text-xs text-ink-600">
-                    <input
-                      type="checkbox"
-                      className="size-3.5 accent-brand-600"
-                      checked={entry.closed}
-                      onChange={(event) =>
-                        updateDay(entry.dayOfWeek, { closed: event.target.checked })
-                      }
-                    />
-                    Closed
-                  </label>
-
-                  <Input
-                    type="time"
-                    className="w-28"
-                    disabled={entry.closed}
-                    value={entry.openTime ?? ''}
-                    onChange={(event) =>
-                      updateDay(entry.dayOfWeek, { openTime: event.target.value })
-                    }
-                  />
-                  <span className="text-xs text-ink-400">to</span>
-                  <Input
-                    type="time"
-                    className="w-28"
-                    disabled={entry.closed}
-                    value={entry.closeTime ?? ''}
-                    onChange={(event) =>
-                      updateDay(entry.dayOfWeek, { closeTime: event.target.value })
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-
-            <p className="text-xs text-ink-500">
-              Equal open and close times mean open all day. A close time earlier than the open
-              time means overnight, for example 20:00 to 04:00.
-            </p>
-
-            <Button loading={hoursMutation.isPending} onClick={() => hoursMutation.mutate()}>
-              Save operating hours
+            <Button
+              disabled={hoursIncomplete}
+              loading={hoursMutation.isPending}
+              onClick={() => hoursMutation.mutate()}
+            >
+              {t('availability.saveHours')}
             </Button>
           </CardBody>
         </Card>

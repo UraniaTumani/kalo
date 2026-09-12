@@ -2,6 +2,7 @@ package com.kalo.driver.service;
 
 import com.kalo.assignment.repository.DriverVehicleAssignmentRepository;
 import com.kalo.common.exception.ConflictException;
+import com.kalo.common.util.PhoneNumberNormalizer;
 import com.kalo.common.exception.InvalidOperationException;
 import com.kalo.common.exception.ResourceNotFoundException;
 import com.kalo.driver.dto.CreateDriverRequest;
@@ -51,7 +52,7 @@ public class DriverServiceImpl
         );
 
         String phone =
-                request.phone().trim();
+                PhoneNumberNormalizer.normalize(request.phone());
 
         String licenseNumber =
                 request.licenseNumber()
@@ -233,7 +234,7 @@ public class DriverServiceImpl
         );
 
         String phone =
-                request.phone().trim();
+                PhoneNumberNormalizer.normalize(request.phone());
 
         String licenseNumber =
                 request.licenseNumber()

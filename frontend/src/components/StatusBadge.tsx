@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Badge } from './ui'
 import { humanise } from '@/lib/utils'
 import type {
@@ -39,12 +40,33 @@ const genericTones: Record<string, Tone> = {
   REJECTED: 'danger',
 }
 
+/**
+ * Translates a backend enum for display only. The raw value is what travels
+ * back to the API — nothing here is ever sent.
+ */
+export function useStatusLabel() {
+  const { t } = useTranslation()
+
+  return (namespace: string, value: string | null | undefined) => {
+    if (!value) return '—'
+
+    const key = `${namespace}.${value}`
+    const translated = t(key)
+
+    // i18next echoes the key when there is no entry; fall back to a readable
+    // form rather than showing "rideStatus.FOO" to a user.
+    return translated === key ? humanise(value) : translated
+  }
+}
+
 export function RideStatusBadge({ status }: { status: RideStatus }) {
-  return <Badge tone={rideTones[status]}>{humanise(status)}</Badge>
+  const label = useStatusLabel()
+  return <Badge tone={rideTones[status]}>{label('rideStatus', status)}</Badge>
 }
 
 export function StatusBadge({
   status,
+  namespace,
 }: {
   status:
     | UserStatus
@@ -54,6 +76,14 @@ export function StatusBadge({
     | DriverAvailabilityStatus
     | VehicleStatus
     | DocumentVerificationStatus
+  /** Which translation group to read, e.g. "companyStatus". */
+  namespace?: string
 }) {
-  return <Badge tone={genericTones[status] ?? 'neutral'}>{humanise(status)}</Badge>
+  const label = useStatusLabel()
+
+  return (
+    <Badge tone={genericTones[status] ?? 'neutral'}>
+      {namespace ? label(namespace, status) : label('companyStatus', status)}
+    </Badge>
+  )
 }

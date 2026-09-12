@@ -1,6 +1,7 @@
 package com.kalo.partner.service;
 
 import com.kalo.common.exception.InvalidOperationException;
+import com.kalo.common.util.PhoneNumberNormalizer;
 import com.kalo.common.exception.ResourceNotFoundException;
 import com.kalo.document.entity.Document;
 import com.kalo.document.enums.DocumentOwnerType;
@@ -63,8 +64,13 @@ public class PartnerServiceImpl implements PartnerService {
                 request.displayName().trim()
         );
 
+        /*
+         * The company contact number is not a login identifier and is not
+         * unique, but it is normalised anyway so every phone in the system
+         * reads the same way.
+         */
         company.setPhone(
-                request.phone().trim()
+                PhoneNumberNormalizer.normalize(request.phone())
         );
 
         company.setEmail(

@@ -3,6 +3,7 @@ package com.kalo.auth.service;
 import com.kalo.auth.dto.CustomerRegisterRequest;
 import com.kalo.auth.dto.UserResponse;
 import com.kalo.common.exception.ConflictException;
+import com.kalo.common.util.PhoneNumberNormalizer;
 import com.kalo.user.entity.User;
 import com.kalo.user.enums.UserRole;
 import com.kalo.user.enums.UserStatus;
@@ -45,7 +46,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public UserResponse registerCustomer(CustomerRegisterRequest request) {
 
-        String phone = request.phone().trim();
+        String phone = PhoneNumberNormalizer.normalize(request.phone());
 
         String email = request.email() == null
                 ? null
@@ -106,7 +107,7 @@ public class AuthServiceImpl implements AuthService {
     ) {
 
         String phone =
-                request.phone().trim();
+                PhoneNumberNormalizer.normalize(request.phone());
 
         String email =
                 request.email() == null
@@ -241,7 +242,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginResponse login(LoginRequest request) {
 
-        String phone = request.phone().trim();
+        String phone = PhoneNumberNormalizer.normalize(request.phone());
 
         try {
 

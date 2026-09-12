@@ -7,6 +7,8 @@ import { AuthProvider } from '@/auth/AuthContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import App from './App'
 import './index.css'
+// Side-effect import: initialises i18next before any component renders.
+import '@/i18n'
 
 const queryClient = new QueryClient({
   defaultOptions: {

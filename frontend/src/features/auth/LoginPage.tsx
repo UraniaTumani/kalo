@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -9,13 +10,14 @@ import { ErrorMessage } from '@/components/ErrorMessage'
 import { AuthShell } from './AuthShell'
 
 const schema = z.object({
-  phone: z.string().min(1, 'Phone is required'),
-  password: z.string().min(1, 'Password is required'),
+  phone: z.string().min(1, 'required'),
+  password: z.string().min(1, 'required'),
 })
 
 type FormValues = z.infer<typeof schema>
 
 export function LoginPage() {
+  const { t } = useTranslation()
   const { login } = useAuth()
   const navigate = useNavigate()
   const [error, setError] = useState<unknown>(null)
@@ -39,20 +41,20 @@ export function LoginPage() {
 
   return (
     <AuthShell
-      title="Sign in"
-      subtitle="Passengers, taxi companies and administrators sign in here."
+      title={t('auth.signInTitle')}
+      subtitle={t('auth.signInSubtitle')}
       footer={
         <>
           <p>
-            No account?{' '}
+            {t('auth.noAccount')}{' '}
             <Link to="/register" className="font-medium text-brand-700 hover:underline">
-              Create one
+              {t('auth.createOne')}
             </Link>
           </p>
           <p className="mt-1">
-            Or{' '}
+            {t('common.or', 'Or')}{' '}
             <Link to="/" className="font-medium text-brand-700 hover:underline">
-              look around as a guest
+              {t('auth.browseAsGuest')}
             </Link>
           </p>
         </>
@@ -61,21 +63,21 @@ export function LoginPage() {
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         {error ? <ErrorMessage error={error} /> : null}
 
-        <Field label="Phone" error={errors.phone?.message} required>
+        <Field label={t('auth.phone')} error={errors.phone ? t('validation.required') : undefined} required>
           <Input
             {...register('phone')}
             type="tel"
             autoComplete="username"
-            placeholder="+355690000002"
+            placeholder={t('auth.phonePlaceholder')}
           />
         </Field>
 
-        <Field label="Password" error={errors.password?.message} required>
+        <Field label={t('auth.password')} error={errors.password ? t('validation.required') : undefined} required>
           <Input {...register('password')} type="password" autoComplete="current-password" />
         </Field>
 
         <Button type="submit" loading={isSubmitting} className="w-full">
-          Sign in
+          {t('common.signIn')}
         </Button>
       </form>
     </AuthShell>

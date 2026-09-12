@@ -15,40 +15,43 @@ import {
   User,
   Users,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/auth/AuthContext'
 import { cn } from '@/lib/utils'
 import { Button } from './ui'
 import { ErrorBoundary } from './ErrorBoundary'
+import { LanguageSwitcher } from './LanguageSwitcher'
 
 interface NavItem {
   to: string
-  label: string
+  /** Translation key, resolved at render so switching language is instant. */
+  labelKey: string
   icon: LucideIcon
   end?: boolean
 }
 
 const customerNav: NavItem[] = [
-  { to: '/ride', label: 'Book a taxi', icon: MapPin, end: true },
-  { to: '/ride/current', label: 'Current ride', icon: Car },
-  { to: '/ride/history', label: 'History', icon: History },
+  { to: '/ride', labelKey: 'nav.book', icon: MapPin, end: true },
+  { to: '/ride/current', labelKey: 'nav.currentRide', icon: Car },
+  { to: '/ride/history', labelKey: 'nav.history', icon: History },
 ]
 
 const partnerNav: NavItem[] = [
-  { to: '/partner', label: 'Dashboard', icon: Gauge, end: true },
-  { to: '/partner/rides', label: 'Rides', icon: ClipboardList },
-  { to: '/partner/drivers', label: 'Drivers', icon: Users },
-  { to: '/partner/vehicles', label: 'Vehicles', icon: Car },
-  { to: '/partner/assignments', label: 'Assignments', icon: MapPin },
-  { to: '/partner/documents', label: 'Documents', icon: FileText },
-  { to: '/partner/settings', label: 'Settings', icon: Settings },
-  { to: '/partner/availability', label: 'Availability', icon: Clock },
+  { to: '/partner', labelKey: 'nav.dashboard', icon: Gauge, end: true },
+  { to: '/partner/rides', labelKey: 'nav.rides', icon: ClipboardList },
+  { to: '/partner/drivers', labelKey: 'nav.drivers', icon: Users },
+  { to: '/partner/vehicles', labelKey: 'nav.vehicles', icon: Car },
+  { to: '/partner/assignments', labelKey: 'nav.assignments', icon: MapPin },
+  { to: '/partner/documents', labelKey: 'nav.documents', icon: FileText },
+  { to: '/partner/settings', labelKey: 'nav.settings', icon: Settings },
+  { to: '/partner/availability', labelKey: 'nav.availability', icon: Clock },
 ]
 
 const adminNav: NavItem[] = [
-  { to: '/admin', label: 'Verification', icon: ShieldCheck, end: true },
-  { to: '/admin/companies', label: 'Companies', icon: Building2 },
-  { to: '/admin/users', label: 'Users', icon: Users },
-  { to: '/admin/rides', label: 'Rides', icon: ClipboardList },
+  { to: '/admin', labelKey: 'nav.verification', icon: ShieldCheck, end: true },
+  { to: '/admin/companies', labelKey: 'nav.companies', icon: Building2 },
+  { to: '/admin/users', labelKey: 'nav.users', icon: Users },
+  { to: '/admin/rides', labelKey: 'nav.rides', icon: ClipboardList },
 ]
 
 const navByRole = {
@@ -57,23 +60,18 @@ const navByRole = {
   ADMIN: adminNav,
 }
 
-const roleLabel = {
-  CUSTOMER: 'Passenger',
-  PARTNER: 'Taxi company',
-  ADMIN: 'Administrator',
-}
-
 export function AppLayout() {
   const { user, role, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useTranslation()
 
   if (!user || !role) return null
 
   // Every role gets the profile entry, always last.
   const items: NavItem[] = [
     ...navByRole[role],
-    { to: '/profile', label: 'Profile', icon: User },
+    { to: '/profile', labelKey: 'nav.profile', icon: User },
   ]
 
   return (
@@ -85,12 +83,12 @@ export function AppLayout() {
           </span>
           <div>
             <p className="text-sm font-semibold text-ink-900">KALO</p>
-            <p className="text-[11px] text-ink-500">{roleLabel[role]}</p>
+            <p className="text-[11px] text-ink-500">{t(`roles.${role}`)}</p>
           </div>
         </div>
 
         <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:overflow-visible lg:pb-0">
-          {items.map(({ to, label, icon: Icon, end }) => (
+          {items.map(({ to, labelKey, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
@@ -105,7 +103,7 @@ export function AppLayout() {
               }
             >
               <Icon className="size-4" aria-hidden />
-              {label}
+              {t(labelKey)}
             </NavLink>
           ))}
         </nav>
@@ -115,18 +113,22 @@ export function AppLayout() {
             {user.firstName} {user.lastName}
           </p>
           <p className="truncate text-xs text-ink-500">{user.phone}</p>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-2 -ml-2"
-            onClick={() => {
-              logout()
-              navigate('/login', { replace: true })
-            }}
-          >
-            <LogOut className="size-3.5" aria-hidden />
-            Sign out
-          </Button>
+
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-ml-2"
+              onClick={() => {
+                logout()
+                navigate('/login', { replace: true })
+              }}
+            >
+              <LogOut className="size-3.5" aria-hidden />
+              {t('common.signOut')}
+            </Button>
+            <LanguageSwitcher />
+          </div>
         </div>
       </aside>
 
@@ -135,17 +137,20 @@ export function AppLayout() {
           <p className="truncate text-sm font-medium text-ink-800">
             {user.firstName} {user.lastName}
           </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              logout()
-              navigate('/login', { replace: true })
-            }}
-          >
-            <LogOut className="size-3.5" aria-hidden />
-            Sign out
-          </Button>
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                logout()
+                navigate('/login', { replace: true })
+              }}
+            >
+              <LogOut className="size-3.5" aria-hidden />
+              {t('common.signOut')}
+            </Button>
+          </div>
         </header>
 
         {/*

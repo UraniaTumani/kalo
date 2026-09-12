@@ -44,3 +44,5 @@ databaseChangeLog:
       file: db/changelog/changes/017-add-concurrency-invariants.yaml
   - include:
       file: db/changelog/changes/018-repair-invalid-company-states.yaml
+  - include:
+      file: db/changelog/changes/019-normalize-phone-numbers.yaml
