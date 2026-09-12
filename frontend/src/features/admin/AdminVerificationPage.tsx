@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/lib/api/endpoints'
+import { readPage } from '@/lib/api/page'
 import { PageHeader } from '@/components/AppLayout'
 import { StatusBadge } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
@@ -28,6 +29,8 @@ export function AdminVerificationPage() {
     queryFn: () => adminApi.partners({ status: 'PENDING', page: 0, size: 20 }),
   })
 
+  const { rows, isEmpty } = readPage(pendingQuery.data)
+
   return (
     <>
       <PageHeader
@@ -35,24 +38,35 @@ export function AdminVerificationPage() {
         description="Companies waiting for review. Approving one activates it immediately."
       />
 
-      {pendingQuery.error && <ErrorMessage error={pendingQuery.error} />}
+      {pendingQuery.error && (
+        <div className="mb-4">
+          <ErrorMessage error={pendingQuery.error} />
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_24rem]">
         <Card>
           {pendingQuery.isLoading && (
             <div className="p-5">
-              <Spinner />
+              <Spinner label="Loading the verification queue" />
             </div>
           )}
 
-          {pendingQuery.data?.empty && (
+          {pendingQuery.isError && !pendingQuery.isLoading && (
+            <EmptyState
+              title="Could not load the queue"
+              description="The request to the server failed. Check that the backend is running."
+            />
+          )}
+
+          {!pendingQuery.isLoading && !pendingQuery.isError && isEmpty && (
             <EmptyState
               title="Nothing to review"
               description="Companies appear here once they submit for verification."
             />
           )}
 
-          {pendingQuery.data && !pendingQuery.data.empty && (
+          {rows.length > 0 && (
             <Table>
               <thead>
                 <tr>
@@ -63,7 +77,7 @@ export function AdminVerificationPage() {
                 </tr>
               </thead>
               <tbody>
-                {pendingQuery.data.content.map((partner) => (
+                {rows.map((partner) => (
                   <tr key={partner.companyId}>
                     <Td>
                       <span className="font-medium">{partner.displayName}</span>

@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
 import {
   Building2,
@@ -18,6 +18,7 @@ import {
 import { useAuth } from '@/auth/AuthContext'
 import { cn } from '@/lib/utils'
 import { Button } from './ui'
+import { ErrorBoundary } from './ErrorBoundary'
 
 interface NavItem {
   to: string
@@ -65,6 +66,7 @@ const roleLabel = {
 export function AppLayout() {
   const { user, role, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   if (!user || !role) return null
 
@@ -146,8 +148,15 @@ export function AppLayout() {
           </Button>
         </header>
 
+        {/*
+          Inside the layout on purpose: a page that fails still leaves the
+          navigation usable, and the key resets the boundary on route change so
+          navigating away recovers without a reload.
+        */}
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
-          <Outlet />
+          <ErrorBoundary resetKey={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>

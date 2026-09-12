@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/lib/api/endpoints'
+import { readPage } from '@/lib/api/page'
 import type { CompanyStatus, VerificationStatus } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
 import { StatusBadge } from '@/components/StatusBadge'
@@ -48,6 +49,8 @@ export function AdminCompaniesPage() {
     mutationFn: (companyId: number) => adminApi.reactivatePartner(companyId),
     onSuccess: invalidate,
   })
+
+  const { rows, page: pageData, isEmpty } = readPage(companiesQuery.data)
 
   return (
     <>
@@ -99,13 +102,22 @@ export function AdminCompaniesPage() {
       <Card>
         {companiesQuery.isLoading && (
           <div className="p-5">
-            <Spinner />
+            <Spinner label="Loading companies" />
           </div>
         )}
 
-        {companiesQuery.data?.empty && <EmptyState title="No companies match this filter" />}
+        {companiesQuery.isError && !companiesQuery.isLoading && (
+          <EmptyState
+            title="Could not load companies"
+            description="The request to the server failed. Check that the backend is running."
+          />
+        )}
 
-        {companiesQuery.data && !companiesQuery.data.empty && (
+        {!companiesQuery.isLoading && !companiesQuery.isError && isEmpty && (
+          <EmptyState title="No companies match this filter" />
+        )}
+
+        {rows.length > 0 && (
           <>
             <Table>
               <thead>
@@ -118,7 +130,7 @@ export function AdminCompaniesPage() {
                 </tr>
               </thead>
               <tbody>
-                {companiesQuery.data.content.map((company) => (
+                {rows.map((company) => (
                   <tr key={company.companyId}>
                     <Td>
                       <span className="font-medium">{company.displayName}</span>
@@ -155,7 +167,7 @@ export function AdminCompaniesPage() {
                 ))}
               </tbody>
             </Table>
-            <Pagination page={companiesQuery.data} onPageChange={setPage} />
+            <Pagination page={pageData} onPageChange={setPage} />
           </>
         )}
       </Card>
