@@ -509,5 +509,53 @@
     "goToDocuments": "Go to documents",
     "notActive": "Your company is not active",
     "notActiveHint": "You will not appear in passenger search and cannot accept new rides."
+  },
+  "confirm": {
+    "suspendCompany": {
+      "title": "Suspend {{name}}?",
+      "body": "The company stops appearing in customer searches straight away and cannot receive new ride requests. Rides already in progress are not affected. You can reactivate the company later.",
+      "action": "Suspend company"
+    },
+    "suspendUser": {
+      "title": "Suspend {{name}}?",
+      "body": "They will be signed out and will not be able to sign in again until the account is reactivated. Their ride history is kept.",
+      "action": "Suspend user"
+    },
+    "rejectVerification": {
+      "title": "Reject this application?",
+      "body": "The company is told it was rejected and sees the reason you wrote. It stays unable to accept rides until it corrects the documents and applies again.",
+      "action": "Reject application"
+    },
+    "deactivateDriver": {
+      "title": "Deactivate {{name}}?",
+      "body": "The driver is taken off the road: they are forced offline and released from the vehicle they are holding. This cannot be undone from the app — you would have to add the driver again.",
+      "action": "Deactivate driver"
+    },
+    "deactivateVehicle": {
+      "title": "Deactivate {{plate}}?",
+      "body": "The vehicle is taken out of service and any driver assigned to it is released and forced offline. This cannot be undone from the app — you would have to add the vehicle again.",
+      "action": "Deactivate vehicle"
+    },
+    "removeAssignment": {
+      "title": "Release {{driver}} from {{plate}}?",
+      "body": "The driver is left without a vehicle and goes offline, so they stop receiving ride requests. You can assign them to a vehicle again afterwards.",
+      "action": "Release vehicle"
+    },
+    "declineRide": {
+      "title": "Decline this ride?",
+      "body": "The request goes back to the customer, who will choose another company. You cannot take this ride back after declining.",
+      "action": "Decline ride"
+    },
+    "cancelRide": {
+      "title": "Cancel your ride?",
+      "body": "The company is told you are no longer travelling and the driver is released. If a driver is already on the way, please cancel only if you really cannot travel.",
+      "action": "Cancel ride"
+    },
+    "deleteDocument": {
+      "title": "Delete {{name}}?",
+      "body": "The document is removed permanently. If your verification depends on it you will need to upload it again before you can apply.",
+      "action": "Delete document"
+    },
+    "keep": "Keep it"
   }
 }

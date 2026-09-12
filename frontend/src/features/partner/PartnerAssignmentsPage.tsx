@@ -1,10 +1,12 @@
 import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
+import type { DriverVehicleAssignmentResponse } from '@/lib/api/types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { partnerApi } from '@/lib/api/endpoints'
 import { PageHeader } from '@/components/AppLayout'
 import { Badge } from '@/components/ui'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Spinner } from '@/components/ui/Spinner'
 import {
   Alert,
@@ -56,6 +58,9 @@ export function PartnerAssignmentsPage() {
       setVehicleId('')
     },
   })
+
+  /* Held while the partner confirms; null means no dialog is open. */
+  const [pendingRemove, setPendingRemove] = useState<DriverVehicleAssignmentResponse | null>(null)
 
   const removeMutation = useMutation({
     mutationFn: (assignmentId: number) => partnerApi.removeAssignment(assignmentId),
@@ -144,7 +149,7 @@ export function PartnerAssignmentsPage() {
                             size="sm"
                             variant="ghost"
                             className="text-red-600 hover:bg-red-50"
-                            onClick={() => removeMutation.mutate(assignment.assignmentId)}
+                            onClick={() => setPendingRemove(assignment)}
                           >
                             {t('partner.unassign')}
                           </Button>
@@ -202,6 +207,25 @@ export function PartnerAssignmentsPage() {
           </CardBody>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={pendingRemove !== null}
+        title={t('confirm.removeAssignment.title', {
+          driver: pendingRemove?.driverName,
+          plate: pendingRemove?.plateNumber,
+        })}
+        description={t('confirm.removeAssignment.body')}
+        confirmLabel={t('confirm.removeAssignment.action')}
+        cancelLabel={t('confirm.keep')}
+        loading={removeMutation.isPending}
+        onCancel={() => setPendingRemove(null)}
+        onConfirm={() =>
+          pendingRemove &&
+          removeMutation.mutate(pendingRemove.assignmentId, {
+            onSuccess: () => setPendingRemove(null),
+          })
+        }
+      />
     </>
   )
 }

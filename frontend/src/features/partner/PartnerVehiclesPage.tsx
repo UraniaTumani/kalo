@@ -4,10 +4,12 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { partnerApi } from '@/lib/api/endpoints'
-import type { VehicleType } from '@/lib/api/types'
+import { useState } from 'react'
+import type { VehicleResponse, VehicleType } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
 import { StatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Spinner } from '@/components/ui/Spinner'
 import {
   Button,
@@ -82,6 +84,9 @@ export function PartnerVehiclesPage() {
     },
   })
 
+  /* Held while the partner confirms; null means no dialog is open. */
+  const [pendingDeactivate, setPendingDeactivate] = useState<VehicleResponse | null>(null)
+
   const deactivateMutation = useMutation({
     mutationFn: (vehicleId: number) => partnerApi.deactivateVehicle(vehicleId),
     onSuccess: invalidate,
@@ -139,7 +144,7 @@ export function PartnerVehiclesPage() {
                             size="sm"
                             variant="ghost"
                             className="text-red-600 hover:bg-red-50"
-                            onClick={() => deactivateMutation.mutate(vehicle.id)}
+                            onClick={() => setPendingDeactivate(vehicle)}
                           >
                             {t('partner.deactivate')}
                           </Button>
@@ -209,6 +214,22 @@ export function PartnerVehiclesPage() {
           </CardBody>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={pendingDeactivate !== null}
+        title={t('confirm.deactivateVehicle.title', { plate: pendingDeactivate?.plateNumber })}
+        description={t('confirm.deactivateVehicle.body')}
+        confirmLabel={t('confirm.deactivateVehicle.action')}
+        cancelLabel={t('confirm.keep')}
+        loading={deactivateMutation.isPending}
+        onCancel={() => setPendingDeactivate(null)}
+        onConfirm={() =>
+          pendingDeactivate &&
+          deactivateMutation.mutate(pendingDeactivate.id, {
+            onSuccess: () => setPendingDeactivate(null),
+          })
+        }
+      />
     </>
   )
 }

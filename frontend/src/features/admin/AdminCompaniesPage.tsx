@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/AppLayout'
 import { StatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { Pagination } from '@/components/Pagination'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Spinner } from '@/components/ui/Spinner'
 import { Alert, Button, Card, EmptyState, Select, Table, Td, Th } from '@/components/ui'
 
@@ -41,6 +42,9 @@ export function AdminCompaniesPage() {
   })
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin'] })
+
+  /* Held while the admin confirms; null means no dialog is open. */
+  const [pendingSuspend, setPendingSuspend] = useState<AdminPartnerResponse | null>(null)
 
   const suspendMutation = useMutation({
     mutationFn: (companyId: number) => adminApi.suspendPartner(companyId),
@@ -148,7 +152,7 @@ export function AdminCompaniesPage() {
                     <Td>
                       <CompanyActions
                         company={company}
-                        onSuspend={() => suspendMutation.mutate(company.companyId)}
+                        onSuspend={() => setPendingSuspend(company)}
                         onReactivate={() => reactivateMutation.mutate(company.companyId)}
                       />
                     </Td>
@@ -167,6 +171,22 @@ export function AdminCompaniesPage() {
 
         </Alert>
       </div>
+
+      <ConfirmDialog
+        open={pendingSuspend !== null}
+        title={t('confirm.suspendCompany.title', { name: pendingSuspend?.displayName })}
+        description={t('confirm.suspendCompany.body')}
+        confirmLabel={t('confirm.suspendCompany.action')}
+        cancelLabel={t('confirm.keep')}
+        loading={suspendMutation.isPending}
+        onCancel={() => setPendingSuspend(null)}
+        onConfirm={() =>
+          pendingSuspend &&
+          suspendMutation.mutate(pendingSuspend.companyId, {
+            onSuccess: () => setPendingSuspend(null),
+          })
+        }
+      />
     </>
   )
 }

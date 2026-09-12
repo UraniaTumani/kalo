@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check } from 'lucide-react'
@@ -10,6 +10,7 @@ import { isActiveRide } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
 import { RideStatusBadge } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Spinner } from '@/components/ui/Spinner'
 import { Alert, Button, Card, CardBody, CardHeader, EmptyState } from '@/components/ui'
 import { cn, formatCurrency, formatTime } from '@/lib/utils'
@@ -58,6 +59,8 @@ export function CurrentRidePage() {
   useEffect(() => {
     if (currentQuery.data) rememberRide(currentQuery.data.rideId)
   }, [currentQuery.data])
+
+  const [confirmingCancel, setConfirmingCancel] = useState(false)
 
   const cancelMutation = useMutation({
     mutationFn: (rideId: number) => rideApi.cancel(rideId),
@@ -178,7 +181,7 @@ export function CurrentRidePage() {
                 size="sm"
                 className="mt-4"
                 loading={cancelMutation.isPending}
-                onClick={() => cancelMutation.mutate(ride.rideId)}
+                onClick={() => setConfirmingCancel(true)}
               >
                 {t('ride.cancelRide')}
               </Button>
@@ -207,6 +210,21 @@ export function CurrentRidePage() {
           {ride.status === 'COMPLETED' && <RatingForm rideId={ride.rideId} />}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmingCancel}
+        title={t('confirm.cancelRide.title')}
+        description={t('confirm.cancelRide.body')}
+        confirmLabel={t('confirm.cancelRide.action')}
+        cancelLabel={t('confirm.keep')}
+        loading={cancelMutation.isPending}
+        onCancel={() => setConfirmingCancel(false)}
+        onConfirm={() =>
+          cancelMutation.mutate(ride.rideId, {
+            onSuccess: () => setConfirmingCancel(false),
+          })
+        }
+      />
     </>
   )
 }

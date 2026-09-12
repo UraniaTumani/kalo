@@ -509,5 +509,53 @@
     "goToDocuments": "Shko te dokumentet",
     "notActive": "Kompania juaj nuk është aktive",
     "notActiveHint": "Nuk do të shfaqeni në kërkimin e udhëtarëve dhe nuk mund të pranoni udhëtime të reja."
+  },
+  "confirm": {
+    "suspendCompany": {
+      "title": "Të pezullohet {{name}}?",
+      "body": "Kompania nuk shfaqet më te kërkimet e klientëve dhe nuk merr kërkesa të reja për udhëtim. Udhëtimet që janë në vazhdim nuk preken. Mund ta riaktivizoni kompaninë më vonë.",
+      "action": "Pezullo kompaninë"
+    },
+    "suspendUser": {
+      "title": "Të pezullohet {{name}}?",
+      "body": "Përdoruesi del nga llogaria dhe nuk mund të hyjë përsëri derisa llogaria të riaktivizohet. Historiku i udhëtimeve ruhet.",
+      "action": "Pezullo përdoruesin"
+    },
+    "rejectVerification": {
+      "title": "Të refuzohet ky aplikim?",
+      "body": "Kompania njoftohet se u refuzua dhe sheh arsyen që shkruani. Ajo nuk mund të pranojë udhëtime derisa të ndreqë dokumentet dhe të aplikojë sërish.",
+      "action": "Refuzo aplikimin"
+    },
+    "deactivateDriver": {
+      "title": "Të çaktivizohet {{name}}?",
+      "body": "Shoferi hiqet nga qarkullimi: kalon jashtë linje dhe lirohet nga automjeti që ka marrë. Kjo nuk kthehet mbrapsht nga aplikacioni — do t’ju duhet ta shtoni shoferin nga e para.",
+      "action": "Çaktivizo shoferin"
+    },
+    "deactivateVehicle": {
+      "title": "Të çaktivizohet {{plate}}?",
+      "body": "Automjeti nxirret jashtë shërbimit dhe shoferi i caktuar në të lirohet e kalon jashtë linje. Kjo nuk kthehet mbrapsht nga aplikacioni — do t’ju duhet ta shtoni automjetin nga e para.",
+      "action": "Çaktivizo automjetin"
+    },
+    "removeAssignment": {
+      "title": "Të lirohet {{driver}} nga {{plate}}?",
+      "body": "Shoferi mbetet pa automjet dhe kalon jashtë linje, ndaj nuk merr më kërkesa për udhëtim. Mund ta caktoni sërish në një automjet më pas.",
+      "action": "Liro automjetin"
+    },
+    "declineRide": {
+      "title": "Të refuzohet ky udhëtim?",
+      "body": "Kërkesa i kthehet klientit, i cili do të zgjedhë një kompani tjetër. Nuk mund ta merrni më këtë udhëtim pasi ta refuzoni.",
+      "action": "Refuzo udhëtimin"
+    },
+    "cancelRide": {
+      "title": "Të anulohet udhëtimi juaj?",
+      "body": "Kompania njoftohet se nuk do të udhëtoni më dhe shoferi lirohet. Nëse një shofer është nisur tashmë, anuloni vetëm nëse vërtet nuk mund të udhëtoni.",
+      "action": "Anulo udhëtimin"
+    },
+    "deleteDocument": {
+      "title": "Të fshihet {{name}}?",
+      "body": "Dokumenti hiqet përgjithmonë. Nëse verifikimi juaj varet prej tij, do t’ju duhet ta ngarkoni sërish para se të aplikoni.",
+      "action": "Fshi dokumentin"
+    },
+    "keep": "Mos e prek"
   }
 }

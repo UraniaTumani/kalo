@@ -3,11 +3,12 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/lib/api/endpoints'
 import { readPage } from '@/lib/api/page'
-import type { UserRole, UserStatus } from '@/lib/api/types'
+import type { AdminUserResponse, UserRole, UserStatus } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
 import { StatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { Pagination } from '@/components/Pagination'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge, Button, Card, EmptyState, Select, Table, Td, Th } from '@/components/ui'
 import { formatDateTime } from '@/lib/utils'
@@ -35,6 +36,9 @@ export function AdminUsersPage() {
   })
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+
+  /* Held while the admin confirms; null means no dialog is open. */
+  const [pendingSuspend, setPendingSuspend] = useState<AdminUserResponse | null>(null)
 
   const suspendMutation = useMutation({
     mutationFn: (userId: number) => adminApi.suspendUser(userId),
@@ -160,7 +164,7 @@ export function AdminUsersPage() {
                           size="sm"
                           variant="ghost"
                           className="text-red-600 hover:bg-red-50"
-                          onClick={() => suspendMutation.mutate(user.userId)}
+                          onClick={() => setPendingSuspend(user)}
                         >
                           {t('admin.suspend')}
                         </Button>
@@ -174,6 +178,24 @@ export function AdminUsersPage() {
           </>
         )}
       </Card>
+
+      <ConfirmDialog
+        open={pendingSuspend !== null}
+        title={t('confirm.suspendUser.title', {
+          name: pendingSuspend && `${pendingSuspend.firstName} ${pendingSuspend.lastName}`,
+        })}
+        description={t('confirm.suspendUser.body')}
+        confirmLabel={t('confirm.suspendUser.action')}
+        cancelLabel={t('confirm.keep')}
+        loading={suspendMutation.isPending}
+        onCancel={() => setPendingSuspend(null)}
+        onConfirm={() =>
+          pendingSuspend &&
+          suspendMutation.mutate(pendingSuspend.userId, {
+            onSuccess: () => setPendingSuspend(null),
+          })
+        }
+      />
     </>
   )
 }

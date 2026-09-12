@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/AppLayout'
 import { RideStatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { Pagination } from '@/components/Pagination'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { MapView } from '@/components/MapPicker'
 import { Spinner } from '@/components/ui/Spinner'
 import {
@@ -190,6 +191,8 @@ function RideActions({ ride, onDone }: { ride: PartnerRideResponse; onDone: () =
     })
   }
 
+  const [confirmingDecline, setConfirmingDecline] = useState(false)
+
   const accept = useMutation({
     mutationFn: () => runAction(() => partnerApi.accept(ride.rideId, Number(driverId))),
   })
@@ -218,125 +221,138 @@ function RideActions({ ride, onDone }: { ride: PartnerRideResponse; onDone: () =
     complete.error
 
   return (
-    <Card>
-      <CardHeader
-        title={`Ride #${ride.rideId}`}
-        description={`${ride.customerFirstName} ${ride.customerLastName} · ${ride.customerPhone}`}
-        action={<RideStatusBadge status={ride.status} />}
-      />
-      <CardBody className="space-y-4">
-        <MapView
-          className="h-44 w-full rounded-lg"
-          markers={[
-            {
-              position: { lat: ride.pickupLatitude, lng: ride.pickupLongitude },
-              label: ride.pickupAddress ?? 'Pickup',
-              tone: 'pickup',
-            },
-            {
-              position: { lat: ride.destinationLatitude, lng: ride.destinationLongitude },
-              label: ride.destinationAddress ?? 'Destination',
-              tone: 'destination',
-            },
-          ]}
+    <>
+      <Card>
+        <CardHeader
+          title={`Ride #${ride.rideId}`}
+          description={`${ride.customerFirstName} ${ride.customerLastName} · ${ride.customerPhone}`}
+          action={<RideStatusBadge status={ride.status} />}
         />
+        <CardBody className="space-y-4">
+          <MapView
+            className="h-44 w-full rounded-lg"
+            markers={[
+              {
+                position: { lat: ride.pickupLatitude, lng: ride.pickupLongitude },
+                label: ride.pickupAddress ?? 'Pickup',
+                tone: 'pickup',
+              },
+              {
+                position: { lat: ride.destinationLatitude, lng: ride.destinationLongitude },
+                label: ride.destinationAddress ?? 'Destination',
+                tone: 'destination',
+              },
+            ]}
+          />
 
-        {error && <ErrorMessage error={error} />}
+          {error && <ErrorMessage error={error} />}
 
-        {ride.status === 'REQUESTED' && (
-          <div className="space-y-3">
-            {driversQuery.data && assignableDrivers.length === 0 ? (
-              <Alert tone="warning" title={t('partner.noDriverAvailable')}>
-                {t('partner.noDriverAvailableHint')}
+          {ride.status === 'REQUESTED' && (
+            <div className="space-y-3">
+              {driversQuery.data && assignableDrivers.length === 0 ? (
+                <Alert tone="warning" title={t('partner.noDriverAvailable')}>
+                  {t('partner.noDriverAvailableHint')}
 
-              </Alert>
-            ) : (
-              <Field label={t('partner.assignDriver')} required>
-                <Select value={driverId} onChange={(event) => setDriverId(event.target.value)}>
-                  <option value="">{t('partner.selectDriver')}</option>
-                  {assignableDrivers.map((driver) => (
-                    <option key={driver.id} value={driver.id}>
-                      {driver.firstName} {driver.lastName} · {driver.phone}
-                    </option>
-                  ))}
-                </Select>
+                </Alert>
+              ) : (
+                <Field label={t('partner.assignDriver')} required>
+                  <Select value={driverId} onChange={(event) => setDriverId(event.target.value)}>
+                    <option value="">{t('partner.selectDriver')}</option>
+                    {assignableDrivers.map((driver) => (
+                      <option key={driver.id} value={driver.id}>
+                        {driver.firstName} {driver.lastName} · {driver.phone}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  variant="success"
+                  className="flex-1"
+                  disabled={!driverId}
+                  loading={accept.isPending}
+                  onClick={() => accept.mutate()}
+                >
+                  {t('partner.accept')}
+                </Button>
+                <Button
+                  variant="danger"
+                  className="flex-1"
+                  loading={decline.isPending}
+                  onClick={() => setConfirmingDecline(true)}
+                >
+                  {t('partner.decline')}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {ride.status === 'DRIVER_ASSIGNED' && (
+            <Button className="w-full" loading={arriving.isPending} onClick={() => arriving.mutate()}>
+              {t('partner.driverOnWay')}
+            </Button>
+          )}
+
+          {ride.status === 'DRIVER_ARRIVING' && (
+            <Button className="w-full" loading={arrived.isPending} onClick={() => arrived.mutate()}>
+              {t('partner.driverArrived')}
+            </Button>
+          )}
+
+          {ride.status === 'DRIVER_ARRIVED' && (
+            <Button className="w-full" loading={start.isPending} onClick={() => start.mutate()}>
+              {t('partner.startRide')}
+            </Button>
+          )}
+
+          {ride.status === 'IN_PROGRESS' && (
+            <div className="space-y-3">
+              <Field
+                label={t('partner.taximeterTotal')}
+                required
+                hint={t('partner.taximeterHint')}
+              >
+                <Input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={finalAmount}
+                  onChange={(event) => setFinalAmount(event.target.value)}
+                  placeholder="850.00"
+                />
               </Field>
-            )}
-
-            <div className="flex gap-2">
               <Button
                 variant="success"
-                className="flex-1"
-                disabled={!driverId}
-                loading={accept.isPending}
-                onClick={() => accept.mutate()}
+                className="w-full"
+                disabled={!finalAmount || Number(finalAmount) <= 0}
+                loading={complete.isPending}
+                onClick={() => complete.mutate()}
               >
-                {t('partner.accept')}
-              </Button>
-              <Button
-                variant="danger"
-                className="flex-1"
-                loading={decline.isPending}
-                onClick={() => decline.mutate()}
-              >
-                {t('partner.decline')}
+                {t('partner.completeRide')}
               </Button>
             </div>
-          </div>
-        )}
+          )}
 
-        {ride.status === 'DRIVER_ASSIGNED' && (
-          <Button className="w-full" loading={arriving.isPending} onClick={() => arriving.mutate()}>
-            {t('partner.driverOnWay')}
-          </Button>
-        )}
+          {!isActiveRide(ride.status) && (
+            <Alert tone="neutral">
+              {t('partner.rideFinished', { status: label('rideStatus', ride.status) })}
+            </Alert>
+          )}
+        </CardBody>
+      </Card>
 
-        {ride.status === 'DRIVER_ARRIVING' && (
-          <Button className="w-full" loading={arrived.isPending} onClick={() => arrived.mutate()}>
-            {t('partner.driverArrived')}
-          </Button>
-        )}
-
-        {ride.status === 'DRIVER_ARRIVED' && (
-          <Button className="w-full" loading={start.isPending} onClick={() => start.mutate()}>
-            {t('partner.startRide')}
-          </Button>
-        )}
-
-        {ride.status === 'IN_PROGRESS' && (
-          <div className="space-y-3">
-            <Field
-              label={t('partner.taximeterTotal')}
-              required
-              hint={t('partner.taximeterHint')}
-            >
-              <Input
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={finalAmount}
-                onChange={(event) => setFinalAmount(event.target.value)}
-                placeholder="850.00"
-              />
-            </Field>
-            <Button
-              variant="success"
-              className="w-full"
-              disabled={!finalAmount || Number(finalAmount) <= 0}
-              loading={complete.isPending}
-              onClick={() => complete.mutate()}
-            >
-              {t('partner.completeRide')}
-            </Button>
-          </div>
-        )}
-
-        {!isActiveRide(ride.status) && (
-          <Alert tone="neutral">
-            {t('partner.rideFinished', { status: label('rideStatus', ride.status) })}
-          </Alert>
-        )}
-      </CardBody>
-    </Card>
+      <ConfirmDialog
+        open={confirmingDecline}
+        title={t('confirm.declineRide.title')}
+        description={t('confirm.declineRide.body')}
+        confirmLabel={t('confirm.declineRide.action')}
+        cancelLabel={t('confirm.keep')}
+        loading={decline.isPending}
+        onCancel={() => setConfirmingDecline(false)}
+        onConfirm={() => decline.mutate()}
+      />
+    </>
   )
 }
