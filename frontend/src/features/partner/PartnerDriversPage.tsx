@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -9,6 +9,8 @@ import { PageHeader } from '@/components/AppLayout'
 import { StatusBadge } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { MapView, TIRANA, type LatLng } from '@/components/MapPicker'
+import { getCurrentPosition, GeolocationError } from '@/lib/geolocation'
+import { useDriverTracking } from './useDriverTracking'
 import { Spinner } from '@/components/ui/Spinner'
 import {
   Alert,
@@ -61,11 +63,59 @@ export function PartnerDriversPage() {
     },
   })
 
+  const tracking = useDriverTracking()
+  const [locationError, setLocationError] = useState<string | null>(null)
+
+  /*
+   * Going online needs a real position first. The backend accepts a driver as
+   * available only while their last fix is fresh, so putting a driver online
+   * without one would advertise them to passengers and then drop them from
+   * search moments later. Refusing up front, with the reason, is clearer than
+   * silently going online and disappearing.
+   */
   const availabilityMutation = useMutation({
-    mutationFn: ({ id, online }: { id: number; online: boolean }) =>
-      partnerApi.setAvailability(id, online ? 'ONLINE' : 'OFFLINE'),
+    mutationFn: async ({ id, online }: { id: number; online: boolean }) => {
+      if (online) {
+        const position = await getCurrentPosition()
+
+        await partnerApi.updateDriverLocation(id, {
+          latitude: position.lat,
+          longitude: position.lng,
+        })
+      }
+
+      const driver = await partnerApi.setAvailability(id, online ? 'ONLINE' : 'OFFLINE')
+
+      if (online) {
+        tracking.startTracking(id)
+      } else {
+        tracking.stopTracking(id)
+      }
+
+      return driver
+    },
+    onMutate: () => setLocationError(null),
     onSuccess: invalidate,
+    onError: (error) => {
+      if (error instanceof GeolocationError) {
+        setLocationError(error.message)
+      }
+    },
   })
+
+  // A driver taken offline elsewhere (a completed ride, another device) must
+  // not keep this device uploading positions for them.
+  useEffect(() => {
+    const drivers = driversQuery.data
+    if (!drivers) return
+
+    for (const driverId of tracking.trackedDriverIds) {
+      const driver = drivers.find((candidate) => candidate.id === driverId)
+      if (driver && driver.availabilityStatus === 'OFFLINE') {
+        tracking.stopTracking(driverId)
+      }
+    }
+  }, [driversQuery.data, tracking])
 
   const deactivateMutation = useMutation({
     mutationFn: (id: number) => partnerApi.deactivateDriver(id),
@@ -81,13 +131,37 @@ export function PartnerDriversPage() {
 
   return (
     <>
-      <PageHeader title="Drivers" description="Your drivers and whether they are available." />
+      <PageHeader
+        title="Drivers"
+        description="Going online shares this device's location so passengers can find the driver. Open this page on the driver's phone."
+      />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
         <div className="space-y-4">
-          {(availabilityMutation.error || deactivateMutation.error) && (
-            <ErrorMessage error={availabilityMutation.error ?? deactivateMutation.error} />
+          {locationError && (
+            <Alert tone="danger" title="Location is required to go online">
+              {locationError}
+            </Alert>
           )}
+
+          {tracking.isTracking && (
+            <Alert tone="success" title="Sharing this device's location">
+              <p>
+                {tracking.trackedDriverIds.length === 1
+                  ? 'One driver is online from this device.'
+                  : `${tracking.trackedDriverIds.length} drivers are online from this device.`}{' '}
+                Position is sent about every 25 seconds while the tab stays open.
+                {tracking.lastSentAt &&
+                  ` Last sent at ${new Date(tracking.lastSentAt).toLocaleTimeString()}.`}
+              </p>
+              {tracking.error && <p className="mt-1 text-red-700">{tracking.error}</p>}
+            </Alert>
+          )}
+
+          {(availabilityMutation.error || deactivateMutation.error) &&
+            !(availabilityMutation.error instanceof GeolocationError) && (
+              <ErrorMessage error={availabilityMutation.error ?? deactivateMutation.error} />
+            )}
 
           <Card>
             {driversQuery.isLoading && (
@@ -157,13 +231,20 @@ export function PartnerDriversPage() {
                               {driver.availabilityStatus === 'ONLINE' ? 'Go offline' : 'Go online'}
                             </Button>
                           )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setLocationFor(driver)}
-                          >
-                            Location
-                          </Button>
+                          {/*
+                            Manual positioning is a debug aid only: production
+                            positions come from the device GPS when a driver
+                            goes online.
+                          */}
+                          {import.meta.env.DEV && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setLocationFor(driver)}
+                            >
+                              Set position (dev)
+                            </Button>
+                          )}
                           {driver.status === 'ACTIVE' && (
                             <Button
                               size="sm"

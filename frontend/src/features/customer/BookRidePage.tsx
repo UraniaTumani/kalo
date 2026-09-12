@@ -1,28 +1,24 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Loader2, MapPin, Star } from 'lucide-react'
+import { Loader2, Star } from 'lucide-react'
 import { rideApi } from '@/lib/api/endpoints'
 import { ApiError } from '@/lib/api/client'
 import type { RideSearchResponse, TaxiOptionResponse } from '@/lib/api/types'
-import { MapView, TIRANA, type LatLng } from '@/components/MapPicker'
+import { MapView, TIRANA } from '@/components/MapPicker'
+import { AddressInput, type SelectedPlace } from '@/components/AddressInput'
 import { PageHeader } from '@/components/AppLayout'
 import { ErrorMessage } from '@/components/ErrorMessage'
-import { Alert, Badge, Button, Card, CardBody, CardHeader, Field, Input } from '@/components/ui'
-import { cn, formatDistance, humanise } from '@/lib/utils'
+import { Alert, Badge, Button, Card, CardBody, CardHeader } from '@/components/ui'
+import { formatDistance, humanise } from '@/lib/utils'
 import { rememberRide } from './rideMemory'
-
-type Picking = 'pickup' | 'destination'
 
 export function BookRidePage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const [picking, setPicking] = useState<Picking>('pickup')
-  const [pickup, setPickup] = useState<LatLng | null>(null)
-  const [destination, setDestination] = useState<LatLng | null>(null)
-  const [pickupAddress, setPickupAddress] = useState('')
-  const [destinationAddress, setDestinationAddress] = useState('')
+  const [pickup, setPickup] = useState<SelectedPlace | null>(null)
+  const [destination, setDestination] = useState<SelectedPlace | null>(null)
   const [search, setSearch] = useState<RideSearchResponse | null>(null)
 
   const searchMutation = useMutation({
@@ -30,10 +26,10 @@ export function BookRidePage() {
       rideApi.search({
         pickupLatitude: pickup!.lat,
         pickupLongitude: pickup!.lng,
-        pickupAddress: pickupAddress.trim() || null,
+        pickupAddress: pickup!.label,
         destinationLatitude: destination!.lat,
         destinationLongitude: destination!.lng,
-        destinationAddress: destinationAddress.trim() || null,
+        destinationAddress: destination!.label,
       }),
     onSuccess: setSearch,
   })
@@ -47,16 +43,6 @@ export function BookRidePage() {
       navigate('/ride/current')
     },
   })
-
-  function handleMapPick(position: LatLng) {
-    if (picking === 'pickup') {
-      setPickup(position)
-      setPicking('destination')
-    } else {
-      setDestination(position)
-    }
-    setSearch(null)
-  }
 
   const canSearch = Boolean(pickup && destination) && !searchMutation.isPending
 
@@ -87,60 +73,57 @@ export function BookRidePage() {
         <Card>
           <CardHeader
             title="Where are you going?"
-            description={
-              picking === 'pickup'
-                ? 'Click the map to set your pickup point.'
-                : 'Now click the map to set your destination.'
-            }
+            description="Search for an address, or use your current location."
           />
           <CardBody className="space-y-3">
+            <AddressInput
+              label="Pickup"
+              required
+              showUseMyLocation
+              placeholder="Search an address or place"
+              value={pickup}
+              onChange={(place) => {
+                setPickup(place)
+                setSearch(null)
+              }}
+            />
+
+            <AddressInput
+              label="Destination"
+              required
+              placeholder="Where to?"
+              value={destination}
+              onChange={(place) => {
+                setDestination(place)
+                setSearch(null)
+              }}
+            />
+
+            {/* Confirmation only — the addresses above are the real input. */}
             <MapView
-              center={pickup ?? TIRANA}
-              onPick={handleMapPick}
-              className="h-80 w-full rounded-lg"
+              center={pickup ? { lat: pickup.lat, lng: pickup.lng } : TIRANA}
+              className="h-64 w-full rounded-lg"
               markers={[
-                ...(pickup ? [{ position: pickup, label: 'Pickup', tone: 'pickup' as const }] : []),
+                ...(pickup
+                  ? [
+                      {
+                        position: { lat: pickup.lat, lng: pickup.lng },
+                        label: pickup.label,
+                        tone: 'pickup' as const,
+                      },
+                    ]
+                  : []),
                 ...(destination
-                  ? [{ position: destination, label: 'Destination', tone: 'destination' as const }]
+                  ? [
+                      {
+                        position: { lat: destination.lat, lng: destination.lng },
+                        label: destination.label,
+                        tone: 'destination' as const,
+                      },
+                    ]
                   : []),
               ]}
             />
-
-            <div className="grid gap-2 sm:grid-cols-2">
-              <PointButton
-                active={picking === 'pickup'}
-                label="Pickup"
-                point={pickup}
-                tone="pickup"
-                onClick={() => setPicking('pickup')}
-              />
-              <PointButton
-                active={picking === 'destination'}
-                label="Destination"
-                point={destination}
-                tone="destination"
-                onClick={() => setPicking('destination')}
-              />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Pickup address (optional)">
-                <Input
-                  value={pickupAddress}
-                  onChange={(event) => setPickupAddress(event.target.value)}
-                  placeholder="Rruga e Durresit 45"
-                  maxLength={500}
-                />
-              </Field>
-              <Field label="Destination address (optional)">
-                <Input
-                  value={destinationAddress}
-                  onChange={(event) => setDestinationAddress(event.target.value)}
-                  placeholder="Sheshi Skenderbej"
-                  maxLength={500}
-                />
-              </Field>
-            </div>
 
             {searchError && !hasActiveRideConflict && <ErrorMessage error={searchError} />}
 
@@ -197,42 +180,6 @@ export function BookRidePage() {
         </div>
       </div>
     </>
-  )
-}
-
-function PointButton({
-  active,
-  label,
-  point,
-  tone,
-  onClick,
-}: {
-  active: boolean
-  label: string
-  point: LatLng | null
-  tone: 'pickup' | 'destination'
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition',
-        active ? 'border-brand-400 bg-brand-50' : 'border-ink-200 bg-white hover:bg-ink-50',
-      )}
-    >
-      <MapPin
-        className={cn('size-4', tone === 'pickup' ? 'text-brand-600' : 'text-emerald-600')}
-        aria-hidden
-      />
-      <span>
-        <span className="block text-xs font-medium text-ink-700">{label}</span>
-        <span className="block text-xs text-ink-500">
-          {point ? `${point.lat.toFixed(4)}, ${point.lng.toFixed(4)}` : 'Not set'}
-        </span>
-      </span>
-    </button>
   )
 }
 
