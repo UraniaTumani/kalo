@@ -10,7 +10,7 @@ export function ProtectedRoute({ allow }: { allow: UserRole[] }) {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <Spinner label="Loading your session" />
+        <Spinner />
       </div>
     )
   }

@@ -1,20 +1,23 @@
+import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/lib/api/endpoints'
 import { readPage } from '@/lib/api/page'
 import type { UserRole, UserStatus } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
-import { StatusBadge } from '@/components/StatusBadge'
+import { StatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { Pagination } from '@/components/Pagination'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge, Button, Card, EmptyState, Select, Table, Td, Th } from '@/components/ui'
-import { formatDateTime, humanise } from '@/lib/utils'
+import { formatDateTime } from '@/lib/utils'
 
 const ROLES: (UserRole | 'ALL')[] = ['ALL', 'CUSTOMER', 'PARTNER', 'ADMIN']
 const STATUSES: (UserStatus | 'ALL')[] = ['ALL', 'ACTIVE', 'PENDING', 'SUSPENDED', 'DISABLED']
 
 export function AdminUsersPage() {
+  const { t } = useTranslation()
+  const label = useStatusLabel()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(0)
   const [role, setRole] = useState<UserRole | 'ALL'>('ALL')
@@ -48,8 +51,8 @@ export function AdminUsersPage() {
   return (
     <>
       <PageHeader
-        title="Users"
-        description="Suspended users cannot sign in, and existing tokens stop working."
+        title={t('admin.usersTitle')}
+        description={t('admin.usersSubtitle')}
         action={
           <div className="flex gap-2">
             <Select
@@ -62,7 +65,7 @@ export function AdminUsersPage() {
             >
               {ROLES.map((value) => (
                 <option key={value} value={value}>
-                  {value === 'ALL' ? 'All roles' : humanise(value)}
+                  {value === 'ALL' ? t('admin.allRoles') : t('roles.' + value)}
                 </option>
               ))}
             </Select>
@@ -76,7 +79,7 @@ export function AdminUsersPage() {
             >
               {STATUSES.map((value) => (
                 <option key={value} value={value}>
-                  {value === 'ALL' ? 'All statuses' : humanise(value)}
+                  {value === 'ALL' ? t('partner.allStatuses') : label('userStatus', value)}
                 </option>
               ))}
             </Select>
@@ -95,19 +98,19 @@ export function AdminUsersPage() {
       <Card>
         {usersQuery.isLoading && (
           <div className="p-5">
-            <Spinner label="Loading users" />
+            <Spinner />
           </div>
         )}
 
         {usersQuery.isError && !usersQuery.isLoading && (
           <EmptyState
-            title="Could not load users"
-            description="The request to the server failed. Check that the backend is running."
+            title={t('errors.loadFailed')}
+
           />
         )}
 
         {!usersQuery.isLoading && !usersQuery.isError && isEmpty && (
-          <EmptyState title="No users match this filter" />
+          <EmptyState title={t('admin.noUsers')} />
         )}
 
         {rows.length > 0 && (
@@ -115,10 +118,10 @@ export function AdminUsersPage() {
             <Table>
               <thead>
                 <tr>
-                  <Th>User</Th>
-                  <Th>Role</Th>
-                  <Th>Status</Th>
-                  <Th>Joined</Th>
+                  <Th>{t('nav.users')}</Th>
+                  <Th>{t('profile.role')}</Th>
+                  <Th>{t('ride.status')}</Th>
+                  <Th>{t('admin.joined')}</Th>
                   <Th />
                 </tr>
               </thead>
@@ -136,11 +139,11 @@ export function AdminUsersPage() {
                     </Td>
                     <Td>
                       <Badge tone={user.role === 'ADMIN' ? 'info' : 'neutral'}>
-                        {humanise(user.role)}
+                        {t('roles.' + user.role)}
                       </Badge>
                     </Td>
                     <Td>
-                      <StatusBadge status={user.status} />
+                      <StatusBadge status={user.status} namespace="userStatus" />
                     </Td>
                     <Td className="text-xs">{formatDateTime(user.createdAt)}</Td>
                     <Td>
@@ -150,7 +153,7 @@ export function AdminUsersPage() {
                           variant="secondary"
                           onClick={() => reactivateMutation.mutate(user.userId)}
                         >
-                          Reactivate
+                          {t('admin.reactivate')}
                         </Button>
                       ) : (
                         <Button
@@ -159,7 +162,7 @@ export function AdminUsersPage() {
                           className="text-red-600 hover:bg-red-50"
                           onClick={() => suspendMutation.mutate(user.userId)}
                         >
-                          Suspend
+                          {t('admin.suspend')}
                         </Button>
                       )}
                     </Td>

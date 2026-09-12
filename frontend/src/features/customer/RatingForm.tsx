@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Star } from 'lucide-react'
@@ -8,6 +9,7 @@ import { ErrorMessage } from '@/components/ErrorMessage'
 import { cn } from '@/lib/utils'
 
 export function RatingForm({ rideId }: { rideId: number }) {
+  const { t } = useTranslation()
   const [driverRating, setDriverRating] = useState(0)
   const [companyRating, setCompanyRating] = useState(0)
   const [comment, setComment] = useState('')
@@ -29,8 +31,8 @@ export function RatingForm({ rideId }: { rideId: number }) {
     return (
       <Card>
         <CardBody>
-          <Alert tone="success" title="Thanks for the feedback">
-            Your rating has been recorded.
+          <Alert tone="success" title={t('rating.thanks')}>
+            {t('rating.recorded')}
           </Alert>
         </CardBody>
       </Card>
@@ -41,20 +43,20 @@ export function RatingForm({ rideId }: { rideId: number }) {
 
   return (
     <Card>
-      <CardHeader title="Rate this ride" description="Help other passengers choose." />
+      <CardHeader title={t('rating.title')} description={t('rating.subtitle')} />
       <CardBody className="space-y-4">
         {mutation.error && !alreadyRated && <ErrorMessage error={mutation.error} />}
 
-        <Stars label="Driver" value={driverRating} onChange={setDriverRating} />
-        <Stars label="Company" value={companyRating} onChange={setCompanyRating} />
+        <Stars label={t('rating.driver')} value={driverRating} onChange={setDriverRating} />
+        <Stars label={t('rating.company')} value={companyRating} onChange={setCompanyRating} />
 
-        <Field label="Comment (optional)">
+        <Field label={t('rating.comment')}>
           <Textarea
             rows={3}
             maxLength={1000}
             value={comment}
             onChange={(event) => setComment(event.target.value)}
-            placeholder="Anything worth mentioning?"
+            placeholder={t('rating.commentPlaceholder')}
           />
         </Field>
 
@@ -64,7 +66,7 @@ export function RatingForm({ rideId }: { rideId: number }) {
           loading={mutation.isPending}
           onClick={() => mutation.mutate()}
         >
-          Submit rating
+          {t('rating.submit')}
         </Button>
       </CardBody>
     </Card>

@@ -1,10 +1,11 @@
+import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { adminApi } from '@/lib/api/endpoints'
 import { readPage } from '@/lib/api/page'
 import type { RideStatus } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
-import { RideStatusBadge } from '@/components/StatusBadge'
+import { RideStatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { Pagination } from '@/components/Pagination'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { MapView } from '@/components/MapPicker'
@@ -20,7 +21,7 @@ import {
   Td,
   Th,
 } from '@/components/ui'
-import { formatCurrency, formatDateTime, humanise } from '@/lib/utils'
+import { formatCurrency, formatDateTime } from '@/lib/utils'
 
 const FILTERS: (RideStatus | 'ALL')[] = [
   'ALL',
@@ -36,6 +37,8 @@ const FILTERS: (RideStatus | 'ALL')[] = [
 ]
 
 export function AdminRidesPage() {
+  const { t } = useTranslation()
+  const label = useStatusLabel()
   const [page, setPage] = useState(0)
   const [status, setStatus] = useState<RideStatus | 'ALL'>('ALL')
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -55,8 +58,8 @@ export function AdminRidesPage() {
   return (
     <>
       <PageHeader
-        title="Rides"
-        description="Every ride across all companies."
+        title={t('admin.ridesTitle')}
+        description={t('admin.ridesSubtitle')}
         action={
           <Select
             value={status}
@@ -68,7 +71,7 @@ export function AdminRidesPage() {
           >
             {FILTERS.map((value) => (
               <option key={value} value={value}>
-                {value === 'ALL' ? 'All statuses' : humanise(value)}
+                {value === 'ALL' ? t('partner.allStatuses') : label('rideStatus', value)}
               </option>
             ))}
           </Select>
@@ -81,19 +84,19 @@ export function AdminRidesPage() {
         <Card>
           {ridesQuery.isLoading && (
             <div className="p-5">
-              <Spinner label="Loading rides" />
+              <Spinner />
             </div>
           )}
 
           {ridesQuery.isError && !ridesQuery.isLoading && (
             <EmptyState
-              title="Could not load rides"
-              description="The request to the server failed. Check that the backend is running."
+              title={t('errors.loadFailed')}
+
             />
           )}
 
           {!ridesQuery.isLoading && !ridesQuery.isError && isEmpty && (
-            <EmptyState title="No rides match this filter" />
+            <EmptyState title={t('admin.noRidesMatch')} />
           )}
 
           {rows.length > 0 && (
@@ -101,11 +104,11 @@ export function AdminRidesPage() {
               <Table>
                 <thead>
                   <tr>
-                    <Th>Requested</Th>
-                    <Th>Passenger</Th>
-                    <Th>Company</Th>
-                    <Th>Status</Th>
-                    <Th className="text-right">Fare</Th>
+                    <Th>{t('ride.requested')}</Th>
+                    <Th>{t('partner.passenger')}</Th>
+                    <Th>{t('ride.company')}</Th>
+                    <Th>{t('ride.status')}</Th>
+                    <Th className="text-right">{t('ride.fare')}</Th>
                     <Th />
                   </tr>
                 </thead>
@@ -132,7 +135,7 @@ export function AdminRidesPage() {
                           variant="secondary"
                           onClick={() => setSelectedId(ride.rideId)}
                         >
-                          View
+                          {t('admin.view')}
                         </Button>
                       </Td>
                     </tr>
@@ -149,7 +152,7 @@ export function AdminRidesPage() {
             <RideDetail rideId={selectedId} onClose={() => setSelectedId(null)} />
           ) : (
             <Card>
-              <EmptyState title="No ride selected" description="Pick a ride to see its detail." />
+              <EmptyState title={t('admin.noRideSelected')} description={t('admin.noRideSelectedHint')} />
             </Card>
           )}
         </div>
@@ -159,6 +162,8 @@ export function AdminRidesPage() {
 }
 
 function RideDetail({ rideId, onClose }: { rideId: number; onClose: () => void }) {
+  const { t } = useTranslation()
+  const label = useStatusLabel()
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin', 'ride', rideId],
     queryFn: () => adminApi.ride(rideId),
@@ -193,7 +198,7 @@ function RideDetail({ rideId, onClose }: { rideId: number; onClose: () => void }
         description={ride.companyName}
         action={
           <Button size="sm" variant="ghost" onClick={onClose}>
-            Close
+            {t('common.close')}
           </Button>
         }
       />
@@ -215,24 +220,24 @@ function RideDetail({ rideId, onClose }: { rideId: number; onClose: () => void }
         />
 
         <dl className="space-y-1.5 text-sm">
-          <Row label="Status" value={humanise(ride.status)} />
-          <Row label="Passenger" value={`${ride.customerName} · ${ride.customerPhone}`} />
-          <Row label="Driver" value={ride.driverName ?? 'Not assigned'} />
-          <Row label="Vehicle" value={ride.vehiclePlateNumber ?? '—'} />
-          <Row label="Fare" value={formatCurrency(ride.finalAmount)} />
+          <Row label={t('ride.status')} value={label('rideStatus', ride.status)} />
+          <Row label={t('partner.passenger')} value={`${ride.customerName} · ${ride.customerPhone}`} />
+          <Row label={t('rating.driver')} value={ride.driverName ?? t('common.none')} />
+          <Row label={t('partner.vehicle')} value={ride.vehiclePlateNumber ?? '—'} />
+          <Row label={t('ride.fare')} value={formatCurrency(ride.finalAmount)} />
         </dl>
 
         <div className="border-t border-ink-200 pt-3">
-          <p className="mb-1.5 text-xs font-medium text-ink-700">Timeline</p>
+          <p className="mb-1.5 text-xs font-medium text-ink-700">{t('admin.timeline')}</p>
           <dl className="space-y-1 text-xs">
-            <Row label="Requested" value={formatDateTime(ride.requestedAt)} />
-            <Row label="Accepted" value={formatDateTime(ride.acceptedAt)} />
-            <Row label="Declined" value={formatDateTime(ride.declinedAt)} />
-            <Row label="Cancelled" value={formatDateTime(ride.cancelledAt)} />
-            <Row label="Arriving" value={formatDateTime(ride.driverArrivingAt)} />
-            <Row label="Arrived" value={formatDateTime(ride.driverArrivedAt)} />
-            <Row label="Started" value={formatDateTime(ride.startedAt)} />
-            <Row label="Completed" value={formatDateTime(ride.completedAt)} />
+            <Row label={t('ride.requested')} value={formatDateTime(ride.requestedAt)} />
+            <Row label={t('admin.accepted')} value={formatDateTime(ride.acceptedAt)} />
+            <Row label={t('rideStatus.DECLINED')} value={formatDateTime(ride.declinedAt)} />
+            <Row label={t('rideStatus.CANCELLED')} value={formatDateTime(ride.cancelledAt)} />
+            <Row label={t('rideStatus.DRIVER_ARRIVING')} value={formatDateTime(ride.driverArrivingAt)} />
+            <Row label={t('rideStatus.DRIVER_ARRIVED')} value={formatDateTime(ride.driverArrivedAt)} />
+            <Row label={t('ride.steps.started')} value={formatDateTime(ride.startedAt)} />
+            <Row label={t('rideStatus.COMPLETED')} value={formatDateTime(ride.completedAt)} />
           </dl>
         </div>
       </CardBody>

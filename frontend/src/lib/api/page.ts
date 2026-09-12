@@ -1,14 +1,18 @@
 import type { Page } from './types'
 
 /**
- * Thrown when an endpoint answers with a shape the UI cannot render. Carrying
- * a specific message means the error boundary can tell the user what actually
- * went wrong instead of showing a generic failure.
+ * Thrown when an endpoint answers with a shape the UI cannot render.
+ *
+ * Carries a translation key rather than a finished sentence so the message
+ * follows the selected language; see useErrorMessage.
  */
 export class UnexpectedResponseError extends Error {
-  constructor(message: string) {
-    super(message)
+  readonly translationKey: string
+
+  constructor(translationKey: string) {
+    super(translationKey)
     this.name = 'UnexpectedResponseError'
+    this.translationKey = translationKey
   }
 }
 
@@ -20,8 +24,6 @@ export class UnexpectedResponseError extends Error {
  * something else — most likely a server running an older build, from before
  * these lists were paginated — the component throws
  * `undefined is not a function` and the whole page goes blank.
- *
- * This turns that into a named error the boundary can explain.
  */
 export function readPage<T>(data: Page<T> | undefined): {
   rows: T[]
@@ -33,17 +35,11 @@ export function readPage<T>(data: Page<T> | undefined): {
   }
 
   if (Array.isArray(data)) {
-    throw new UnexpectedResponseError(
-      'The server returned a plain list where a paged result was expected. ' +
-        'The backend is probably running an older build than this frontend — ' +
-        'restart it from the current main branch.',
-    )
+    throw new UnexpectedResponseError('staleBackend')
   }
 
   if (!Array.isArray((data as Page<T>).content)) {
-    throw new UnexpectedResponseError(
-      'The server returned an unexpected response for this list.',
-    )
+    throw new UnexpectedResponseError('unexpectedShape')
   }
 
   return {

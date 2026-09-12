@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -10,6 +11,7 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { MapView, TIRANA, type LatLng } from '@/components/MapPicker'
 import { getCurrentPosition, GeolocationError } from '@/lib/geolocation'
+import i18n from '@/i18n'
 import { useDriverTracking } from './useDriverTracking'
 import { Spinner } from '@/components/ui/Spinner'
 import {
@@ -27,20 +29,21 @@ import {
 } from '@/components/ui'
 
 const driverSchema = z.object({
-  firstName: z.string().trim().min(1, 'Required').max(100),
-  lastName: z.string().trim().min(1, 'Required').max(100),
+  firstName: z.string().trim().min(1, 'validation.required').max(100),
+  lastName: z.string().trim().min(1, 'validation.required').max(100),
   phone: z
     .string()
     .trim()
-    .regex(/^\+?[0-9]{6,19}$/, "Digits only, optionally starting with '+'"),
-  licenseNumber: z.string().trim().min(1, 'Required').max(100),
-  licenseExpiryDate: z.string().min(1, 'Required'),
+    .regex(/^\+?[0-9]{6,19}$/, 'validation.phoneInvalid'),
+  licenseNumber: z.string().trim().min(1, 'validation.required').max(100),
+  licenseExpiryDate: z.string().min(1, 'validation.required'),
   dateOfBirth: z.string().optional(),
 })
 
 type DriverValues = z.infer<typeof driverSchema>
 
 export function PartnerDriversPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [locationFor, setLocationFor] = useState<DriverResponse | null>(null)
 
@@ -132,27 +135,27 @@ export function PartnerDriversPage() {
   return (
     <>
       <PageHeader
-        title="Drivers"
-        description="Going online shares this device's location so passengers can find the driver. Open this page on the driver's phone."
+        title={t('partner.driversTitle')}
+        description={t('partner.driversSubtitle')}
       />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
         <div className="space-y-4">
           {locationError && (
-            <Alert tone="danger" title="Location is required to go online">
+            <Alert tone="danger" title={t('partner.locationRequired')}>
               {locationError}
             </Alert>
           )}
 
           {tracking.isTracking && (
-            <Alert tone="success" title="Sharing this device's location">
+            <Alert tone="success" title={t('partner.sharingLocation')}>
               <p>
                 {tracking.trackedDriverIds.length === 1
-                  ? 'One driver is online from this device.'
-                  : `${tracking.trackedDriverIds.length} drivers are online from this device.`}{' '}
-                Position is sent about every 25 seconds while the tab stays open.
+                  ? t('partner.oneDriverOnline')
+                  : t('partner.manyDriversOnline', { count: tracking.trackedDriverIds.length })}{' '}
+                {t('partner.positionInterval')}
                 {tracking.lastSentAt &&
-                  ` Last sent at ${new Date(tracking.lastSentAt).toLocaleTimeString()}.`}
+                  ' ' + t('partner.lastSentAt', { time: new Date(tracking.lastSentAt).toLocaleTimeString(i18n.language) })}
               </p>
               {tracking.error && <p className="mt-1 text-red-700">{tracking.error}</p>}
             </Alert>
@@ -178,8 +181,8 @@ export function PartnerDriversPage() {
 
             {driversQuery.data?.length === 0 && (
               <EmptyState
-                title="No drivers yet"
-                description="Add a driver, give them a vehicle, then put them online."
+                title={t('partner.noDrivers')}
+                description={t('partner.noDriversHint')}
               />
             )}
 
@@ -187,10 +190,10 @@ export function PartnerDriversPage() {
               <Table>
                 <thead>
                   <tr>
-                    <Th>Driver</Th>
-                    <Th>Licence</Th>
-                    <Th>Status</Th>
-                    <Th>Availability</Th>
+                    <Th>{t('rating.driver')}</Th>
+                    <Th>{t('partner.licence')}</Th>
+                    <Th>{t('ride.status')}</Th>
+                    <Th>{t('nav.availability')}</Th>
                     <Th />
                   </tr>
                 </thead>
@@ -206,14 +209,14 @@ export function PartnerDriversPage() {
                       <Td className="text-xs">
                         {driver.licenseNumber}
                         <span className="block text-ink-500">
-                          expires {driver.licenseExpiryDate}
+                          {t('partner.expiresOn', { date: driver.licenseExpiryDate })}
                         </span>
                       </Td>
                       <Td>
-                        <StatusBadge status={driver.status} />
+                        <StatusBadge status={driver.status} namespace="driverStatus" />
                       </Td>
                       <Td>
-                        <StatusBadge status={driver.availabilityStatus} />
+                        <StatusBadge status={driver.availabilityStatus} namespace="driverAvailability" />
                       </Td>
                       <Td>
                         <div className="flex flex-wrap gap-1">
@@ -228,7 +231,7 @@ export function PartnerDriversPage() {
                                 })
                               }
                             >
-                              {driver.availabilityStatus === 'ONLINE' ? 'Go offline' : 'Go online'}
+                              {driver.availabilityStatus === 'ONLINE' ? t('partner.goOffline') : t('partner.goOnline')}
                             </Button>
                           )}
                           {/*
@@ -242,7 +245,7 @@ export function PartnerDriversPage() {
                               variant="ghost"
                               onClick={() => setLocationFor(driver)}
                             >
-                              Set position (dev)
+                              {t('partner.devPositionTool')}
                             </Button>
                           )}
                           {driver.status === 'ACTIVE' && (
@@ -252,7 +255,7 @@ export function PartnerDriversPage() {
                               className="text-red-600 hover:bg-red-50"
                               onClick={() => deactivateMutation.mutate(driver.id)}
                             >
-                              Deactivate
+                              {t('partner.deactivate')}
                             </Button>
                           )}
                         </div>
@@ -270,7 +273,7 @@ export function PartnerDriversPage() {
         </div>
 
         <Card>
-          <CardHeader title="Add a driver" />
+          <CardHeader title={t('partner.addDriver')} />
           <CardBody>
             <form
               className="space-y-3"
@@ -279,32 +282,32 @@ export function PartnerDriversPage() {
             >
               {createMutation.error && <ErrorMessage error={createMutation.error} />}
 
-              <Field label="First name" error={errors.firstName?.message} required>
+              <Field label={t('auth.firstName')} error={errors.firstName ? t(errors.firstName.message!) : undefined} required>
                 <Input {...register('firstName')} />
               </Field>
-              <Field label="Last name" error={errors.lastName?.message} required>
+              <Field label={t('auth.lastName')} error={errors.lastName ? t(errors.lastName.message!) : undefined} required>
                 <Input {...register('lastName')} />
               </Field>
-              <Field label="Phone" error={errors.phone?.message} required>
-                <Input {...register('phone')} type="tel" placeholder="+355691234567" />
+              <Field label={t('auth.phone')} error={errors.phone ? t(errors.phone.message!) : undefined} required>
+                <Input {...register('phone')} type="tel" placeholder={t('auth.phonePlaceholder')} />
               </Field>
-              <Field label="Licence number" error={errors.licenseNumber?.message} required>
+              <Field label={t('partner.licenceNumber')} error={errors.licenseNumber ? t(errors.licenseNumber.message!) : undefined} required>
                 <Input {...register('licenseNumber')} />
               </Field>
               <Field
-                label="Licence expiry"
-                error={errors.licenseExpiryDate?.message}
+                label={t('partner.licenceExpiry')}
+                error={errors.licenseExpiryDate ? t(errors.licenseExpiryDate.message!) : undefined}
                 required
-                hint="Must be in the future"
+                hint={t('validation.mustBeFuture')}
               >
                 <Input {...register('licenseExpiryDate')} type="date" />
               </Field>
-              <Field label="Date of birth" error={errors.dateOfBirth?.message}>
+              <Field label={t('partner.dateOfBirth')} error={errors.dateOfBirth ? t(errors.dateOfBirth.message!) : undefined}>
                 <Input {...register('dateOfBirth')} type="date" />
               </Field>
 
               <Button type="submit" className="w-full" loading={createMutation.isPending}>
-                Add driver
+                {t('partner.addDriver')}
               </Button>
             </form>
           </CardBody>
@@ -321,6 +324,7 @@ function DriverLocationCard({
   driver: DriverResponse
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [position, setPosition] = useState<LatLng | null>(null)
 
@@ -351,16 +355,16 @@ function DriverLocationCard({
     <Card>
       <CardHeader
         title={`Position · ${driver.firstName} ${driver.lastName}`}
-        description="Click the map to set where the driver is now."
+        description={t('partner.devToolNotice')}
         action={
           <Button size="sm" variant="ghost" onClick={onClose}>
-            Close
+            {t('common.close')}
           </Button>
         }
       />
       <CardBody className="space-y-3">
         <Alert tone="info">
-          Taxi search only counts positions updated in the last two minutes.
+          {t('partner.devToolNotice')}
         </Alert>
 
         {mutation.error && <ErrorMessage error={mutation.error} />}
@@ -378,7 +382,7 @@ function DriverLocationCard({
           loading={mutation.isPending}
           onClick={() => mutation.mutate()}
         >
-          Update position
+          {t('partner.devPositionTool')}
         </Button>
       </CardBody>
     </Card>

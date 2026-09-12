@@ -1,9 +1,10 @@
+import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/lib/api/endpoints'
 import { readPage } from '@/lib/api/page'
 import { PageHeader } from '@/components/AppLayout'
-import { StatusBadge } from '@/components/StatusBadge'
+import { StatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Spinner } from '@/components/ui/Spinner'
 import {
@@ -19,9 +20,9 @@ import {
   Textarea,
   Th,
 } from '@/components/ui'
-import { humanise } from '@/lib/utils'
 
 export function AdminVerificationPage() {
+  const { t } = useTranslation()
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
   const pendingQuery = useQuery({
@@ -34,8 +35,8 @@ export function AdminVerificationPage() {
   return (
     <>
       <PageHeader
-        title="Partner verification"
-        description="Companies waiting for review. Approving one activates it immediately."
+        title={t('admin.verificationTitle')}
+        description={t('admin.verificationSubtitle')}
       />
 
       {pendingQuery.error && (
@@ -48,21 +49,20 @@ export function AdminVerificationPage() {
         <Card>
           {pendingQuery.isLoading && (
             <div className="p-5">
-              <Spinner label="Loading the verification queue" />
+              <Spinner />
             </div>
           )}
 
           {pendingQuery.isError && !pendingQuery.isLoading && (
             <EmptyState
-              title="Could not load the queue"
-              description="The request to the server failed. Check that the backend is running."
+              title={t('errors.loadFailed')}
             />
           )}
 
           {!pendingQuery.isLoading && !pendingQuery.isError && isEmpty && (
             <EmptyState
-              title="Nothing to review"
-              description="Companies appear here once they submit for verification."
+              title={t('admin.nothingToReview')}
+              description={t('admin.nothingToReviewHint')}
             />
           )}
 
@@ -70,9 +70,9 @@ export function AdminVerificationPage() {
             <Table>
               <thead>
                 <tr>
-                  <Th>Company</Th>
-                  <Th>NIPT</Th>
-                  <Th>Contact</Th>
+                  <Th>{t('ride.company')}</Th>
+                  <Th>{t('auth.nipt')}</Th>
+                  <Th>{t('auth.phone')}</Th>
                   <Th />
                 </tr>
               </thead>
@@ -94,7 +94,7 @@ export function AdminVerificationPage() {
                         variant="secondary"
                         onClick={() => setSelectedId(partner.companyId)}
                       >
-                        Review
+                        {t('admin.review')}
                       </Button>
                     </Td>
                   </tr>
@@ -110,8 +110,8 @@ export function AdminVerificationPage() {
           ) : (
             <Card>
               <EmptyState
-                title="No company selected"
-                description="Pick one from the queue to see its documents."
+                title={t('admin.noCompanySelected')}
+                description={t('admin.noCompanySelectedHint')}
               />
             </Card>
           )}
@@ -122,6 +122,8 @@ export function AdminVerificationPage() {
 }
 
 function ReviewPanel({ companyId, onDone }: { companyId: number; onDone: () => void }) {
+  const { t } = useTranslation()
+  const label = useStatusLabel()
   const queryClient = useQueryClient()
   const [reason, setReason] = useState('')
 
@@ -174,26 +176,26 @@ function ReviewPanel({ companyId, onDone }: { companyId: number; onDone: () => v
         description={`${company.ownerFirstName} ${company.ownerLastName} · ${company.phone}`}
         action={
           <Button size="sm" variant="ghost" onClick={onDone}>
-            Close
+            {t('common.close')}
           </Button>
         }
       />
       <CardBody className="space-y-4">
         <dl className="space-y-1.5 text-sm">
-          <Row label="Legal name" value={company.legalName} />
-          <Row label="NIPT" value={company.nipt} />
-          <Row label="Address" value={company.address} />
-          <Row label="Licence" value={company.licenseNumber ?? '—'} />
+          <Row label={t('auth.legalName')} value={company.legalName} />
+          <Row label={t('auth.nipt')} value={company.nipt} />
+          <Row label={t('auth.address')} value={company.address} />
+          <Row label={t('partner.licence')} value={company.licenseNumber ?? '—'} />
         </dl>
 
         <div>
           <p className="mb-2 text-xs font-medium text-ink-700">
-            Documents ({company.documents.length})
+            {t('admin.documentsCount', { count: company.documents.length })}
           </p>
 
           {company.documents.length === 0 ? (
             <Alert tone="warning">
-              No documents. Approval requires at least one pending document.
+              {t('admin.noDocuments')}
             </Alert>
           ) : (
             <ul className="space-y-2">
@@ -201,9 +203,9 @@ function ReviewPanel({ companyId, onDone }: { companyId: number; onDone: () => v
                 <li key={document.id} className="rounded-lg border border-ink-200 px-3 py-2">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-ink-800">
-                      {humanise(document.documentType)}
+                      {label('documentType', document.documentType)}
                     </span>
-                    <StatusBadge status={document.verificationStatus} />
+                    <StatusBadge status={document.verificationStatus} namespace="documentStatus" />
                   </div>
                   <a
                     href={document.fileUrl}
@@ -229,17 +231,17 @@ function ReviewPanel({ companyId, onDone }: { companyId: number; onDone: () => v
           loading={approveMutation.isPending}
           onClick={() => approveMutation.mutate()}
         >
-          Approve company
+          {t('admin.approve')}
         </Button>
 
         <div className="space-y-2 border-t border-ink-200 pt-3">
-          <Field label="Rejection reason" required>
+          <Field label={t('admin.rejectReason')} required>
             <Textarea
               rows={2}
               maxLength={1000}
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              placeholder="What needs to be fixed before resubmitting?"
+              placeholder={t('admin.rejectReasonPlaceholder')}
             />
           </Field>
           <Button
@@ -249,10 +251,10 @@ function ReviewPanel({ companyId, onDone }: { companyId: number; onDone: () => v
             loading={rejectMutation.isPending}
             onClick={() => rejectMutation.mutate()}
           >
-            Reject
+            {t('admin.reject')}
           </Button>
           <p className="text-xs text-ink-500">
-            The partner keeps access so they can fix the problem and submit again.
+            {t('admin.rejectHint')}
           </p>
         </div>
       </CardBody>

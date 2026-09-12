@@ -28,19 +28,16 @@
     "page": "Page {{current}} of {{total}}",
     "totalItems": "{{count}} total"
   },
-
   "language": {
     "label": "Language",
     "albanian": "Shqip",
     "english": "English"
   },
-
   "roles": {
     "CUSTOMER": "Passenger",
     "PARTNER": "Taxi company",
     "ADMIN": "Administrator"
   },
-
   "nav": {
     "book": "Book a taxi",
     "currentRide": "Current ride",
@@ -58,7 +55,6 @@
     "companies": "Companies",
     "users": "Users"
   },
-
   "auth": {
     "signInTitle": "Sign in",
     "signInSubtitle": "Passengers, taxi companies and administrators sign in here.",
@@ -82,9 +78,11 @@
     "displayName": "Display name",
     "displayNameHint": "Shown to passengers in search results",
     "nipt": "NIPT",
-    "address": "Address"
+    "address": "Address",
+    "passengerSubtitle": "Book taxis from the companies available near you.",
+    "partnerSubtitle": "Register your taxi company and submit it for verification.",
+    "partnerDraftNotice": "Your company starts as a draft. Add documents, submit for verification, and an administrator reviews it before you can take rides."
   },
-
   "validation": {
     "required": "This field is required",
     "phoneInvalid": "Enter a valid phone number, for example +355 69 123 4567",
@@ -95,18 +93,21 @@
     "tooLong": "Too long",
     "mustBeFuture": "Must be a date in the future",
     "invalidRange": "The end time must be after the start time",
-    "ratingRange": "Choose between 1 and 5"
+    "ratingRange": "Choose between 1 and 5",
+    "urlInvalid": "Enter a valid URL",
+    "yearInvalid": "Not a valid year",
+    "seatsRange": "Between 2 and 20 seats"
   },
-
   "errors": {
     "generic": "Something went wrong.",
     "unreachable": "Could not reach the server. Is the backend running on port 8080?",
     "forbidden": "You do not have permission to do that.",
     "notFound": "Not found.",
     "pageFailed": "This page could not be displayed",
-    "loadFailed": "Could not load this data. Check that the backend is running."
+    "loadFailed": "Could not load this data. Check that the backend is running.",
+    "staleBackend": "The server returned a plain list where a paged result was expected. The backend is probably running an older build than this frontend — restart it from the current main branch.",
+    "unexpectedShape": "The server returned an unexpected response for this list."
   },
-
   "rideStatus": {
     "REQUESTED": "Requested",
     "DRIVER_ASSIGNED": "Driver assigned",
@@ -118,38 +119,32 @@
     "CANCELLED": "Cancelled",
     "NO_RESPONSE": "No response"
   },
-
   "verificationStatus": {
     "DRAFT": "Draft",
     "PENDING": "Pending",
     "APPROVED": "Approved",
     "REJECTED": "Rejected"
   },
-
   "companyStatus": {
     "ACTIVE": "Active",
     "INACTIVE": "Inactive",
     "SUSPENDED": "Suspended"
   },
-
   "driverAvailability": {
     "ONLINE": "Online",
     "OFFLINE": "Offline",
     "BUSY": "On a ride"
   },
-
   "paymentMethod": {
     "CASH": "Cash",
     "CARD_IN_CAR": "Card in car"
   },
-
   "vehicleType": {
     "STANDARD": "Standard",
     "PREMIUM": "Premium",
     "ELECTRIC": "Electric",
     "VAN": "Van"
   },
-
   "booking": {
     "title": "Book a taxi",
     "subtitle": "Pick your start and destination, then choose a taxi company.",
@@ -176,7 +171,6 @@
     "goToCurrentRide": "Go to current ride",
     "searching": "Searching…"
   },
-
   "ride": {
     "currentTitle": "Current ride",
     "lastRide": "Your last ride",
@@ -213,7 +207,6 @@
       "completed": "Completed"
     }
   },
-
   "rating": {
     "title": "Rate this ride",
     "subtitle": "Help other passengers choose.",
@@ -227,7 +220,6 @@
     "recorded": "Your rating has been recorded.",
     "outOfFive": "{{score}} of 5"
   },
-
   "partner": {
     "ridesTitle": "Rides",
     "ridesSubtitle": "Accept a request, assign a driver, and drive it to completion.",
@@ -312,9 +304,21 @@
     "paymentMethods": "Payment methods",
     "paymentMethodsHint": "At least one is required. Passengers pay the driver directly; KALO does not process payments.",
     "requiredBeforeSubmit": "Required before you can submit for verification",
-    "licenceExpiryHint": "This is the company's taxi licence, separate from the expiry on the uploaded document."
+    "licenceExpiryHint": "This is the company's taxi licence, separate from the expiry on the uploaded document.",
+    "registrationExpiry": "Registration expiry",
+    "insuranceExpiry": "Insurance expiry",
+    "inspectionExpiry": "Technical inspection expiry",
+    "ended": "Ended",
+    "selectVehicle": "Select a vehicle…",
+    "noEligibleDriver": "No eligible driver. A driver must be active, offline and not already assigned.",
+    "documentNumber": "Document number",
+    "fileUrl": "File URL",
+    "issuedAt": "Issued at",
+    "expiresAt": "Expires at",
+    "noDocumentsYet": "No documents",
+    "noDocumentsHint": "Add your business registration and taxi licence.",
+    "documentUrlHint": "Hosted file URL — upload is not part of the MVP."
   },
-
   "availability": {
     "title": "Availability",
     "subtitle": "Where you operate and when you accept bookings. Both are checked when a passenger searches.",
@@ -359,7 +363,6 @@
       "SUNDAY": "Sun"
     }
   },
-
   "admin": {
     "verificationTitle": "Partner verification",
     "verificationSubtitle": "Companies waiting for review. Approving one activates it immediately.",
@@ -403,9 +406,9 @@
     "noRideSelected": "No ride selected",
     "noRideSelectedHint": "Pick a ride to see its detail.",
     "documentsCount": "Documents ({{count}})",
-    "noDocuments": "No documents. Approval requires at least one pending document."
+    "noDocuments": "No documents. Approval requires at least one pending document.",
+    "accepted": "Accepted"
   },
-
   "profile": {
     "title": "Profile",
     "subtitle": "Your account details.",
@@ -421,7 +424,6 @@
     "verificationNotice": "Phone verification is not part of the MVP yet, so this stays unverified.",
     "saveChanges": "Save changes"
   },
-
   "guest": {
     "browsing": "Browsing as a guest",
     "headline": "See which taxi companies are near you",
@@ -441,5 +443,71 @@
     "step2Body": "You see one offer per company, with its rating and distance.",
     "step3": "They assign a driver",
     "step3Body": "The company sends one of its own drivers. You pay the driver directly."
+  },
+  "userStatus": {
+    "ACTIVE": "Active",
+    "PENDING": "Pending",
+    "SUSPENDED": "Suspended",
+    "DISABLED": "Disabled"
+  },
+  "driverStatus": {
+    "ACTIVE": "Active",
+    "INACTIVE": "Inactive",
+    "SUSPENDED": "Suspended"
+  },
+  "vehicleStatus": {
+    "ACTIVE": "Active",
+    "INACTIVE": "Inactive",
+    "SUSPENDED": "Suspended"
+  },
+  "documentStatus": {
+    "DRAFT": "Draft",
+    "PENDING": "Pending",
+    "APPROVED": "Approved",
+    "REJECTED": "Rejected"
+  },
+  "documentType": {
+    "BUSINESS_REGISTRATION": "Business registration",
+    "TAXI_LICENSE": "Taxi licence",
+    "DRIVING_LICENSE": "Driving licence",
+    "PROFESSIONAL_CERTIFICATE": "Professional certificate",
+    "VEHICLE_REGISTRATION": "Vehicle registration",
+    "INSURANCE": "Insurance",
+    "PASSENGER_INSURANCE": "Passenger insurance",
+    "TECHNICAL_INSPECTION": "Technical inspection",
+    "TAXIMETER_VERIFICATION": "Taximeter verification"
+  },
+  "geo": {
+    "unsupported": "This browser does not support location access.",
+    "denied": "Location permission was denied. Allow location access in your browser to continue.",
+    "unavailable": "Your device could not determine a position. Check that location services are on.",
+    "timeout": "Timed out while getting your position.",
+    "failed": "Could not get your location.",
+    "searchFailed": "Could not search addresses right now."
+  },
+  "dashboard": {
+    "drivers": "Drivers",
+    "onlineNow": "Online now",
+    "onARide": "On a ride",
+    "awaitingResponse": "Awaiting response",
+    "acceptingBookings": "Accepting bookings",
+    "bookingEnabled": "Booking enabled",
+    "paymentMethods": "Payment methods",
+    "noneConfigured": "None configured",
+    "editSettings": "Edit settings",
+    "availableOnceApproved": "Available once your company is approved.",
+    "nextSteps": "Next steps",
+    "step1": "Add drivers and vehicles.",
+    "step2": "Assign a vehicle to each driver.",
+    "step3": "Set the driver position and put them online.",
+    "step4": "Watch the Rides queue for incoming requests.",
+    "openRides": "Open rides queue",
+    "notSubmitted": "Your company is not submitted yet",
+    "waitingReview": "Waiting for administrator review",
+    "wasRejected": "Your application was rejected",
+    "onboardingHint": "You can manage your profile and documents now, but you cannot take rides until an administrator approves the company.",
+    "goToDocuments": "Go to documents",
+    "notActive": "Your company is not active",
+    "notActiveHint": "You will not appear in passenger search and cannot accept new rides."
   }
 }

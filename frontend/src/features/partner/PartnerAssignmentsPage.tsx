@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { partnerApi } from '@/lib/api/endpoints'
@@ -21,6 +22,7 @@ import {
 import { formatDateTime } from '@/lib/utils'
 
 export function PartnerAssignmentsPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [driverId, setDriverId] = useState('')
   const [vehicleId, setVehicleId] = useState('')
@@ -85,8 +87,8 @@ export function PartnerAssignmentsPage() {
   return (
     <>
       <PageHeader
-        title="Driver – vehicle assignments"
-        description="A driver needs an active vehicle before they can go online."
+        title={t('partner.assignmentsTitle')}
+        description={t('partner.assignmentsSubtitle')}
       />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
@@ -102,8 +104,8 @@ export function PartnerAssignmentsPage() {
 
             {assignmentsQuery.data?.length === 0 && (
               <EmptyState
-                title="No assignments"
-                description="Pair a driver with a vehicle to put them on the road."
+                title={t('partner.noAssignments')}
+                description={t('partner.noAssignmentsHint')}
               />
             )}
 
@@ -111,10 +113,10 @@ export function PartnerAssignmentsPage() {
               <Table>
                 <thead>
                   <tr>
-                    <Th>Driver</Th>
-                    <Th>Vehicle</Th>
-                    <Th>From</Th>
-                    <Th>State</Th>
+                    <Th>{t('rating.driver')}</Th>
+                    <Th>{t('partner.vehicle')}</Th>
+                    <Th>{t('ride.from')}</Th>
+                    <Th>{t('ride.status')}</Th>
                     <Th />
                   </tr>
                 </thead>
@@ -131,9 +133,9 @@ export function PartnerAssignmentsPage() {
                       <Td className="text-xs">{formatDateTime(assignment.assignedFrom)}</Td>
                       <Td>
                         {assignment.active ? (
-                          <Badge tone="success">Active</Badge>
+                          <Badge tone="success">{t('companyStatus.ACTIVE')}</Badge>
                         ) : (
-                          <Badge>Ended</Badge>
+                          <Badge>{t('partner.ended')}</Badge>
                         )}
                       </Td>
                       <Td>
@@ -144,7 +146,7 @@ export function PartnerAssignmentsPage() {
                             className="text-red-600 hover:bg-red-50"
                             onClick={() => removeMutation.mutate(assignment.assignmentId)}
                           >
-                            Unassign
+                            {t('partner.unassign')}
                           </Button>
                         )}
                       </Td>
@@ -157,19 +159,19 @@ export function PartnerAssignmentsPage() {
         </div>
 
         <Card>
-          <CardHeader title="New assignment" />
+          <CardHeader title={t('partner.newAssignment')} />
           <CardBody className="space-y-3">
             {createMutation.error && <ErrorMessage error={createMutation.error} />}
 
             {availableDrivers.length === 0 && (
               <Alert tone="warning">
-                No eligible driver. A driver must be active, offline and not already assigned.
+                {t('partner.noEligibleDriver')}
               </Alert>
             )}
 
-            <Field label="Driver" required>
+            <Field label={t('rating.driver')} required>
               <Select value={driverId} onChange={(event) => setDriverId(event.target.value)}>
-                <option value="">Select a driver…</option>
+                <option value="">{t('partner.selectDriver')}</option>
                 {availableDrivers.map((driver) => (
                   <option key={driver.id} value={driver.id}>
                     {driver.firstName} {driver.lastName}
@@ -178,9 +180,9 @@ export function PartnerAssignmentsPage() {
               </Select>
             </Field>
 
-            <Field label="Vehicle" required>
+            <Field label={t('partner.vehicle')} required>
               <Select value={vehicleId} onChange={(event) => setVehicleId(event.target.value)}>
-                <option value="">Select a vehicle…</option>
+                <option value="">{t('partner.selectVehicle')}</option>
                 {availableVehicles.map((vehicle) => (
                   <option key={vehicle.id} value={vehicle.id}>
                     {vehicle.plateNumber} · {vehicle.brand} {vehicle.model}
@@ -195,7 +197,7 @@ export function PartnerAssignmentsPage() {
               loading={createMutation.isPending}
               onClick={() => createMutation.mutate()}
             >
-              Assign vehicle
+              {t('partner.assignVehicle')}
             </Button>
           </CardBody>
         </Card>

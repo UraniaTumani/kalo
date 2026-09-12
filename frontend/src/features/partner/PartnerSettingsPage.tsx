@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -6,6 +7,7 @@ import { z } from 'zod'
 import { partnerApi } from '@/lib/api/endpoints'
 import type { PaymentMethod } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
+import { useStatusLabel } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Spinner } from '@/components/ui/Spinner'
 import { Alert, Button, Card, CardBody, CardHeader, Field, Input } from '@/components/ui'
@@ -13,14 +15,14 @@ import { Alert, Button, Card, CardBody, CardHeader, Field, Input } from '@/compo
 const PAYMENT_METHODS: PaymentMethod[] = ['CASH', 'CARD_IN_CAR']
 
 const profileSchema = z.object({
-  legalName: z.string().trim().min(1, 'Required').max(200),
-  displayName: z.string().trim().min(1, 'Required').max(150),
+  legalName: z.string().trim().min(1, 'validation.required').max(200),
+  displayName: z.string().trim().min(1, 'validation.required').max(150),
   phone: z
     .string()
     .trim()
-    .regex(/^\+?[0-9]{6,19}$/, "Digits only, optionally starting with '+'"),
-  email: z.union([z.literal(''), z.email('Enter a valid email')]).optional(),
-  address: z.string().trim().min(1, 'Required').max(500),
+    .regex(/^\+?[0-9]{6,19}$/, 'validation.phoneInvalid'),
+  email: z.union([z.literal(''), z.email('validation.emailInvalid')]).optional(),
+  address: z.string().trim().min(1, 'validation.required').max(500),
   // Optional to save, because a partner fills the profile in over several
   // visits, but both are required before submit-for-verification is accepted.
   licenseNumber: z.string().trim().max(100).optional(),
@@ -29,13 +31,15 @@ const profileSchema = z.object({
     .optional()
     .refine(
       (value) => !value || new Date(value) > new Date(),
-      'Licence expiry must be in the future',
+      'validation.mustBeFuture',
     ),
 })
 
 type ProfileValues = z.infer<typeof profileSchema>
 
 export function PartnerSettingsPage() {
+  const { t } = useTranslation()
+  const label = useStatusLabel()
   const queryClient = useQueryClient()
 
   const profileQuery = useQuery({
@@ -86,7 +90,7 @@ export function PartnerSettingsPage() {
     onSuccess: invalidate,
   })
 
-  if (profileQuery.isLoading) return <Spinner label="Loading settings" />
+  if (profileQuery.isLoading) return <Spinner />
 
   const settings = settingsQuery.data
 
@@ -105,11 +109,11 @@ export function PartnerSettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" description="Company details and how you take bookings." />
+      <PageHeader title={t('partner.settingsTitle')} description={t('partner.settingsSubtitle')} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Company profile" />
+          <CardHeader title={t('partner.companyProfile')} />
           <CardBody>
             <form
               className="space-y-3"
@@ -118,46 +122,46 @@ export function PartnerSettingsPage() {
             >
               {profileMutation.error && <ErrorMessage error={profileMutation.error} />}
               {profileMutation.isSuccess && !isDirty && (
-                <Alert tone="success">Profile saved.</Alert>
+                <Alert tone="success">{t('common.saved')}</Alert>
               )}
 
-              <Field label="Legal name" error={errors.legalName?.message} required>
+              <Field label={t('auth.legalName')} error={errors.legalName ? t(errors.legalName.message!) : undefined} required>
                 <Input {...register('legalName')} />
               </Field>
               <Field
-                label="Display name"
-                error={errors.displayName?.message}
+                label={t('auth.displayName')}
+                error={errors.displayName ? t(errors.displayName.message!) : undefined}
                 required
-                hint="Shown to passengers"
+                hint={t('auth.displayNameHint')}
               >
                 <Input {...register('displayName')} />
               </Field>
-              <Field label="Phone" error={errors.phone?.message} required>
+              <Field label={t('auth.phone')} error={errors.phone ? t(errors.phone.message!) : undefined} required>
                 <Input {...register('phone')} type="tel" />
               </Field>
-              <Field label="Email" error={errors.email?.message}>
+              <Field label={t('auth.email')} error={errors.email ? t(errors.email.message!) : undefined}>
                 <Input {...register('email')} type="email" />
               </Field>
-              <Field label="Address" error={errors.address?.message} required>
+              <Field label={t('auth.address')} error={errors.address ? t(errors.address.message!) : undefined} required>
                 <Input {...register('address')} />
               </Field>
               <Field
-                label="Licence number"
-                error={errors.licenseNumber?.message}
-                hint="Required before you can submit for verification"
+                label={t('partner.licenceNumber')}
+                error={errors.licenseNumber ? t(errors.licenseNumber.message!) : undefined}
+                hint={t('partner.requiredBeforeSubmit')}
               >
                 <Input {...register('licenseNumber')} />
               </Field>
               <Field
-                label="Licence expiry"
-                error={errors.licenseExpiryDate?.message}
-                hint="Required before you can submit for verification. This is the company's taxi licence, separate from the expiry on the uploaded document."
+                label={t('partner.licenceExpiry')}
+                error={errors.licenseExpiryDate ? t(errors.licenseExpiryDate.message!) : undefined}
+                hint={t('partner.licenceExpiryHint')}
               >
                 <Input {...register('licenseExpiryDate')} type="date" />
               </Field>
 
               <Button type="submit" loading={profileMutation.isPending}>
-                Save profile
+                {t('common.save')}
               </Button>
             </form>
           </CardBody>
@@ -165,13 +169,13 @@ export function PartnerSettingsPage() {
 
         <Card>
           <CardHeader
-            title="Bookings"
-            description="Only approved and active companies appear in search."
+            title={t('partner.bookings')}
+            description={t('partner.bookingsHint')}
           />
           <CardBody className="space-y-4">
             {!settings && (
               <Alert tone="warning">
-                Operational settings become available once your company is approved.
+                {t('availability.notApprovedYet')}
               </Alert>
             )}
 
@@ -182,10 +186,10 @@ export function PartnerSettingsPage() {
                 <label className="flex items-center justify-between gap-3 rounded-lg border border-ink-200 px-3 py-2.5">
                   <span>
                     <span className="block text-sm font-medium text-ink-900">
-                      Accepting bookings
+                      {t('partner.acceptingBookings')}
                     </span>
                     <span className="block text-xs text-ink-500">
-                      Turn off to disappear from passenger search
+                      {t('partner.acceptingBookingsHint')}
                     </span>
                   </span>
                   <input
@@ -204,7 +208,7 @@ export function PartnerSettingsPage() {
 
                 <div>
                   <p className="mb-2 text-xs font-medium text-ink-700">
-                    Payment methods (at least one)
+                    {t('partner.paymentMethods')}
                   </p>
                   <div className="space-y-2">
                     {PAYMENT_METHODS.map((method) => (
@@ -213,7 +217,7 @@ export function PartnerSettingsPage() {
                         className="flex items-center justify-between gap-3 rounded-lg border border-ink-200 px-3 py-2.5"
                       >
                         <span className="text-sm text-ink-800">
-                          {method === 'CASH' ? 'Cash' : 'Card in car'}
+                          {label('paymentMethod', method)}
                         </span>
                         <input
                           type="checkbox"
@@ -226,7 +230,7 @@ export function PartnerSettingsPage() {
                     ))}
                   </div>
                   <p className="mt-2 text-xs text-ink-500">
-                    Passengers pay the driver directly. KALO does not process payments.
+                    {t('partner.paymentMethodsHint')}
                   </p>
                 </div>
               </>

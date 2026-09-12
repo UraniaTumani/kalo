@@ -1,10 +1,11 @@
+import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { partnerApi } from '@/lib/api/endpoints'
 import type { PartnerRideResponse, RideStatus } from '@/lib/api/types'
 import { isActiveRide } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
-import { RideStatusBadge } from '@/components/StatusBadge'
+import { RideStatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { Pagination } from '@/components/Pagination'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { MapView } from '@/components/MapPicker'
@@ -23,7 +24,7 @@ import {
   Td,
   Th,
 } from '@/components/ui'
-import { formatDateTime, humanise } from '@/lib/utils'
+import { formatDateTime } from '@/lib/utils'
 
 const FILTERS: (RideStatus | 'ALL')[] = [
   'ALL',
@@ -39,6 +40,8 @@ const FILTERS: (RideStatus | 'ALL')[] = [
 ]
 
 export function PartnerRidesPage() {
+  const { t } = useTranslation()
+  const label = useStatusLabel()
   const [status, setStatus] = useState<RideStatus | 'ALL'>('ALL')
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<PartnerRideResponse | null>(null)
@@ -63,8 +66,8 @@ export function PartnerRidesPage() {
   return (
     <>
       <PageHeader
-        title="Rides"
-        description="Accept a request, assign a driver, and drive it to completion."
+        title={t('partner.ridesTitle')}
+        description={t('partner.ridesSubtitle')}
         action={
           <Select
             value={status}
@@ -76,7 +79,7 @@ export function PartnerRidesPage() {
           >
             {FILTERS.map((value) => (
               <option key={value} value={value}>
-                {value === 'ALL' ? 'All statuses' : humanise(value)}
+                {value === 'ALL' ? t('partner.allStatuses') : label('rideStatus', value)}
               </option>
             ))}
           </Select>
@@ -95,8 +98,8 @@ export function PartnerRidesPage() {
 
           {ridesQuery.data?.empty && (
             <EmptyState
-              title="No rides"
-              description="Requests from passengers who chose your company appear here."
+              title={t('partner.noRides')}
+              description={t('partner.noRidesHint')}
             />
           )}
 
@@ -105,10 +108,10 @@ export function PartnerRidesPage() {
               <Table>
                 <thead>
                   <tr>
-                    <Th>Requested</Th>
-                    <Th>Passenger</Th>
-                    <Th>Route</Th>
-                    <Th>Status</Th>
+                    <Th>{t('ride.requested')}</Th>
+                    <Th>{t('partner.passenger')}</Th>
+                    <Th>{t('ride.route')}</Th>
+                    <Th>{t('ride.status')}</Th>
                     <Th />
                   </tr>
                 </thead>
@@ -123,15 +126,15 @@ export function PartnerRidesPage() {
                         <span className="block text-xs text-ink-500">{ride.customerPhone}</span>
                       </Td>
                       <Td className="text-xs text-ink-500">
-                        {ride.pickupAddress ?? 'Map point'} →{' '}
-                        {ride.destinationAddress ?? 'Map point'}
+                        {ride.pickupAddress ?? t('ride.mapPoint')} →{' '}
+                        {ride.destinationAddress ?? t('ride.mapPoint')}
                       </Td>
                       <Td>
                         <RideStatusBadge status={ride.status} />
                       </Td>
                       <Td>
                         <Button size="sm" variant="secondary" onClick={() => setSelected(ride)}>
-                          Manage
+                          {t('partner.manage')}
                         </Button>
                       </Td>
                     </tr>
@@ -149,8 +152,8 @@ export function PartnerRidesPage() {
           ) : (
             <Card>
               <EmptyState
-                title="No ride selected"
-                description="Pick a ride from the list to act on it."
+                title={t('partner.noRideSelected')}
+                description={t('partner.noRideSelectedHint')}
               />
             </Card>
           )}
@@ -161,6 +164,8 @@ export function PartnerRidesPage() {
 }
 
 function RideActions({ ride, onDone }: { ride: PartnerRideResponse; onDone: () => void }) {
+  const { t } = useTranslation()
+  const label = useStatusLabel()
   const queryClient = useQueryClient()
   const [driverId, setDriverId] = useState('')
   const [finalAmount, setFinalAmount] = useState('')
@@ -241,14 +246,14 @@ function RideActions({ ride, onDone }: { ride: PartnerRideResponse; onDone: () =
         {ride.status === 'REQUESTED' && (
           <div className="space-y-3">
             {driversQuery.data && assignableDrivers.length === 0 ? (
-              <Alert tone="warning" title="No driver available">
-                A driver must be ACTIVE, ONLINE and hold an active vehicle assignment before you
-                can accept.
+              <Alert tone="warning" title={t('partner.noDriverAvailable')}>
+                {t('partner.noDriverAvailableHint')}
+
               </Alert>
             ) : (
-              <Field label="Assign driver" required>
+              <Field label={t('partner.assignDriver')} required>
                 <Select value={driverId} onChange={(event) => setDriverId(event.target.value)}>
-                  <option value="">Select a driver…</option>
+                  <option value="">{t('partner.selectDriver')}</option>
                   {assignableDrivers.map((driver) => (
                     <option key={driver.id} value={driver.id}>
                       {driver.firstName} {driver.lastName} · {driver.phone}
@@ -266,7 +271,7 @@ function RideActions({ ride, onDone }: { ride: PartnerRideResponse; onDone: () =
                 loading={accept.isPending}
                 onClick={() => accept.mutate()}
               >
-                Accept
+                {t('partner.accept')}
               </Button>
               <Button
                 variant="danger"
@@ -274,7 +279,7 @@ function RideActions({ ride, onDone }: { ride: PartnerRideResponse; onDone: () =
                 loading={decline.isPending}
                 onClick={() => decline.mutate()}
               >
-                Decline
+                {t('partner.decline')}
               </Button>
             </div>
           </div>
@@ -282,28 +287,28 @@ function RideActions({ ride, onDone }: { ride: PartnerRideResponse; onDone: () =
 
         {ride.status === 'DRIVER_ASSIGNED' && (
           <Button className="w-full" loading={arriving.isPending} onClick={() => arriving.mutate()}>
-            Driver is on the way
+            {t('partner.driverOnWay')}
           </Button>
         )}
 
         {ride.status === 'DRIVER_ARRIVING' && (
           <Button className="w-full" loading={arrived.isPending} onClick={() => arrived.mutate()}>
-            Driver has arrived
+            {t('partner.driverArrived')}
           </Button>
         )}
 
         {ride.status === 'DRIVER_ARRIVED' && (
           <Button className="w-full" loading={start.isPending} onClick={() => start.mutate()}>
-            Start ride
+            {t('partner.startRide')}
           </Button>
         )}
 
         {ride.status === 'IN_PROGRESS' && (
           <div className="space-y-3">
             <Field
-              label="Taximeter total"
+              label={t('partner.taximeterTotal')}
               required
-              hint="The real amount the passenger pays the driver"
+              hint={t('partner.taximeterHint')}
             >
               <Input
                 type="number"
@@ -321,14 +326,14 @@ function RideActions({ ride, onDone }: { ride: PartnerRideResponse; onDone: () =
               loading={complete.isPending}
               onClick={() => complete.mutate()}
             >
-              Complete ride
+              {t('partner.completeRide')}
             </Button>
           </div>
         )}
 
         {!isActiveRide(ride.status) && (
           <Alert tone="neutral">
-            This ride is finished ({humanise(ride.status)}). No further action is possible.
+            {t('partner.rideFinished', { status: label('rideStatus', ride.status) })}
           </Alert>
         )}
       </CardBody>
