@@ -21,8 +21,16 @@ const profileSchema = z.object({
     .regex(/^\+?[0-9]{6,19}$/, "Digits only, optionally starting with '+'"),
   email: z.union([z.literal(''), z.email('Enter a valid email')]).optional(),
   address: z.string().trim().min(1, 'Required').max(500),
+  // Optional to save, because a partner fills the profile in over several
+  // visits, but both are required before submit-for-verification is accepted.
   licenseNumber: z.string().trim().max(100).optional(),
-  licenseExpiryDate: z.string().optional(),
+  licenseExpiryDate: z
+    .string()
+    .optional()
+    .refine(
+      (value) => !value || new Date(value) > new Date(),
+      'Licence expiry must be in the future',
+    ),
 })
 
 type ProfileValues = z.infer<typeof profileSchema>
@@ -133,10 +141,18 @@ export function PartnerSettingsPage() {
               <Field label="Address" error={errors.address?.message} required>
                 <Input {...register('address')} />
               </Field>
-              <Field label="Licence number" error={errors.licenseNumber?.message}>
+              <Field
+                label="Licence number"
+                error={errors.licenseNumber?.message}
+                hint="Required before you can submit for verification"
+              >
                 <Input {...register('licenseNumber')} />
               </Field>
-              <Field label="Licence expiry" error={errors.licenseExpiryDate?.message}>
+              <Field
+                label="Licence expiry"
+                error={errors.licenseExpiryDate?.message}
+                hint="Required before you can submit for verification. This is the company's taxi licence, separate from the expiry on the uploaded document."
+              >
                 <Input {...register('licenseExpiryDate')} type="date" />
               </Field>
 
