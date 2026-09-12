@@ -80,7 +80,7 @@ function RootRedirect() {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <Spinner label="Loading" />
+        <Spinner />
       </div>
     )
   }

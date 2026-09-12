@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -9,11 +10,13 @@ import { MapView, TIRANA } from '@/components/MapPicker'
 import { AddressInput, type SelectedPlace } from '@/components/AddressInput'
 import { PageHeader } from '@/components/AppLayout'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { useStatusLabel } from '@/components/StatusBadge'
 import { Alert, Badge, Button, Card, CardBody, CardHeader } from '@/components/ui'
-import { formatDistance, humanise } from '@/lib/utils'
+import { formatDistance } from '@/lib/utils'
 import { rememberRide } from './rideMemory'
 
 export function BookRidePage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -53,16 +56,16 @@ export function BookRidePage() {
   return (
     <>
       <PageHeader
-        title="Book a taxi"
-        description="Pick your start and destination, then choose a taxi company."
+        title={t('booking.title')}
+        description={t('booking.subtitle')}
       />
 
       {hasActiveRideConflict && (
         <div className="mb-4">
-          <Alert tone="warning" title="You already have a ride in progress">
+          <Alert tone="warning" title={t('booking.activeRideTitle')}>
             <div className="mt-2">
               <Button size="sm" variant="secondary" onClick={() => navigate('/ride/current')}>
-                Go to current ride
+                {t('booking.goToCurrentRide')}
               </Button>
             </div>
           </Alert>
@@ -72,15 +75,15 @@ export function BookRidePage() {
       <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
         <Card>
           <CardHeader
-            title="Where are you going?"
-            description="Search for an address, or use your current location."
+            title={t('booking.whereTo')}
+            description={t('booking.searchHint')}
           />
           <CardBody className="space-y-3">
             <AddressInput
-              label="Pickup"
+              label={t('booking.pickup')}
               required
               showUseMyLocation
-              placeholder="Search an address or place"
+              placeholder={t('booking.pickupPlaceholder')}
               value={pickup}
               onChange={(place) => {
                 setPickup(place)
@@ -89,9 +92,9 @@ export function BookRidePage() {
             />
 
             <AddressInput
-              label="Destination"
+              label={t('booking.destination')}
               required
-              placeholder="Where to?"
+              placeholder={t('booking.destinationPlaceholder')}
               value={destination}
               onChange={(place) => {
                 setDestination(place)
@@ -133,7 +136,7 @@ export function BookRidePage() {
               loading={searchMutation.isPending}
               className="w-full"
             >
-              Search available taxis
+              {t('booking.searchTaxis')}
             </Button>
           </CardBody>
         </Card>
@@ -141,23 +144,23 @@ export function BookRidePage() {
         <div className="space-y-4">
           <Card>
             <CardHeader
-              title="Taxi companies"
+              title={t('booking.companies')}
               description={
                 search
-                  ? `${search.taxiOptions.length} available near your pickup`
-                  : 'Run a search to see who is available.'
+                  ? t('booking.availableNear', { count: search.taxiOptions.length })
+                  : t('booking.runSearch')
               }
             />
             <CardBody className="space-y-3">
               {!search && (
                 <p className="text-sm text-ink-500">
-                  You choose the company. They assign one of their drivers.
+                  {t('booking.youChoose')}
                 </p>
               )}
 
               {search && search.taxiOptions.length === 0 && (
-                <Alert tone="warning" title="No taxis available right now">
-                  No company has an online driver near your pickup point. Try again shortly.
+                <Alert tone="warning" title={t('booking.noneAvailable')}>
+                  {t('booking.noneAvailableHint')}
                 </Alert>
               )}
 
@@ -194,6 +197,9 @@ function OfferCard({
   disabled: boolean
   pending: boolean
 }) {
+  const { t } = useTranslation()
+  const label = useStatusLabel()
+
   return (
     <div className="rounded-lg border border-ink-200 p-3">
       <div className="flex items-start justify-between gap-2">
@@ -207,11 +213,11 @@ function OfferCard({
                 <span className="text-ink-400">({option.companyRatingCount ?? 0})</span>
               </>
             ) : (
-              'Not rated yet'
+              t('booking.notRated')
             )}
           </p>
         </div>
-        <Badge tone="info">{formatDistance(option.distanceKm)} away</Badge>
+        <Badge tone="info">{t('booking.away', { distance: formatDistance(option.distanceKm) })}</Badge>
       </div>
 
       <p className="mt-2 text-xs text-ink-600">
@@ -219,12 +225,13 @@ function OfferCard({
       </p>
 
       <div className="mt-2 flex flex-wrap gap-1">
+        <Badge>{label('vehicleType', option.vehicleType)}</Badge>
         {option.paymentMethods.map((method) => (
-          <Badge key={method}>{humanise(method)}</Badge>
+          <Badge key={method}>{label('paymentMethod', method)}</Badge>
         ))}
       </div>
 
-      <p className="mt-2 text-xs text-ink-500">{option.pricingNote}</p>
+      <p className="mt-2 text-xs text-ink-500">{t('booking.pricingNote')}</p>
 
       <Button
         size="sm"
@@ -234,7 +241,7 @@ function OfferCard({
         loading={pending}
       >
         {pending ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
-        Choose this company
+        {t('booking.chooseCompany')}
       </Button>
     </div>
   )

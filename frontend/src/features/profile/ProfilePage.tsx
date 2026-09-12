@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -9,17 +10,17 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Spinner } from '@/components/ui/Spinner'
 import { Alert, Badge, Button, Card, CardBody, CardHeader, Field, Input } from '@/components/ui'
-import { humanise } from '@/lib/utils'
 
 const schema = z.object({
-  firstName: z.string().trim().min(1, 'First name is required').max(100),
-  lastName: z.string().trim().min(1, 'Last name is required').max(100),
-  email: z.union([z.literal(''), z.email('Enter a valid email')]).optional(),
+  firstName: z.string().trim().min(1, 'validation.required').max(100),
+  lastName: z.string().trim().min(1, 'validation.required').max(100),
+  email: z.union([z.literal(''), z.email('validation.emailInvalid')]).optional(),
 })
 
 type FormValues = z.infer<typeof schema>
 
 export function ProfilePage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [saved, setSaved] = useState(false)
 
@@ -63,18 +64,18 @@ export function ProfilePage() {
     },
   })
 
-  if (profileQuery.isLoading) return <Spinner label="Loading your profile" />
+  if (profileQuery.isLoading) return <Spinner />
   if (profileQuery.error) return <ErrorMessage error={profileQuery.error} />
 
   const me = profileQuery.data!
 
   return (
     <>
-      <PageHeader title="Profile" description="Your account details." />
+      <PageHeader title={t('profile.title')} description={t('profile.subtitle')} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Your details" />
+          <CardHeader title={t('profile.yourDetails')} />
           <CardBody>
             <form
               className="space-y-3"
@@ -85,51 +86,51 @@ export function ProfilePage() {
               noValidate
             >
               {mutation.error && <ErrorMessage error={mutation.error} />}
-              {saved && !isDirty && <Alert tone="success">Profile saved.</Alert>}
+              {saved && !isDirty && <Alert tone="success">{t('common.saved')}</Alert>}
 
               <div className="grid grid-cols-2 gap-3">
-                <Field label="First name" error={errors.firstName?.message} required>
+                <Field label={t('auth.firstName')} error={errors.firstName ? t(errors.firstName.message!) : undefined} required>
                   <Input {...register('firstName')} autoComplete="given-name" />
                 </Field>
-                <Field label="Last name" error={errors.lastName?.message} required>
+                <Field label={t('auth.lastName')} error={errors.lastName ? t(errors.lastName.message!) : undefined} required>
                   <Input {...register('lastName')} autoComplete="family-name" />
                 </Field>
               </div>
 
-              <Field label="Email" error={errors.email?.message}>
+              <Field label={t('auth.email')} error={errors.email ? t(errors.email.message!) : undefined}>
                 <Input {...register('email')} type="email" autoComplete="email" />
               </Field>
 
               <Field
-                label="Phone"
-                hint="Your phone is your username and cannot be changed here."
+                label={t('auth.phone')}
+                hint={t('profile.phoneReadOnly')}
               >
                 <Input value={me.phone} disabled readOnly />
               </Field>
 
               <Button type="submit" loading={mutation.isPending} disabled={!isDirty}>
-                Save changes
+                {t('profile.saveChanges')}
               </Button>
             </form>
           </CardBody>
         </Card>
 
         <Card>
-          <CardHeader title="Account" />
+          <CardHeader title={t('profile.account')} />
           <CardBody>
             <dl className="space-y-2.5 text-sm">
-              <Row label="Role">
-                <Badge tone={me.role === 'ADMIN' ? 'info' : 'neutral'}>{humanise(me.role)}</Badge>
+              <Row label={t('profile.role')}>
+                <Badge tone={me.role === 'ADMIN' ? 'info' : 'neutral'}>{t('roles.' + me.role)}</Badge>
               </Row>
-              <Row label="Status">
-                <StatusBadge status={me.status} />
+              <Row label={t('profile.status')}>
+                <StatusBadge status={me.status} namespace="userStatus" />
               </Row>
-              <Row label="Phone verified">
+              <Row label={t('profile.phoneVerified')}>
                 <Badge tone={me.phoneVerified ? 'success' : 'neutral'}>
-                  {me.phoneVerified ? 'Verified' : 'Not verified'}
+                  {me.phoneVerified ? t('profile.verified') : t('profile.notVerified')}
                 </Badge>
               </Row>
-              <Row label="User ID">
+              <Row label={t('profile.userId')}>
                 <span className="font-medium text-ink-900">{me.id}</span>
               </Row>
             </dl>
@@ -137,7 +138,7 @@ export function ProfilePage() {
             {!me.phoneVerified && (
               <div className="mt-4">
                 <Alert tone="neutral">
-                  Phone verification is not part of the MVP yet, so this stays unverified.
+                  {t('profile.verificationNotice')}
                 </Alert>
               </div>
             )}

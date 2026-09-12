@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -6,7 +7,7 @@ import { z } from 'zod'
 import { partnerApi } from '@/lib/api/endpoints'
 import type { DocumentType } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
-import { StatusBadge } from '@/components/StatusBadge'
+import { StatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Spinner } from '@/components/ui/Spinner'
 import {
@@ -23,14 +24,13 @@ import {
   Td,
   Th,
 } from '@/components/ui'
-import { humanise } from '@/lib/utils'
 
 const COMPANY_DOCUMENT_TYPES: DocumentType[] = ['BUSINESS_REGISTRATION', 'TAXI_LICENSE']
 
 const documentSchema = z.object({
   documentType: z.enum(['BUSINESS_REGISTRATION', 'TAXI_LICENSE']),
   documentNumber: z.string().trim().max(100).optional(),
-  fileUrl: z.url('Enter a valid URL').max(1000),
+  fileUrl: z.url('validation.urlInvalid').max(1000),
   issuedAt: z.string().optional(),
   expiresAt: z.string().optional(),
 })
@@ -38,6 +38,8 @@ const documentSchema = z.object({
 type DocumentValues = z.infer<typeof documentSchema>
 
 export function PartnerDocumentsPage() {
+  const { t } = useTranslation()
+  const label = useStatusLabel()
   const queryClient = useQueryClient()
 
   const profileQuery = useQuery({
@@ -118,8 +120,8 @@ export function PartnerDocumentsPage() {
   return (
     <>
       <PageHeader
-        title="Documents"
-        description="Upload your company paperwork, then submit for verification."
+        title={t('partner.documentsTitle')}
+        description={t('partner.documentsSubtitle')}
         action={
           canSubmit ? (
             <Button
@@ -127,7 +129,7 @@ export function PartnerDocumentsPage() {
               loading={submitMutation.isPending}
               onClick={() => submitMutation.mutate()}
             >
-              Submit for verification
+              {t('partner.submitVerification')}
             </Button>
           ) : undefined
         }
@@ -141,7 +143,7 @@ export function PartnerDocumentsPage() {
 
       {submitMutation.isSuccess && (
         <div className="mb-4">
-          <Alert tone="success" title="Submitted">
+          <Alert tone="success" title={t('common.saved')}>
             {submitMutation.data.message}
           </Alert>
         </div>
@@ -149,20 +151,20 @@ export function PartnerDocumentsPage() {
 
       {canSubmit && !readyToSubmit && !profileQuery.isLoading && (
         <div className="mb-4">
-          <Alert tone="warning" title="Not ready to submit yet">
+          <Alert tone="warning" title={t('partner.notReady')}>
             {missingProfileFields.length > 0 && (
               <p>
-                Missing from your{' '}
+                {t('partner.missingProfile')}:{' '}
                 <Link to="/partner/settings" className="font-medium underline">
-                  company profile
+                  {t('partner.companyProfile')}
                 </Link>
-                : {missingProfileFields.join(', ')}.
+                {missingProfileFields.join(', ')}.
               </p>
             )}
             {missingDocuments.length > 0 && (
               <p className={missingProfileFields.length > 0 ? 'mt-1' : undefined}>
-                Missing document{missingDocuments.length > 1 ? 's' : ''}:{' '}
-                {missingDocuments.map((type) => humanise(type)).join(', ')}.
+                {t('partner.missingDocuments')}:{' '}
+                {missingDocuments.map((type) => label('documentType', type)).join(', ')}.
               </p>
             )}
           </Alert>
@@ -171,8 +173,8 @@ export function PartnerDocumentsPage() {
 
       {verificationStatus === 'PENDING' && (
         <div className="mb-4">
-          <Alert tone="info" title="Under review">
-            An administrator is reviewing your documents. You cannot change them right now.
+          <Alert tone="info" title={t('partner.underReview')}>
+            {t('partner.underReviewHint')}
           </Alert>
         </div>
       )}
@@ -187,8 +189,8 @@ export function PartnerDocumentsPage() {
 
           {documents.length === 0 && !documentsQuery.isLoading && (
             <EmptyState
-              title="No documents"
-              description="Add your business registration and taxi licence."
+              title={t('partner.noDocumentsYet')}
+              description={t('partner.noDocumentsHint')}
             />
           )}
 
@@ -196,9 +198,9 @@ export function PartnerDocumentsPage() {
             <Table>
               <thead>
                 <tr>
-                  <Th>Type</Th>
-                  <Th>Number</Th>
-                  <Th>Status</Th>
+                  <Th>{t('partner.type')}</Th>
+                  <Th>{t('partner.documentNumber')}</Th>
+                  <Th>{t('ride.status')}</Th>
                   <Th />
                 </tr>
               </thead>
@@ -206,7 +208,7 @@ export function PartnerDocumentsPage() {
                 {documents.map((document) => (
                   <tr key={document.id}>
                     <Td>
-                      <span className="font-medium">{humanise(document.documentType)}</span>
+                      <span className="font-medium">{label('documentType', document.documentType)}</span>
                       <a
                         href={document.fileUrl}
                         target="_blank"
@@ -218,7 +220,7 @@ export function PartnerDocumentsPage() {
                     </Td>
                     <Td className="text-xs">{document.documentNumber ?? '—'}</Td>
                     <Td>
-                      <StatusBadge status={document.verificationStatus} />
+                      <StatusBadge status={document.verificationStatus} namespace="documentStatus" />
                       {document.rejectionReason && (
                         <span className="mt-1 block text-xs text-red-600">
                           {document.rejectionReason}
@@ -233,7 +235,7 @@ export function PartnerDocumentsPage() {
                           className="text-red-600 hover:bg-red-50"
                           onClick={() => deleteMutation.mutate(document.id)}
                         >
-                          Remove
+                          {t('common.remove')}
                         </Button>
                       )}
                     </Td>
@@ -245,7 +247,7 @@ export function PartnerDocumentsPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Add a document" description="Hosted file URL — upload is not part of the MVP." />
+          <CardHeader title={t('partner.addDocument')} description={t('partner.documentUrlHint')} />
           <CardBody>
             <form
               className="space-y-3"
@@ -255,34 +257,34 @@ export function PartnerDocumentsPage() {
               {createMutation.error && <ErrorMessage error={createMutation.error} />}
               {deleteMutation.error && <ErrorMessage error={deleteMutation.error} />}
 
-              <Field label="Type" error={errors.documentType?.message} required>
+              <Field label={t('partner.type')} error={errors.documentType ? t(errors.documentType.message!) : undefined} required>
                 <Select {...register('documentType')}>
                   {COMPANY_DOCUMENT_TYPES.map((type) => (
                     <option key={type} value={type}>
-                      {humanise(type)}
+                      {label('documentType', type)}
                     </option>
                   ))}
                 </Select>
               </Field>
 
-              <Field label="File URL" error={errors.fileUrl?.message} required>
+              <Field label={t('partner.fileUrl')} error={errors.fileUrl ? t(errors.fileUrl.message!) : undefined} required>
                 <Input {...register('fileUrl')} placeholder="https://example.com/licence.pdf" />
               </Field>
 
-              <Field label="Document number" error={errors.documentNumber?.message}>
+              <Field label={t('partner.documentNumber')} error={errors.documentNumber ? t(errors.documentNumber.message!) : undefined}>
                 <Input {...register('documentNumber')} />
               </Field>
 
-              <Field label="Issued at" error={errors.issuedAt?.message}>
+              <Field label={t('partner.issuedAt')} error={errors.issuedAt ? t(errors.issuedAt.message!) : undefined}>
                 <Input {...register('issuedAt')} type="date" />
               </Field>
 
-              <Field label="Expires at" error={errors.expiresAt?.message}>
+              <Field label={t('partner.expiresAt')} error={errors.expiresAt ? t(errors.expiresAt.message!) : undefined}>
                 <Input {...register('expiresAt')} type="date" />
               </Field>
 
               <Button type="submit" className="w-full" loading={createMutation.isPending}>
-                Add document
+                {t('partner.addDocument')}
               </Button>
             </form>
           </CardBody>

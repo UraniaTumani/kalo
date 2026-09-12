@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { rideApi } from '@/lib/api/endpoints'
@@ -11,6 +12,7 @@ import { RatingForm } from './RatingForm'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 
 export function RideHistoryPage() {
+  const { t } = useTranslation()
   const [page, setPage] = useState(0)
 
   /*
@@ -29,7 +31,7 @@ export function RideHistoryPage() {
 
   return (
     <>
-      <PageHeader title="Ride history" description="Every ride you have requested." />
+      <PageHeader title={t('ride.historyTitle')} description={t('ride.historySubtitle')} />
 
       {error && <ErrorMessage error={error} />}
 
@@ -41,7 +43,7 @@ export function RideHistoryPage() {
         )}
 
         {data && data.empty && (
-          <EmptyState title="No rides yet" description="Your completed rides will appear here." />
+          <EmptyState title={t('ride.noRides')} description={t('ride.noRidesHint')} />
         )}
 
         {data && !data.empty && (
@@ -49,11 +51,11 @@ export function RideHistoryPage() {
             <Table>
               <thead>
                 <tr>
-                  <Th>Requested</Th>
-                  <Th>Company</Th>
-                  <Th>Route</Th>
-                  <Th>Status</Th>
-                  <Th className="text-right">Fare</Th>
+                  <Th>{t('ride.requested')}</Th>
+                  <Th>{t('ride.company')}</Th>
+                  <Th>{t('ride.route')}</Th>
+                  <Th>{t('ride.status')}</Th>
+                  <Th className="text-right">{t('ride.fare')}</Th>
                   <Th />
                 </tr>
               </thead>
@@ -63,7 +65,7 @@ export function RideHistoryPage() {
                     <Td>{formatDateTime(ride.requestedAt)}</Td>
                     <Td className="font-medium">{ride.companyName}</Td>
                     <Td className="text-xs text-ink-500">
-                      {ride.pickupAddress ?? 'Map point'} → {ride.destinationAddress ?? 'Map point'}
+                      {ride.pickupAddress ?? t('ride.mapPoint')} → {ride.destinationAddress ?? t('ride.mapPoint')}
                     </Td>
                     <Td>
                       <RideStatusBadge status={ride.status} />
@@ -78,7 +80,7 @@ export function RideHistoryPage() {
                             setRatingRideId(ratingRideId === ride.rideId ? null : ride.rideId)
                           }
                         >
-                          {ratingRideId === ride.rideId ? 'Close' : 'Rate'}
+                          {ratingRideId === ride.rideId ? t('common.close') : t('rating.rate')}
                         </Button>
                       )}
                     </Td>

@@ -1,3 +1,4 @@
+import { Trans, useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
@@ -6,9 +7,10 @@ import { useAuth, homePathFor } from '@/auth/AuthContext'
 import { publicApi } from '@/lib/api/endpoints'
 import { MapView, TIRANA, type LatLng } from '@/components/MapPicker'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { useStatusLabel } from '@/components/StatusBadge'
 import { Spinner } from '@/components/ui/Spinner'
 import { Alert, Badge, Button, Card, CardBody, CardHeader } from '@/components/ui'
-import { formatDistance, formatTime, humanise } from '@/lib/utils'
+import { formatDistance, formatTime } from '@/lib/utils'
 
 /**
  * Open to anyone. Shows which companies could serve a point right now, using
@@ -16,6 +18,8 @@ import { formatDistance, formatTime, humanise } from '@/lib/utils'
  * which is why every result ends at a sign-up prompt rather than a button.
  */
 export function GuestLandingPage() {
+  const { t } = useTranslation()
+  const label = useStatusLabel()
   const { user, role, loading } = useAuth()
   const [point, setPoint] = useState<LatLng | null>(null)
   const [locating, setLocating] = useState(false)
@@ -72,11 +76,11 @@ export function GuestLandingPage() {
           <div className="flex gap-2">
             <Link to="/login">
               <Button variant="secondary" size="sm">
-                Sign in
+                {t('common.signIn')}
               </Button>
             </Link>
             <Link to="/register">
-              <Button size="sm">Create account</Button>
+              <Button size="sm">{t('common.signUp')}</Button>
             </Link>
           </div>
         </div>
@@ -85,24 +89,21 @@ export function GuestLandingPage() {
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <div className="mb-6 max-w-2xl">
           <p className="text-xs font-medium tracking-wide text-brand-700 uppercase">
-            Browsing as a guest
+            {t('guest.browsing')}
           </p>
           <h1 className="mt-1 text-2xl font-semibold text-ink-900">
-            See which taxi companies are near you
+            {t('guest.headline')}
           </h1>
           <p className="mt-2 text-sm text-ink-600">
-            KALO is a marketplace, not a taxi operator. You pick the{' '}
-            <strong className="font-medium text-ink-800">company</strong>, they assign one of
-            their drivers, and you pay the driver directly — the final price is the real
-            taximeter amount.
+            <Trans i18nKey="guest.intro" components={{ strong: <strong className="font-medium text-ink-800" /> }} />
           </p>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1fr_22rem]">
           <Card>
             <CardHeader
-              title="Pick a location"
-              description="Click anywhere on the map to check that spot."
+              title={t('guest.pickLocation')}
+              description={t('guest.pickLocationHint')}
               action={
                 <Button
                   size="sm"
@@ -111,7 +112,7 @@ export function GuestLandingPage() {
                   onClick={useMyLocation}
                 >
                   <LocateFixed className="size-3.5" aria-hidden />
-                  Use my location
+                  {t('booking.useMyLocation')}
                 </Button>
               }
             />
@@ -120,14 +121,14 @@ export function GuestLandingPage() {
                 center={point ?? TIRANA}
                 onPick={check}
                 className="h-80 w-full rounded-lg"
-                markers={point ? [{ position: point, label: 'Checking here', tone: 'pickup' }] : []}
+                markers={point ? [{ position: point, label: t('guest.pickLocation'), tone: 'pickup' }] : []}
               />
 
               {point && (
                 <p className="flex items-center gap-1.5 text-xs text-ink-500">
                   <MapPin className="size-3.5" aria-hidden />
                   {point.lat.toFixed(4)}, {point.lng.toFixed(4)}
-                  {result && <span>· checked {formatTime(result.checkedAt)}</span>}
+                  {result && <span>· {formatTime(result.checkedAt)}</span>}
                 </p>
               )}
             </CardBody>
@@ -136,30 +137,28 @@ export function GuestLandingPage() {
           <div className="space-y-4">
             <Card>
               <CardHeader
-                title="Available now"
+                title={t('guest.availableNow')}
                 description={
                   result
-                    ? `${result.companiesAvailable} ${
-                        result.companiesAvailable === 1 ? 'company' : 'companies'
-                      } could pick you up`
-                    : 'Choose a point to check.'
+                    ? t('guest.couldPickYouUp', { count: result.companiesAvailable })
+                    : t('guest.chooseToCheck')
                 }
               />
               <CardBody className="space-y-3">
-                {availability.isPending && <Spinner label="Checking availability" />}
+                {availability.isPending && <Spinner />}
 
                 {availability.error && <ErrorMessage error={availability.error} />}
 
                 {!point && !availability.isPending && (
                   <p className="text-sm text-ink-500">
-                    Results show each company&apos;s nearest available driver.
+                    {t('guest.resultsHint')}
                   </p>
                 )}
 
                 {result && result.taxiOptions.length === 0 && (
-                  <Alert tone="warning" title="Nothing available here right now">
-                    No company has an online driver near this point. Try another spot or check
-                    again shortly.
+                  <Alert tone="warning" title={t('guest.nothingHere')}>
+                    {t('guest.nothingHereHint')}
+
                   </Alert>
                 )}
 
@@ -186,21 +185,21 @@ export function GuestLandingPage() {
                               </span>
                             </>
                           ) : (
-                            'Not rated yet'
+                            t('booking.notRated')
                           )}
                         </p>
                       </div>
-                      <Badge tone="info">{formatDistance(option.distanceKm)} away</Badge>
+                      <Badge tone="info">{t('booking.away', { distance: formatDistance(option.distanceKm) })}</Badge>
                     </div>
 
                     <div className="mt-2 flex flex-wrap gap-1">
-                      <Badge>{humanise(option.vehicleType)}</Badge>
+                      <Badge>{label('vehicleType', option.vehicleType)}</Badge>
                       {option.paymentMethods.map((method) => (
-                        <Badge key={method}>{humanise(method)}</Badge>
+                        <Badge key={method}>{label('paymentMethod', method)}</Badge>
                       ))}
                     </div>
 
-                    <p className="mt-2 text-xs text-ink-500">{option.pricingNote}</p>
+                    <p className="mt-2 text-xs text-ink-500">{t('booking.pricingNote')}</p>
                   </div>
                 ))}
               </CardBody>
@@ -209,9 +208,9 @@ export function GuestLandingPage() {
             {result && result.taxiOptions.length > 0 && (
               <Card>
                 <CardBody className="space-y-3">
-                  <p className="text-sm text-ink-700">{result.note}</p>
+                  
                   <Link to="/register" className="block">
-                    <Button className="w-full">Create an account to book</Button>
+                    <Button className="w-full">{t('guest.createToBook')}</Button>
                   </Link>
                 </CardBody>
               </Card>
@@ -222,18 +221,18 @@ export function GuestLandingPage() {
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <Step
             number={1}
-            title="Search"
-            body="Tell KALO where you are and where you are going."
+            title={t('guest.step1')}
+            body={t('guest.step1Body')}
           />
           <Step
             number={2}
-            title="Choose a company"
-            body="You see one offer per company, with its rating and distance."
+            title={t('guest.step2')}
+            body={t('guest.step2Body')}
           />
           <Step
             number={3}
-            title="They assign a driver"
-            body="The company sends one of its own drivers. You pay the driver directly."
+            title={t('guest.step3')}
+            body={t('guest.step3Body')}
           />
         </div>
       </main>

@@ -1,15 +1,15 @@
+import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/lib/api/endpoints'
 import { readPage } from '@/lib/api/page'
 import type { AdminPartnerResponse, CompanyStatus, VerificationStatus } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
-import { StatusBadge } from '@/components/StatusBadge'
+import { StatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { Pagination } from '@/components/Pagination'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Spinner } from '@/components/ui/Spinner'
 import { Alert, Button, Card, EmptyState, Select, Table, Td, Th } from '@/components/ui'
-import { humanise } from '@/lib/utils'
 
 const VERIFICATION: (VerificationStatus | 'ALL')[] = [
   'ALL',
@@ -22,6 +22,8 @@ const VERIFICATION: (VerificationStatus | 'ALL')[] = [
 const COMPANY: (CompanyStatus | 'ALL')[] = ['ALL', 'ACTIVE', 'INACTIVE', 'SUSPENDED']
 
 export function AdminCompaniesPage() {
+  const { t } = useTranslation()
+  const label = useStatusLabel()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(0)
   const [verification, setVerification] = useState<VerificationStatus | 'ALL'>('ALL')
@@ -55,8 +57,8 @@ export function AdminCompaniesPage() {
   return (
     <>
       <PageHeader
-        title="Taxi companies"
-        description="Suspending a company removes it from search and blocks new rides. History is kept."
+        title={t('admin.companiesTitle')}
+        description={t('admin.companiesSubtitle')}
         action={
           <div className="flex gap-2">
             <Select
@@ -69,7 +71,7 @@ export function AdminCompaniesPage() {
             >
               {VERIFICATION.map((value) => (
                 <option key={value} value={value}>
-                  {value === 'ALL' ? 'All verification' : humanise(value)}
+                  {value === 'ALL' ? t('admin.allVerification') : label('verificationStatus', value)}
                 </option>
               ))}
             </Select>
@@ -83,7 +85,7 @@ export function AdminCompaniesPage() {
             >
               {COMPANY.map((value) => (
                 <option key={value} value={value}>
-                  {value === 'ALL' ? 'All statuses' : humanise(value)}
+                  {value === 'ALL' ? t('partner.allStatuses') : label('companyStatus', value)}
                 </option>
               ))}
             </Select>
@@ -102,19 +104,19 @@ export function AdminCompaniesPage() {
       <Card>
         {companiesQuery.isLoading && (
           <div className="p-5">
-            <Spinner label="Loading companies" />
+            <Spinner />
           </div>
         )}
 
         {companiesQuery.isError && !companiesQuery.isLoading && (
           <EmptyState
-            title="Could not load companies"
-            description="The request to the server failed. Check that the backend is running."
+            title={t('errors.loadFailed')}
+
           />
         )}
 
         {!companiesQuery.isLoading && !companiesQuery.isError && isEmpty && (
-          <EmptyState title="No companies match this filter" />
+          <EmptyState title={t('admin.noCompanies')} />
         )}
 
         {rows.length > 0 && (
@@ -122,10 +124,10 @@ export function AdminCompaniesPage() {
             <Table>
               <thead>
                 <tr>
-                  <Th>Company</Th>
+                  <Th>{t('ride.company')}</Th>
                   <Th>NIPT</Th>
-                  <Th>Verification</Th>
-                  <Th>Status</Th>
+                  <Th>{t('nav.verification')}</Th>
+                  <Th>{t('ride.status')}</Th>
                   <Th />
                 </tr>
               </thead>
@@ -138,10 +140,10 @@ export function AdminCompaniesPage() {
                     </Td>
                     <Td className="text-xs">{company.nipt}</Td>
                     <Td>
-                      <StatusBadge status={company.verificationStatus} />
+                      <StatusBadge status={company.verificationStatus} namespace="verificationStatus" />
                     </Td>
                     <Td>
-                      <StatusBadge status={company.companyStatus} />
+                      <StatusBadge status={company.companyStatus} namespace="companyStatus" />
                     </Td>
                     <Td>
                       <CompanyActions
@@ -161,8 +163,8 @@ export function AdminCompaniesPage() {
 
       <div className="mt-4">
         <Alert tone="info">
-          Suspension applies only to approved companies. A company still in
-          onboarding is approved or rejected from the Verification page.
+          {t('admin.suspensionNote')}
+
         </Alert>
       </div>
     </>
@@ -185,14 +187,16 @@ function CompanyActions({
   onSuspend: () => void
   onReactivate: () => void
 }) {
+  const { t } = useTranslation()
+
   if (company.verificationStatus !== 'APPROVED') {
     return (
       <span className="text-xs text-ink-400">
         {company.verificationStatus === 'PENDING'
-          ? 'Awaiting review'
+          ? t('admin.awaitingReview')
           : company.verificationStatus === 'REJECTED'
-            ? 'Rejected — partner can resubmit'
-            : 'In onboarding'}
+            ? t('admin.rejectedCanResubmit')
+            : t('admin.inOnboarding')}
       </span>
     )
   }
@@ -200,7 +204,7 @@ function CompanyActions({
   if (company.companyStatus === 'SUSPENDED') {
     return (
       <Button size="sm" variant="secondary" onClick={onReactivate}>
-        Reactivate
+        {t('admin.reactivate')}
       </Button>
     )
   }
@@ -212,7 +216,7 @@ function CompanyActions({
       className="text-red-600 hover:bg-red-50"
       onClick={onSuspend}
     >
-      Suspend
+      {t('admin.suspend')}
     </Button>
   )
 }

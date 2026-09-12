@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useEffect, useId, useRef, useState } from 'react'
 import { LocateFixed, MapPin, X } from 'lucide-react'
 import { geocoding, type Place } from '@/lib/geocoding'
@@ -31,6 +32,7 @@ export function AddressInput({
   showUseMyLocation?: boolean
   required?: boolean
 }) {
+  const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Place[]>([])
   const [open, setOpen] = useState(false)
@@ -62,7 +64,7 @@ export function AddressInput({
         })
         .catch((caught: unknown) => {
           if (caught instanceof Error && caught.name === 'AbortError') return
-          setError('Could not search addresses right now.')
+          setError(t('geo.searchFailed'))
         })
         .finally(() => setSearching(false))
     }, 400)
@@ -107,7 +109,7 @@ export function AddressInput({
       setQuery('')
     } catch (caught) {
       setError(
-        caught instanceof GeolocationError ? caught.message : 'Could not get your location.',
+        caught instanceof GeolocationError ? t(`geo.${caught.kind}`) : t('geo.failed'),
       )
     } finally {
       setLocating(false)
@@ -154,7 +156,7 @@ export function AddressInput({
           onClick={useMyLocation}
         >
           <LocateFixed className="size-3.5" aria-hidden />
-          Use my current location
+          {t('booking.useMyLocation')}
         </Button>
       )}
 
@@ -165,7 +167,7 @@ export function AddressInput({
           className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-ink-200 bg-white py-1 shadow-lg"
         >
           {searching && results.length === 0 && (
-            <li className="px-3 py-2 text-xs text-ink-500">Searching…</li>
+            <li className="px-3 py-2 text-xs text-ink-500">{t('booking.searching')}</li>
           )}
 
           {results.map((place) => (

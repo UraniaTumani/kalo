@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -16,16 +17,17 @@ import { recallRide, rememberRide } from './rideMemory'
 import { RatingForm } from './RatingForm'
 
 /** The happy path, in the order the partner drives it. */
-const TIMELINE: { status: RideStatus; label: string; at: keyof RideResponse }[] = [
-  { status: 'REQUESTED', label: 'Request sent to company', at: 'requestedAt' },
-  { status: 'DRIVER_ASSIGNED', label: 'Driver assigned', at: 'acceptedAt' },
-  { status: 'DRIVER_ARRIVING', label: 'Driver on the way', at: 'driverArrivingAt' },
-  { status: 'DRIVER_ARRIVED', label: 'Driver arrived', at: 'driverArrivedAt' },
-  { status: 'IN_PROGRESS', label: 'Ride started', at: 'startedAt' },
-  { status: 'COMPLETED', label: 'Completed', at: 'completedAt' },
+const TIMELINE: { status: RideStatus; labelKey: string; at: keyof RideResponse }[] = [
+  { status: 'REQUESTED', labelKey: 'ride.steps.requested', at: 'requestedAt' },
+  { status: 'DRIVER_ASSIGNED', labelKey: 'ride.steps.assigned', at: 'acceptedAt' },
+  { status: 'DRIVER_ARRIVING', labelKey: 'ride.steps.arriving', at: 'driverArrivingAt' },
+  { status: 'DRIVER_ARRIVED', labelKey: 'ride.steps.arrived', at: 'driverArrivedAt' },
+  { status: 'IN_PROGRESS', labelKey: 'ride.steps.started', at: 'startedAt' },
+  { status: 'COMPLETED', labelKey: 'ride.steps.completed', at: 'completedAt' },
 ]
 
 export function CurrentRidePage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const rememberedRideId = recallRide()
 
@@ -65,20 +67,20 @@ export function CurrentRidePage() {
   })
 
   if (currentQuery.isLoading || (noActiveRide && lastRideQuery.isLoading)) {
-    return <Spinner label="Checking for an active ride" />
+    return <Spinner />
   }
 
   if (!ride) {
     return (
       <>
-        <PageHeader title="Current ride" />
+        <PageHeader title={t('ride.currentTitle')} />
         <Card>
           <EmptyState
-            title="No active ride"
-            description="Book a taxi and it will show up here with live status."
+            title={t('ride.noActive')}
+            description={t('ride.noActiveHint')}
             action={
               <Link to="/ride">
-                <Button size="sm">Book a taxi</Button>
+                <Button size="sm">{t('nav.book')}</Button>
               </Link>
             }
           />
@@ -93,16 +95,16 @@ export function CurrentRidePage() {
   return (
     <>
       <PageHeader
-        title={active ? 'Current ride' : 'Your last ride'}
+        title={active ? t('ride.currentTitle') : t('ride.lastRide')}
         description={`${ride.companyName} · ride #${ride.rideId}`}
         action={<RideStatusBadge status={ride.status} />}
       />
 
       {ride.status === 'REQUESTED' && (
         <div className="mb-4">
-          <Alert tone="info" title="Waiting for the company to respond">
-            If they do not answer in time, the request returns to searching and you can pick
-            another company.
+          <Alert tone="info" title={t('ride.waitingTitle')}>
+            {t('ride.waitingHint')}
+
           </Alert>
         </div>
       )}
@@ -111,13 +113,13 @@ export function CurrentRidePage() {
         <div className="mb-4">
           <Alert tone="warning" title={
             ride.status === 'DECLINED'
-              ? 'The company declined this ride'
-              : 'The company did not respond in time'
+              ? t('ride.declinedTitle')
+              : t('ride.noResponseTitle')
           }>
             <div className="mt-2">
               <Link to="/ride">
                 <Button size="sm" variant="secondary">
-                  Choose another company
+                  {t('ride.chooseAnother')}
                 </Button>
               </Link>
             </div>
@@ -127,7 +129,7 @@ export function CurrentRidePage() {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
         <Card>
-          <CardHeader title="Progress" />
+          <CardHeader title={t('ride.progress')} />
           <CardBody>
             <ol className="space-y-3">
               {TIMELINE.map((step) => {
@@ -151,7 +153,7 @@ export function CurrentRidePage() {
                           done ? 'font-medium text-ink-900' : 'text-ink-400',
                         )}
                       >
-                        {step.label}
+                        {t(step.labelKey)}
                       </span>
                       {done && (
                         <span className="block text-xs text-ink-500">
@@ -178,7 +180,7 @@ export function CurrentRidePage() {
                 loading={cancelMutation.isPending}
                 onClick={() => cancelMutation.mutate(ride.rideId)}
               >
-                Cancel ride
+                {t('ride.cancelRide')}
               </Button>
             )}
           </CardBody>
@@ -186,16 +188,16 @@ export function CurrentRidePage() {
 
         <div className="space-y-4">
           <Card>
-            <CardHeader title="Trip" />
+            <CardHeader title={t('ride.trip')} />
             <CardBody className="space-y-2 text-sm">
-              <Detail label="From" value={ride.pickupAddress ?? 'Point on map'} />
-              <Detail label="To" value={ride.destinationAddress ?? 'Point on map'} />
-              <Detail label="Company" value={ride.companyName} />
+              <Detail label={t('ride.from')} value={ride.pickupAddress ?? t('ride.mapPoint')} />
+              <Detail label={t('ride.to')} value={ride.destinationAddress ?? t('ride.mapPoint')} />
+              <Detail label={t('ride.company')} value={ride.companyName} />
               <Detail
-                label="Fare"
+                label={t('ride.fare')}
                 value={
                   ride.finalAmount === null
-                    ? 'By taximeter'
+                    ? t('ride.byTaximeter')
                     : formatCurrency(ride.finalAmount)
                 }
               />

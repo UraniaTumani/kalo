@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -5,7 +6,7 @@ import { z } from 'zod'
 import { partnerApi } from '@/lib/api/endpoints'
 import type { VehicleType } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
-import { StatusBadge } from '@/components/StatusBadge'
+import { StatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Spinner } from '@/components/ui/Spinner'
 import {
@@ -21,23 +22,22 @@ import {
   Td,
   Th,
 } from '@/components/ui'
-import { humanise } from '@/lib/utils'
 
 const VEHICLE_TYPES: VehicleType[] = ['STANDARD', 'PREMIUM', 'ELECTRIC', 'VAN']
 
 const currentYear = new Date().getFullYear()
 
 const vehicleSchema = z.object({
-  plateNumber: z.string().trim().min(1, 'Required').max(30),
-  brand: z.string().trim().min(1, 'Required').max(100),
-  model: z.string().trim().min(1, 'Required').max(100),
+  plateNumber: z.string().trim().min(1, 'validation.required').max(30),
+  brand: z.string().trim().min(1, 'validation.required').max(100),
+  model: z.string().trim().min(1, 'validation.required').max(100),
   // Registered with valueAsNumber, so these arrive already numeric.
   manufactureYear: z
-    .number({ error: 'Required' })
+    .number({ error: 'validation.required' })
     .int()
-    .min(1900, 'Not a valid year')
-    .max(currentYear + 1, 'Not a valid year'),
-  seats: z.number({ error: 'Required' }).int().min(2, 'At least 2').max(20, 'At most 20'),
+    .min(1900, 'validation.yearInvalid')
+    .max(currentYear + 1, 'validation.yearInvalid'),
+  seats: z.number({ error: 'validation.required' }).int().min(2, 'validation.seatsRange').max(20, 'validation.seatsRange'),
   vehicleType: z.enum(['STANDARD', 'PREMIUM', 'ELECTRIC', 'VAN']),
   registrationExpiryDate: z.string().optional(),
   insuranceExpiryDate: z.string().optional(),
@@ -47,6 +47,8 @@ const vehicleSchema = z.object({
 type VehicleValues = z.infer<typeof vehicleSchema>
 
 export function PartnerVehiclesPage() {
+  const { t } = useTranslation()
+  const label = useStatusLabel()
   const queryClient = useQueryClient()
 
   const vehiclesQuery = useQuery({
@@ -87,7 +89,7 @@ export function PartnerVehiclesPage() {
 
   return (
     <>
-      <PageHeader title="Vehicles" description="The cars your drivers can be assigned to." />
+      <PageHeader title={t('partner.vehiclesTitle')} description={t('partner.vehiclesSubtitle')} />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
         <div className="space-y-4">
@@ -101,18 +103,18 @@ export function PartnerVehiclesPage() {
             )}
 
             {vehiclesQuery.data?.length === 0 && (
-              <EmptyState title="No vehicles yet" description="Add a vehicle to get started." />
+              <EmptyState title={t('partner.noVehicles')} description={t('partner.noVehiclesHint')} />
             )}
 
             {vehiclesQuery.data && vehiclesQuery.data.length > 0 && (
               <Table>
                 <thead>
                   <tr>
-                    <Th>Plate</Th>
-                    <Th>Vehicle</Th>
-                    <Th>Type</Th>
-                    <Th>Seats</Th>
-                    <Th>Status</Th>
+                    <Th>{t('partner.plate')}</Th>
+                    <Th>{t('partner.vehicle')}</Th>
+                    <Th>{t('partner.type')}</Th>
+                    <Th>{t('partner.seats')}</Th>
+                    <Th>{t('ride.status')}</Th>
                     <Th />
                   </tr>
                 </thead>
@@ -126,10 +128,10 @@ export function PartnerVehiclesPage() {
                           {vehicle.manufactureYear}
                         </span>
                       </Td>
-                      <Td>{humanise(vehicle.vehicleType)}</Td>
+                      <Td>{label('vehicleType', vehicle.vehicleType)}</Td>
                       <Td>{vehicle.seats}</Td>
                       <Td>
-                        <StatusBadge status={vehicle.status} />
+                        <StatusBadge status={vehicle.status} namespace="vehicleStatus" />
                       </Td>
                       <Td>
                         {vehicle.status === 'ACTIVE' && (
@@ -139,7 +141,7 @@ export function PartnerVehiclesPage() {
                             className="text-red-600 hover:bg-red-50"
                             onClick={() => deactivateMutation.mutate(vehicle.id)}
                           >
-                            Deactivate
+                            {t('partner.deactivate')}
                           </Button>
                         )}
                       </Td>
@@ -152,7 +154,7 @@ export function PartnerVehiclesPage() {
         </div>
 
         <Card>
-          <CardHeader title="Add a vehicle" />
+          <CardHeader title={t('partner.addVehicle')} />
           <CardBody>
             <form
               className="space-y-3"
@@ -161,47 +163,47 @@ export function PartnerVehiclesPage() {
             >
               {createMutation.error && <ErrorMessage error={createMutation.error} />}
 
-              <Field label="Plate number" error={errors.plateNumber?.message} required>
+              <Field label={t('partner.plate')} error={errors.plateNumber ? t(errors.plateNumber.message!) : undefined} required>
                 <Input {...register('plateNumber')} placeholder="AA123TR" />
               </Field>
-              <Field label="Brand" error={errors.brand?.message} required>
+              <Field label={t('partner.brand')} error={errors.brand ? t(errors.brand.message!) : undefined} required>
                 <Input {...register('brand')} placeholder="Skoda" />
               </Field>
-              <Field label="Model" error={errors.model?.message} required>
+              <Field label={t('partner.model')} error={errors.model ? t(errors.model.message!) : undefined} required>
                 <Input {...register('model')} placeholder="Octavia" />
               </Field>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Year" error={errors.manufactureYear?.message} required>
+                <Field label={t('partner.year')} error={errors.manufactureYear ? t(errors.manufactureYear.message!) : undefined} required>
                   <Input {...register('manufactureYear', { valueAsNumber: true })} type="number" />
                 </Field>
-                <Field label="Seats" error={errors.seats?.message} required>
+                <Field label={t('partner.seats')} error={errors.seats ? t(errors.seats.message!) : undefined} required>
                   <Input {...register('seats', { valueAsNumber: true })} type="number" />
                 </Field>
               </div>
-              <Field label="Type" error={errors.vehicleType?.message} required>
+              <Field label={t('partner.type')} error={errors.vehicleType ? t(errors.vehicleType.message!) : undefined} required>
                 <Select {...register('vehicleType')}>
                   {VEHICLE_TYPES.map((type) => (
                     <option key={type} value={type}>
-                      {humanise(type)}
+                      {label('vehicleType', type)}
                     </option>
                   ))}
                 </Select>
               </Field>
-              <Field label="Registration expiry" error={errors.registrationExpiryDate?.message}>
+              <Field label={t('partner.registrationExpiry')} error={errors.registrationExpiryDate ? t(errors.registrationExpiryDate.message!) : undefined}>
                 <Input {...register('registrationExpiryDate')} type="date" />
               </Field>
-              <Field label="Insurance expiry" error={errors.insuranceExpiryDate?.message}>
+              <Field label={t('partner.insuranceExpiry')} error={errors.insuranceExpiryDate ? t(errors.insuranceExpiryDate.message!) : undefined}>
                 <Input {...register('insuranceExpiryDate')} type="date" />
               </Field>
               <Field
-                label="Technical inspection expiry"
-                error={errors.technicalInspectionExpiryDate?.message}
+                label={t('partner.inspectionExpiry')}
+                error={errors.technicalInspectionExpiryDate ? t(errors.technicalInspectionExpiryDate.message!) : undefined}
               >
                 <Input {...register('technicalInspectionExpiryDate')} type="date" />
               </Field>
 
               <Button type="submit" className="w-full" loading={createMutation.isPending}>
-                Add vehicle
+                {t('partner.addVehicle')}
               </Button>
             </form>
           </CardBody>

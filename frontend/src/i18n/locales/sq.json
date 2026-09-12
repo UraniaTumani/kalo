@@ -28,19 +28,16 @@
     "page": "Faqja {{current}} nga {{total}}",
     "totalItems": "{{count}} gjithsej"
   },
-
   "language": {
     "label": "Gjuha",
     "albanian": "Shqip",
     "english": "English"
   },
-
   "roles": {
     "CUSTOMER": "Udhëtar",
     "PARTNER": "Kompani taksie",
     "ADMIN": "Administrator"
   },
-
   "nav": {
     "book": "Rezervo taksi",
     "currentRide": "Udhëtimi aktual",
@@ -58,7 +55,6 @@
     "companies": "Kompanitë",
     "users": "Përdoruesit"
   },
-
   "auth": {
     "signInTitle": "Hyr në llogari",
     "signInSubtitle": "Udhëtarët, kompanitë e taksive dhe administratorët hyjnë këtu.",
@@ -82,9 +78,11 @@
     "displayName": "Emri i shfaqur",
     "displayNameHint": "Shfaqet te udhëtarët në rezultatet e kërkimit",
     "nipt": "NIPT",
-    "address": "Adresa"
+    "address": "Adresa",
+    "passengerSubtitle": "Rezervoni taksi nga kompanitë e disponueshme pranë jush.",
+    "partnerSubtitle": "Regjistroni kompaninë tuaj të taksive dhe dërgojeni për verifikim.",
+    "partnerDraftNotice": "Kompania juaj fillon si draft. Shtoni dokumentet, dërgojini për verifikim dhe një administrator i shqyrton para se të merrni udhëtime."
   },
-
   "validation": {
     "required": "Kjo fushë është e detyrueshme",
     "phoneInvalid": "Vendosni një numër telefoni të vlefshëm, për shembull +355 69 123 4567",
@@ -95,18 +93,21 @@
     "tooLong": "Shumë i gjatë",
     "mustBeFuture": "Duhet të jetë një datë në të ardhmen",
     "invalidRange": "Ora e mbylljes duhet të jetë pas orës së hapjes",
-    "ratingRange": "Zgjidhni nga 1 deri në 5"
+    "ratingRange": "Zgjidhni nga 1 deri në 5",
+    "urlInvalid": "Vendosni një URL të vlefshme",
+    "yearInvalid": "Vit i pavlefshëm",
+    "seatsRange": "Nga 2 deri në 20 vende"
   },
-
   "errors": {
     "generic": "Diçka shkoi keq.",
     "unreachable": "Serveri nuk u arrit. A po funksionon backend-i në portin 8080?",
     "forbidden": "Nuk keni leje për ta bërë këtë.",
     "notFound": "Nuk u gjet.",
     "pageFailed": "Kjo faqe nuk mund të shfaqet",
-    "loadFailed": "Të dhënat nuk u ngarkuan. Kontrolloni që backend-i po funksionon."
+    "loadFailed": "Të dhënat nuk u ngarkuan. Kontrolloni që backend-i po funksionon.",
+    "staleBackend": "Serveri ktheu një listë të thjeshtë aty ku pritej një rezultat me faqe. Backend-i ka gjasa të jetë një version më i vjetër se ky frontend — rindizeni nga dega kryesore aktuale.",
+    "unexpectedShape": "Serveri ktheu një përgjigje të papritur për këtë listë."
   },
-
   "rideStatus": {
     "REQUESTED": "E kërkuar",
     "DRIVER_ASSIGNED": "Shoferi u caktua",
@@ -118,38 +119,32 @@
     "CANCELLED": "E anuluar",
     "NO_RESPONSE": "Pa përgjigje"
   },
-
   "verificationStatus": {
     "DRAFT": "Draft",
     "PENDING": "Në pritje",
     "APPROVED": "E miratuar",
     "REJECTED": "E refuzuar"
   },
-
   "companyStatus": {
     "ACTIVE": "Aktive",
     "INACTIVE": "Joaktive",
     "SUSPENDED": "Pezulluar"
   },
-
   "driverAvailability": {
     "ONLINE": "Në linjë",
     "OFFLINE": "Jashtë linje",
     "BUSY": "Në udhëtim"
   },
-
   "paymentMethod": {
     "CASH": "Para në dorë",
     "CARD_IN_CAR": "Kartë në makinë"
   },
-
   "vehicleType": {
     "STANDARD": "Standarde",
     "PREMIUM": "Premium",
     "ELECTRIC": "Elektrike",
     "VAN": "Furgon"
   },
-
   "booking": {
     "title": "Rezervo taksi",
     "subtitle": "Zgjidhni nisjen dhe destinacionin, pastaj zgjidhni kompaninë e taksisë.",
@@ -176,7 +171,6 @@
     "goToCurrentRide": "Shko te udhëtimi aktual",
     "searching": "Duke kërkuar…"
   },
-
   "ride": {
     "currentTitle": "Udhëtimi aktual",
     "lastRide": "Udhëtimi juaj i fundit",
@@ -213,7 +207,6 @@
       "completed": "Përfundoi"
     }
   },
-
   "rating": {
     "title": "Vlerëso këtë udhëtim",
     "subtitle": "Ndihmoni udhëtarët e tjerë të zgjedhin.",
@@ -227,7 +220,6 @@
     "recorded": "Vlerësimi juaj u regjistrua.",
     "outOfFive": "{{score}} nga 5"
   },
-
   "partner": {
     "ridesTitle": "Udhëtimet",
     "ridesSubtitle": "Pranoni një kërkesë, caktoni një shofer dhe ndiqeni deri në fund.",
@@ -312,9 +304,21 @@
     "paymentMethods": "Mënyrat e pagesës",
     "paymentMethodsHint": "Të paktën një është e detyrueshme. Udhëtarët paguajnë shoferin drejtpërdrejt; KALO nuk përpunon pagesa.",
     "requiredBeforeSubmit": "E detyrueshme para se të dërgoni për verifikim",
-    "licenceExpiryHint": "Kjo është licenca e taksisë së kompanisë, e ndryshme nga skadimi i dokumentit të ngarkuar."
+    "licenceExpiryHint": "Kjo është licenca e taksisë së kompanisë, e ndryshme nga skadimi i dokumentit të ngarkuar.",
+    "registrationExpiry": "Skadimi i regjistrimit",
+    "insuranceExpiry": "Skadimi i sigurimit",
+    "inspectionExpiry": "Skadimi i kontrollit teknik",
+    "ended": "Përfunduar",
+    "selectVehicle": "Zgjidhni një automjet…",
+    "noEligibleDriver": "Asnjë shofer i përshtatshëm. Shoferi duhet të jetë aktiv, jashtë linje dhe i pacaktuar.",
+    "documentNumber": "Numri i dokumentit",
+    "fileUrl": "URL e skedarit",
+    "issuedAt": "Lëshuar më",
+    "expiresAt": "Skadon më",
+    "noDocumentsYet": "Asnjë dokument",
+    "noDocumentsHint": "Shtoni regjistrimin e biznesit dhe licencën e taksisë.",
+    "documentUrlHint": "URL e skedarit të publikuar — ngarkimi nuk është pjesë e MVP-së."
   },
-
   "availability": {
     "title": "Disponueshmëria",
     "subtitle": "Ku operoni dhe kur pranoni rezervime. Të dyja kontrollohen kur një udhëtar kërkon.",
@@ -359,7 +363,6 @@
       "SUNDAY": "Die"
     }
   },
-
   "admin": {
     "verificationTitle": "Verifikimi i partnerëve",
     "verificationSubtitle": "Kompanitë në pritje të shqyrtimit. Miratimi e aktivizon menjëherë kompaninë.",
@@ -403,9 +406,9 @@
     "noRideSelected": "Asnjë udhëtim i zgjedhur",
     "noRideSelectedHint": "Zgjidhni një udhëtim për të parë detajet.",
     "documentsCount": "Dokumentet ({{count}})",
-    "noDocuments": "Asnjë dokument. Miratimi kërkon të paktën një dokument në pritje."
+    "noDocuments": "Asnjë dokument. Miratimi kërkon të paktën një dokument në pritje.",
+    "accepted": "Pranuar"
   },
-
   "profile": {
     "title": "Profili",
     "subtitle": "Të dhënat e llogarisë suaj.",
@@ -421,7 +424,6 @@
     "verificationNotice": "Verifikimi i telefonit ende nuk është pjesë e MVP-së, prandaj mbetet i paverifikuar.",
     "saveChanges": "Ruaj ndryshimet"
   },
-
   "guest": {
     "browsing": "Po shikoni si vizitor",
     "headline": "Shihni cilat kompani taksish janë pranë jush",
@@ -441,5 +443,71 @@
     "step2Body": "Shihni një ofertë për çdo kompani, me vlerësimin dhe distancën e saj.",
     "step3": "Ajo cakton një shofer",
     "step3Body": "Kompania dërgon një nga shoferët e vet. Ju paguani shoferin drejtpërdrejt."
+  },
+  "userStatus": {
+    "ACTIVE": "Aktiv",
+    "PENDING": "Në pritje",
+    "SUSPENDED": "Pezulluar",
+    "DISABLED": "Çaktivizuar"
+  },
+  "driverStatus": {
+    "ACTIVE": "Aktiv",
+    "INACTIVE": "Joaktiv",
+    "SUSPENDED": "Pezulluar"
+  },
+  "vehicleStatus": {
+    "ACTIVE": "Aktiv",
+    "INACTIVE": "Joaktiv",
+    "SUSPENDED": "Pezulluar"
+  },
+  "documentStatus": {
+    "DRAFT": "Draft",
+    "PENDING": "Në pritje",
+    "APPROVED": "I miratuar",
+    "REJECTED": "I refuzuar"
+  },
+  "documentType": {
+    "BUSINESS_REGISTRATION": "Regjistrimi i biznesit",
+    "TAXI_LICENSE": "Licenca e taksisë",
+    "DRIVING_LICENSE": "Patenta",
+    "PROFESSIONAL_CERTIFICATE": "Certifikata profesionale",
+    "VEHICLE_REGISTRATION": "Regjistrimi i automjetit",
+    "INSURANCE": "Sigurimi",
+    "PASSENGER_INSURANCE": "Sigurimi i udhëtarëve",
+    "TECHNICAL_INSPECTION": "Kontrolli teknik",
+    "TAXIMETER_VERIFICATION": "Verifikimi i taksimetrit"
+  },
+  "geo": {
+    "unsupported": "Ky shfletues nuk mbështet aksesin te vendndodhja.",
+    "denied": "Leja për vendndodhjen u refuzua. Lejoni aksesin te vendndodhja në shfletuesin tuaj për të vazhduar.",
+    "unavailable": "Pajisja juaj nuk arriti të përcaktojë vendndodhjen. Kontrolloni që shërbimet e vendndodhjes janë aktive.",
+    "timeout": "Koha skadoi gjatë marrjes së vendndodhjes suaj.",
+    "failed": "Vendndodhja juaj nuk u mor.",
+    "searchFailed": "Adresat nuk mund të kërkohen tani."
+  },
+  "dashboard": {
+    "drivers": "Shoferë",
+    "onlineNow": "Në linjë tani",
+    "onARide": "Në udhëtim",
+    "awaitingResponse": "Në pritje të përgjigjes",
+    "acceptingBookings": "Pranimi i rezervimeve",
+    "bookingEnabled": "Rezervimet të aktivizuara",
+    "paymentMethods": "Mënyrat e pagesës",
+    "noneConfigured": "Asnjë e konfiguruar",
+    "editSettings": "Ndrysho cilësimet",
+    "availableOnceApproved": "E disponueshme pasi kompania juaj të miratohet.",
+    "nextSteps": "Hapat e ardhshëm",
+    "step1": "Shtoni shoferë dhe automjete.",
+    "step2": "Caktoni një automjet për çdo shofer.",
+    "step3": "Vendosni pozicionin e shoferit dhe vendoseni në linjë.",
+    "step4": "Ndiqni radhën e Udhëtimeve për kërkesa të reja.",
+    "openRides": "Hap radhën e udhëtimeve",
+    "notSubmitted": "Kompania juaj ende nuk është dërguar",
+    "waitingReview": "Në pritje të shqyrtimit nga administratori",
+    "wasRejected": "Aplikimi juaj u refuzua",
+    "onboardingHint": "Mund të menaxhoni profilin dhe dokumentet tani, por nuk mund të merrni udhëtime derisa një administrator ta miratojë kompaninë.",
+    "goToDocuments": "Shko te dokumentet",
+    "notActive": "Kompania juaj nuk është aktive",
+    "notActiveHint": "Nuk do të shfaqeni në kërkimin e udhëtarëve dhe nuk mund të pranoni udhëtime të reja."
   }
 }

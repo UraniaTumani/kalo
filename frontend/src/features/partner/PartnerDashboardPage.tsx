@@ -1,13 +1,16 @@
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { partnerApi } from '@/lib/api/endpoints'
 import { PageHeader } from '@/components/AppLayout'
-import { StatusBadge } from '@/components/StatusBadge'
+import { StatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Spinner } from '@/components/ui/Spinner'
 import { Alert, Button, Card, CardBody, CardHeader } from '@/components/ui'
 
 export function PartnerDashboardPage() {
+  const { t } = useTranslation()
+  const label = useStatusLabel()
   const profileQuery = useQuery({
     queryKey: ['partner', 'profile'],
     queryFn: () => partnerApi.profile(),
@@ -31,7 +34,7 @@ export function PartnerDashboardPage() {
     retry: false,
   })
 
-  if (profileQuery.isLoading) return <Spinner label="Loading your company" />
+  if (profileQuery.isLoading) return <Spinner />
   if (profileQuery.error) return <ErrorMessage error={profileQuery.error} />
 
   const company = profileQuery.data!
@@ -50,8 +53,8 @@ export function PartnerDashboardPage() {
         description={`${company.legalName} · NIPT ${company.nipt}`}
         action={
           <div className="flex gap-2">
-            <StatusBadge status={company.verificationStatus} />
-            <StatusBadge status={company.status} />
+            <StatusBadge status={company.verificationStatus} namespace="verificationStatus" />
+            <StatusBadge status={company.status} namespace="companyStatus" />
           </div>
         }
       />
@@ -62,20 +65,20 @@ export function PartnerDashboardPage() {
             tone={company.verificationStatus === 'REJECTED' ? 'danger' : 'warning'}
             title={
               company.verificationStatus === 'DRAFT'
-                ? 'Your company is not submitted yet'
+                ? t('dashboard.notSubmitted')
                 : company.verificationStatus === 'PENDING'
-                  ? 'Waiting for administrator review'
-                  : 'Your application was rejected'
+                  ? t('dashboard.waitingReview')
+                  : t('dashboard.wasRejected')
             }
           >
             <p>
-              You can manage your profile and documents now, but you cannot take rides until an
-              administrator approves the company.
+              {t('dashboard.onboardingHint')}
+
             </p>
             <div className="mt-2">
               <Link to="/partner/documents">
                 <Button size="sm" variant="secondary">
-                  Go to documents
+                  {t('dashboard.goToDocuments')}
                 </Button>
               </Link>
             </div>
@@ -85,60 +88,60 @@ export function PartnerDashboardPage() {
 
       {approved && !active && (
         <div className="mb-4">
-          <Alert tone="danger" title="Your company is not active">
-            You will not appear in passenger search and cannot accept new rides.
+          <Alert tone="danger" title={t('dashboard.notActive')}>
+            {t('dashboard.notActiveHint')}
           </Alert>
         </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Drivers" value={drivers.length} />
-        <Stat label="Online now" value={online} tone="success" />
-        <Stat label="On a ride" value={busy} tone="info" />
-        <Stat label="Awaiting response" value={pendingRides} tone={pendingRides ? 'warning' : undefined} />
+        <Stat label={t('dashboard.drivers')} value={drivers.length} />
+        <Stat label={t('dashboard.onlineNow')} value={online} tone="success" />
+        <Stat label={t('dashboard.onARide')} value={busy} tone="info" />
+        <Stat label={t('dashboard.awaitingResponse')} value={pendingRides} tone={pendingRides ? 'warning' : undefined} />
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Accepting bookings" />
+          <CardHeader title={t('dashboard.acceptingBookings')} />
           <CardBody className="space-y-2 text-sm">
             {settingsQuery.data ? (
               <>
                 <Row
-                  label="Booking enabled"
-                  value={settingsQuery.data.bookingEnabled ? 'Yes' : 'No'}
+                  label={t('dashboard.bookingEnabled')}
+                  value={settingsQuery.data.bookingEnabled ? t('common.yes') : t('common.no')}
                 />
                 <Row
-                  label="Payment methods"
+                  label={t('dashboard.paymentMethods')}
                   value={
                     settingsQuery.data.paymentMethods.length
-                      ? settingsQuery.data.paymentMethods.join(', ')
-                      : 'None configured'
+                      ? settingsQuery.data.paymentMethods.map((m) => label('paymentMethod', m)).join(', ')
+                      : t('dashboard.noneConfigured')
                   }
                 />
               </>
             ) : (
-              <p className="text-ink-500">Available once your company is approved.</p>
+              <p className="text-ink-500">{t('dashboard.availableOnceApproved')}</p>
             )}
             <Link to="/partner/settings" className="inline-block pt-1">
               <Button size="sm" variant="secondary">
-                Edit settings
+                {t('dashboard.editSettings')}
               </Button>
             </Link>
           </CardBody>
         </Card>
 
         <Card>
-          <CardHeader title="Next steps" />
+          <CardHeader title={t('dashboard.nextSteps')} />
           <CardBody>
             <ol className="space-y-2 text-sm text-ink-600">
-              <li>1. Add drivers and vehicles.</li>
-              <li>2. Assign a vehicle to each driver.</li>
-              <li>3. Set the driver&apos;s position and put them online.</li>
-              <li>4. Watch the Rides queue for incoming requests.</li>
+              <li>1. {t('dashboard.step1')}</li>
+              <li>2. {t('dashboard.step2')}</li>
+              <li>3. {t('dashboard.step3')}</li>
+              <li>4. {t('dashboard.step4')}</li>
             </ol>
             <Link to="/partner/rides" className="mt-3 inline-block">
-              <Button size="sm">Open rides queue</Button>
+              <Button size="sm">{t('dashboard.openRides')}</Button>
             </Link>
           </CardBody>
         </Card>

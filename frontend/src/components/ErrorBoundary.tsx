@@ -1,5 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { AlertTriangle } from 'lucide-react'
+import i18n from '@/i18n'
+import { UnexpectedResponseError } from '@/lib/api/page'
 import { Button, Card, CardBody } from './ui'
 
 interface Props {
@@ -54,22 +56,30 @@ export class ErrorBoundary extends Component<Props, State> {
             </span>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-ink-900">
-                This page could not be displayed
+                {i18n.t('errors.pageFailed')}
               </p>
-              <p className="mt-1 text-sm text-ink-600">{error.message}</p>
+              {/*
+                A thrown error may carry a translation key rather than a
+                sentence, so resolve it here instead of printing the key.
+              */}
+              <p className="mt-1 text-sm text-ink-600">
+                {error instanceof UnexpectedResponseError
+                  ? i18n.t(`errors.${error.translationKey}`)
+                  : error.message}
+              </p>
             </div>
           </div>
 
           <div className="flex gap-2">
             <Button size="sm" onClick={() => this.setState({ error: null })}>
-              Try again
+              {i18n.t('common.tryAgain')}
             </Button>
             <Button
               size="sm"
               variant="secondary"
               onClick={() => window.location.reload()}
             >
-              Reload the app
+              {i18n.t('common.reload')}
             </Button>
           </div>
         </CardBody>

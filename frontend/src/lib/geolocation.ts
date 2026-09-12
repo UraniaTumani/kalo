@@ -15,10 +15,11 @@ export interface Position {
 }
 
 export class GeolocationError extends Error {
+  /** Translation key suffix under "geo."; the sentence is chosen at render. */
   readonly kind: 'unsupported' | 'denied' | 'unavailable' | 'timeout'
 
-  constructor(kind: GeolocationError['kind'], message: string) {
-    super(message)
+  constructor(kind: GeolocationError['kind']) {
+    super(kind)
     this.name = 'GeolocationError'
     this.kind = kind
   }
@@ -30,17 +31,11 @@ export const isGeolocationSupported = () =>
 function toGeolocationError(error: GeolocationPositionError): GeolocationError {
   switch (error.code) {
     case error.PERMISSION_DENIED:
-      return new GeolocationError(
-        'denied',
-        'Location permission was denied. Allow location access in your browser to continue.',
-      )
+      return new GeolocationError('denied')
     case error.POSITION_UNAVAILABLE:
-      return new GeolocationError(
-        'unavailable',
-        'Your device could not determine a position. Check that location services are on.',
-      )
+      return new GeolocationError('unavailable')
     default:
-      return new GeolocationError('timeout', 'Timed out while getting your position.')
+      return new GeolocationError('timeout')
   }
 }
 
@@ -56,7 +51,7 @@ export function getCurrentPosition(
 ): Promise<Position> {
   if (!isGeolocationSupported()) {
     return Promise.reject(
-      new GeolocationError('unsupported', 'This browser does not support location access.'),
+      new GeolocationError('unsupported'),
     )
   }
 
@@ -81,7 +76,7 @@ export function watchPosition(
   options: PositionOptions = { enableHighAccuracy: true, timeout: 30_000, maximumAge: 5_000 },
 ): () => void {
   if (!isGeolocationSupported()) {
-    onError?.(new GeolocationError('unsupported', 'This browser does not support location access.'))
+    onError?.(new GeolocationError('unsupported'))
     return () => {}
   }
 
