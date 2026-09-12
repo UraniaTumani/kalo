@@ -6,6 +6,7 @@ import { readPage } from '@/lib/api/page'
 import { PageHeader } from '@/components/AppLayout'
 import { StatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Spinner } from '@/components/ui/Spinner'
 import {
   Alert,
@@ -142,6 +143,8 @@ function ReviewPanel({ companyId, onDone }: { companyId: number; onDone: () => v
     onSuccess: invalidate,
   })
 
+  const [confirmingReject, setConfirmingReject] = useState(false)
+
   const rejectMutation = useMutation({
     mutationFn: () => adminApi.rejectPartner(companyId, reason.trim()),
     onSuccess: invalidate,
@@ -170,95 +173,112 @@ function ReviewPanel({ companyId, onDone }: { companyId: number; onDone: () => v
   const company = detailQuery.data!
 
   return (
-    <Card>
-      <CardHeader
-        title={company.displayName}
-        description={`${company.ownerFirstName} ${company.ownerLastName} · ${company.phone}`}
-        action={
-          <Button size="sm" variant="ghost" onClick={onDone}>
-            {t('common.close')}
+    <>
+      <Card>
+        <CardHeader
+          title={company.displayName}
+          description={`${company.ownerFirstName} ${company.ownerLastName} · ${company.phone}`}
+          action={
+            <Button size="sm" variant="ghost" onClick={onDone}>
+              {t('common.close')}
+            </Button>
+          }
+        />
+        <CardBody className="space-y-4">
+          <dl className="space-y-1.5 text-sm">
+            <Row label={t('auth.legalName')} value={company.legalName} />
+            <Row label={t('auth.nipt')} value={company.nipt} />
+            <Row label={t('auth.address')} value={company.address} />
+            <Row label={t('partner.licence')} value={company.licenseNumber ?? '—'} />
+          </dl>
+
+          <div>
+            <p className="mb-2 text-xs font-medium text-ink-700">
+              {t('admin.documentsCount', { count: company.documents.length })}
+            </p>
+
+            {company.documents.length === 0 ? (
+              <Alert tone="warning">
+                {t('admin.noDocuments')}
+              </Alert>
+            ) : (
+              <ul className="space-y-2">
+                {company.documents.map((document) => (
+                  <li key={document.id} className="rounded-lg border border-ink-200 px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-ink-800">
+                        {label('documentType', document.documentType)}
+                      </span>
+                      <StatusBadge status={document.verificationStatus} namespace="documentStatus" />
+                    </div>
+                    <a
+                      href={document.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-0.5 block truncate text-xs text-brand-700 hover:underline"
+                    >
+                      {document.fileUrl}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {(approveMutation.error || rejectMutation.error) && (
+            <ErrorMessage error={approveMutation.error ?? rejectMutation.error} />
+          )}
+
+          <Button
+            variant="success"
+            className="w-full"
+            loading={approveMutation.isPending}
+            onClick={() => approveMutation.mutate()}
+          >
+            {t('admin.approve')}
           </Button>
+
+          <div className="space-y-2 border-t border-ink-200 pt-3">
+            <Field label={t('admin.rejectReason')} required>
+              <Textarea
+                rows={2}
+                maxLength={1000}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder={t('admin.rejectReasonPlaceholder')}
+              />
+            </Field>
+            <Button
+              variant="danger"
+              className="w-full"
+              disabled={!reason.trim()}
+              loading={rejectMutation.isPending}
+              onClick={() => setConfirmingReject(true)}
+            >
+              {t('admin.reject')}
+            </Button>
+            <p className="text-xs text-ink-500">
+              {t('admin.rejectHint')}
+            </p>
+          </div>
+        </CardBody>
+      </Card>
+
+      <ConfirmDialog
+        open={confirmingReject}
+        title={t('confirm.rejectVerification.title')}
+        description={t('confirm.rejectVerification.body')}
+        confirmLabel={t('confirm.rejectVerification.action')}
+        cancelLabel={t('confirm.keep')}
+        loading={rejectMutation.isPending}
+        onCancel={() => setConfirmingReject(false)}
+        onConfirm={() =>
+          rejectMutation.mutate(undefined, {
+            onSuccess: () => setConfirmingReject(false),
+          })
         }
       />
-      <CardBody className="space-y-4">
-        <dl className="space-y-1.5 text-sm">
-          <Row label={t('auth.legalName')} value={company.legalName} />
-          <Row label={t('auth.nipt')} value={company.nipt} />
-          <Row label={t('auth.address')} value={company.address} />
-          <Row label={t('partner.licence')} value={company.licenseNumber ?? '—'} />
-        </dl>
-
-        <div>
-          <p className="mb-2 text-xs font-medium text-ink-700">
-            {t('admin.documentsCount', { count: company.documents.length })}
-          </p>
-
-          {company.documents.length === 0 ? (
-            <Alert tone="warning">
-              {t('admin.noDocuments')}
-            </Alert>
-          ) : (
-            <ul className="space-y-2">
-              {company.documents.map((document) => (
-                <li key={document.id} className="rounded-lg border border-ink-200 px-3 py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-ink-800">
-                      {label('documentType', document.documentType)}
-                    </span>
-                    <StatusBadge status={document.verificationStatus} namespace="documentStatus" />
-                  </div>
-                  <a
-                    href={document.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-0.5 block truncate text-xs text-brand-700 hover:underline"
-                  >
-                    {document.fileUrl}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {(approveMutation.error || rejectMutation.error) && (
-          <ErrorMessage error={approveMutation.error ?? rejectMutation.error} />
-        )}
-
-        <Button
-          variant="success"
-          className="w-full"
-          loading={approveMutation.isPending}
-          onClick={() => approveMutation.mutate()}
-        >
-          {t('admin.approve')}
-        </Button>
-
-        <div className="space-y-2 border-t border-ink-200 pt-3">
-          <Field label={t('admin.rejectReason')} required>
-            <Textarea
-              rows={2}
-              maxLength={1000}
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              placeholder={t('admin.rejectReasonPlaceholder')}
-            />
-          </Field>
-          <Button
-            variant="danger"
-            className="w-full"
-            disabled={!reason.trim()}
-            loading={rejectMutation.isPending}
-            onClick={() => rejectMutation.mutate()}
-          >
-            {t('admin.reject')}
-          </Button>
-          <p className="text-xs text-ink-500">
-            {t('admin.rejectHint')}
-          </p>
-        </div>
-      </CardBody>
-    </Card>
+    </>
   )
 }
 

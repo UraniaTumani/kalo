@@ -9,6 +9,7 @@ import type { DriverResponse } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
 import { StatusBadge } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { MapView, TIRANA, type LatLng } from '@/components/MapPicker'
 import { getCurrentPosition, GeolocationError } from '@/lib/geolocation'
 import i18n from '@/i18n'
@@ -119,6 +120,9 @@ export function PartnerDriversPage() {
       }
     }
   }, [driversQuery.data, tracking])
+
+  /* Held while the partner confirms; null means no dialog is open. */
+  const [pendingDeactivate, setPendingDeactivate] = useState<DriverResponse | null>(null)
 
   const deactivateMutation = useMutation({
     mutationFn: (id: number) => partnerApi.deactivateDriver(id),
@@ -253,7 +257,7 @@ export function PartnerDriversPage() {
                               size="sm"
                               variant="ghost"
                               className="text-red-600 hover:bg-red-50"
-                              onClick={() => deactivateMutation.mutate(driver.id)}
+                              onClick={() => setPendingDeactivate(driver)}
                             >
                               {t('partner.deactivate')}
                             </Button>
@@ -313,6 +317,24 @@ export function PartnerDriversPage() {
           </CardBody>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={pendingDeactivate !== null}
+        title={t('confirm.deactivateDriver.title', {
+          name: pendingDeactivate && `${pendingDeactivate.firstName} ${pendingDeactivate.lastName}`,
+        })}
+        description={t('confirm.deactivateDriver.body')}
+        confirmLabel={t('confirm.deactivateDriver.action')}
+        cancelLabel={t('confirm.keep')}
+        loading={deactivateMutation.isPending}
+        onCancel={() => setPendingDeactivate(null)}
+        onConfirm={() =>
+          pendingDeactivate &&
+          deactivateMutation.mutate(pendingDeactivate.id, {
+            onSuccess: () => setPendingDeactivate(null),
+          })
+        }
+      />
     </>
   )
 }

@@ -5,10 +5,12 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { partnerApi } from '@/lib/api/endpoints'
-import type { DocumentType } from '@/lib/api/types'
+import { useState } from 'react'
+import type { DocumentResponse, DocumentType } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
 import { StatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Spinner } from '@/components/ui/Spinner'
 import {
   Alert,
@@ -77,6 +79,9 @@ export function PartnerDocumentsPage() {
       reset()
     },
   })
+
+  /* Held while the partner confirms; null means no dialog is open. */
+  const [pendingDelete, setPendingDelete] = useState<DocumentResponse | null>(null)
 
   const deleteMutation = useMutation({
     mutationFn: (documentId: number) => partnerApi.deleteDocument(documentId),
@@ -233,7 +238,7 @@ export function PartnerDocumentsPage() {
                           size="sm"
                           variant="ghost"
                           className="text-red-600 hover:bg-red-50"
-                          onClick={() => deleteMutation.mutate(document.id)}
+                          onClick={() => setPendingDelete(document)}
                         >
                           {t('common.remove')}
                         </Button>
@@ -290,6 +295,24 @@ export function PartnerDocumentsPage() {
           </CardBody>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={t('confirm.deleteDocument.title', {
+          name: label('documentType', pendingDelete?.documentType),
+        })}
+        description={t('confirm.deleteDocument.body')}
+        confirmLabel={t('confirm.deleteDocument.action')}
+        cancelLabel={t('confirm.keep')}
+        loading={deleteMutation.isPending}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() =>
+          pendingDelete &&
+          deleteMutation.mutate(pendingDelete.id, {
+            onSuccess: () => setPendingDelete(null),
+          })
+        }
+      />
     </>
   )
 }
