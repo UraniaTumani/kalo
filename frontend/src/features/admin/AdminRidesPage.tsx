@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { adminApi } from '@/lib/api/endpoints'
+import { readPage } from '@/lib/api/page'
 import type { RideStatus } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
 import { RideStatusBadge } from '@/components/StatusBadge'
@@ -49,6 +50,8 @@ export function AdminRidesPage() {
       }),
   })
 
+  const { rows, page: pageData, isEmpty } = readPage(ridesQuery.data)
+
   return (
     <>
       <PageHeader
@@ -78,13 +81,22 @@ export function AdminRidesPage() {
         <Card>
           {ridesQuery.isLoading && (
             <div className="p-5">
-              <Spinner />
+              <Spinner label="Loading rides" />
             </div>
           )}
 
-          {ridesQuery.data?.empty && <EmptyState title="No rides match this filter" />}
+          {ridesQuery.isError && !ridesQuery.isLoading && (
+            <EmptyState
+              title="Could not load rides"
+              description="The request to the server failed. Check that the backend is running."
+            />
+          )}
 
-          {ridesQuery.data && !ridesQuery.data.empty && (
+          {!ridesQuery.isLoading && !ridesQuery.isError && isEmpty && (
+            <EmptyState title="No rides match this filter" />
+          )}
+
+          {rows.length > 0 && (
             <>
               <Table>
                 <thead>
@@ -98,7 +110,7 @@ export function AdminRidesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {ridesQuery.data.content.map((ride) => (
+                  {rows.map((ride) => (
                     <tr key={ride.rideId}>
                       <Td className="whitespace-nowrap text-xs">
                         {formatDateTime(ride.requestedAt)}
@@ -127,7 +139,7 @@ export function AdminRidesPage() {
                   ))}
                 </tbody>
               </Table>
-              <Pagination page={ridesQuery.data} onPageChange={setPage} />
+              <Pagination page={pageData} onPageChange={setPage} />
             </>
           )}
         </Card>

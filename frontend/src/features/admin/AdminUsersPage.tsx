@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/lib/api/endpoints'
+import { readPage } from '@/lib/api/page'
 import type { UserRole, UserStatus } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
 import { StatusBadge } from '@/components/StatusBadge'
@@ -41,6 +42,8 @@ export function AdminUsersPage() {
     mutationFn: (userId: number) => adminApi.reactivateUser(userId),
     onSuccess: invalidate,
   })
+
+  const { rows, page: pageData, isEmpty } = readPage(usersQuery.data)
 
   return (
     <>
@@ -92,13 +95,22 @@ export function AdminUsersPage() {
       <Card>
         {usersQuery.isLoading && (
           <div className="p-5">
-            <Spinner />
+            <Spinner label="Loading users" />
           </div>
         )}
 
-        {usersQuery.data?.empty && <EmptyState title="No users match this filter" />}
+        {usersQuery.isError && !usersQuery.isLoading && (
+          <EmptyState
+            title="Could not load users"
+            description="The request to the server failed. Check that the backend is running."
+          />
+        )}
 
-        {usersQuery.data && !usersQuery.data.empty && (
+        {!usersQuery.isLoading && !usersQuery.isError && isEmpty && (
+          <EmptyState title="No users match this filter" />
+        )}
+
+        {rows.length > 0 && (
           <>
             <Table>
               <thead>
@@ -111,7 +123,7 @@ export function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody>
-                {usersQuery.data.content.map((user) => (
+                {rows.map((user) => (
                   <tr key={user.userId}>
                     <Td>
                       <span className="font-medium">
@@ -155,7 +167,7 @@ export function AdminUsersPage() {
                 ))}
               </tbody>
             </Table>
-            <Pagination page={usersQuery.data} onPageChange={setPage} />
+            <Pagination page={pageData} onPageChange={setPage} />
           </>
         )}
       </Card>
