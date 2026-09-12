@@ -12,6 +12,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfigurationSource;
 import com.kalo.auth.security.JwtAuthenticationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -54,10 +55,17 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            DaoAuthenticationProvider authenticationProvider
+            DaoAuthenticationProvider authenticationProvider,
+            CorsConfigurationSource corsConfigurationSource
     ) throws Exception {
 
         http
+                /*
+                 * Contributes nothing in the default same-origin deployment;
+                 * applies an exact origin allow-list when one is configured.
+                 */
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+
                 .csrf(csrf -> csrf.disable())
 
                 .sessionManagement(session ->
@@ -96,6 +104,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/public/**")
                         .permitAll()
 
+                        /*
+                         * These paths only exist when springdoc is enabled,
+                         * which is off unless a deployment opts in via
+                         * SWAGGER_ENABLED. With it off they 404 rather than
+                         * publishing the API surface.
+                         */
                         .requestMatchers(
                                 "/v3/api-docs",
                                 "/v3/api-docs/**",

@@ -97,10 +97,29 @@ Liquibase creates every table on first startup. Do not create tables by hand.
 | `DB_URL` | no | `jdbc:postgresql://localhost:5432/kalo_db` | JDBC URL |
 | `DB_USERNAME` | no | `postgres` | Database user |
 | `DB_PASSWORD` | no | `postgres` | Database password |
+| `SPRING_PROFILES_ACTIVE` | **in every deployment** | *(none)* | Must be set explicitly — there is no default profile. See below. |
+| `CORS_ALLOWED_ORIGINS` | only if split-origin | *(empty)* | Comma-separated exact origins, e.g. `https://app.kalo.al`. Wildcards are rejected at startup. |
+| `SWAGGER_ENABLED` | no | `false` | API documentation is off unless a deployment opts in. |
+| `APP_RATE_LIMIT_TRUST_FORWARDED_FOR` | behind a proxy | `false` | Trust `X-Forwarded-For` for rate-limit identity. Enable only when a proxy sets it, or callers can forge it. |
+| `APP_RATE_LIMIT_ENABLED` | no | `true` | Leave on. |
+| `VITE_API_URL` | frontend build, split-origin only | *(empty)* | Baked into the bundle at build time. Empty means same-origin. |
 
-There is deliberately **no fallback JWT secret**. A committed secret that works
-in production is a committed production credential, so the application fails
-fast instead. The `dev` profile supplies a throwaway one for local work.
+There is deliberately **no fallback JWT secret** and **no default profile**.
+
+A committed secret that works in production is a committed production
+credential, so the application fails fast instead. The `dev` profile supplies a
+throwaway one for local work.
+
+`spring.profiles.default` was removed for the same reason. With it set to `dev`,
+a deployment that configured `DB_URL` but forgot the profile would have started
+against the production database using this repository's throwaway secret, and
+seeded demo accounts whose passwords are printed below — silently, because the
+application started normally. **Every deployment must set
+`SPRING_PROFILES_ACTIVE` explicitly.**
+
+`DevelopmentSafetyGuard` is the backstop. The application refuses to start when
+the development secret is used without the `dev` profile, or when either the
+development secret or demo seeding is pointed at a non-local database.
 
 Generate a secret:
 
@@ -112,17 +131,32 @@ openssl rand -base64 48
 
 ## 5. Running the backend
 
-Production-style run (secret from the environment):
+`./mvnw spring-boot:run` activates the `dev` profile automatically — that is
+configured in the POM rather than as a global default — so local work needs no
+environment variables:
 
 ```bash
-JWT_SECRET="$(openssl rand -base64 48)" ./mvnw spring-boot:run
+./mvnw spring-boot:run
 ```
 
-On Windows PowerShell:
+An IDE run configuration does not read that POM setting. Set
+`SPRING_PROFILES_ACTIVE=dev` in the run configuration once.
 
-```powershell
-$env:JWT_SECRET = "REPLACE_WITH_BASE64_SECRET"; ./mvnw spring-boot:run
+Production-style run, with an explicit profile and a real secret:
+
+```bash
+SPRING_PROFILES_ACTIVE=prod JWT_SECRET="$(openssl rand -base64 48)" ./mvnw spring-boot:run
 ```
+
+### The whole stack, the way production is shaped
+
+```bash
+docker compose up --build
+```
+
+Frontend on <http://localhost:8081>, with nginx forwarding `/api` to the
+backend so everything is one origin. PostgreSQL is published on `5433` for
+`psql` and the IDE.
 
 ---
 

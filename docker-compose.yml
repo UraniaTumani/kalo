@@ -1,0 +1,64 @@
+# Runs the whole stack the way production is shaped: one origin, with nginx
+# serving the frontend and forwarding /api to the backend.
+#
+#   docker compose up --build      → http://localhost:8081
+#
+# This file is for local integration and demos. It activates the dev profile,
+# which seeds demo accounts, so it must not be pointed at a real database —
+# DevelopmentSafetyGuard refuses to start if it is.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: kalo_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - kalo-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kalo_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # Published so psql and the IDE can reach it; the app uses the network name.
+    ports:
+      - "5433:5432"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      # Explicit, never defaulted — this is the setting whose absence used to
+      # mean a production deploy silently ran development configuration.
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://postgres:5432/kalo_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      # Requests arrive via nginx, so the forwarded address is the real client.
+      APP_RATE_LIMIT_TRUST_FORWARDED_FOR: "true"
+      # Handy locally; stays off unless asked for.
+      SWAGGER_ENABLED: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Not published: the frontend container reaches it over the compose
+    # network, which is what production looks like too.
+    expose:
+      - "8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Empty on purpose: same-origin through the nginx proxy.
+        VITE_API_URL: ""
+    depends_on:
+      - backend
+    ports:
+      - "8081:80"
+
+volumes:
+  kalo-postgres:

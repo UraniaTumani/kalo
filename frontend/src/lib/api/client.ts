@@ -50,8 +50,19 @@ interface RequestOptions {
   skipAuthRedirect?: boolean
 }
 
+/**
+ * Empty by default, which keeps every request same-origin — the topology the
+ * production nginx image serves, where /api is forwarded to the backend and no
+ * CORS is involved.
+ *
+ * Set VITE_API_URL at build time (it is inlined, not read at runtime) to point
+ * at a separately hosted API; the backend then also needs that exact origin in
+ * CORS_ALLOWED_ORIGINS.
+ */
+const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+
 function buildUrl(path: string, params?: QueryParams) {
-  const url = new URL(path, window.location.origin)
+  const url = new URL(API_BASE + path, API_BASE || window.location.origin)
 
   if (params) {
     for (const [key, value] of Object.entries(params)) {
@@ -61,7 +72,8 @@ function buildUrl(path: string, params?: QueryParams) {
     }
   }
 
-  return url.pathname + url.search
+  // Same-origin stays a relative path; a configured base keeps its host.
+  return API_BASE ? url.toString() : url.pathname + url.search
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
