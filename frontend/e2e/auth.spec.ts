@@ -122,7 +122,6 @@ test.describe('Signing in', () => {
 test.describe('Session recovery', () => {
   test('C14 · an expired access token is refreshed and the request replayed', async ({
     page,
-    context,
     app,
     guards,
   }) => {
