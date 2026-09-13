@@ -172,17 +172,17 @@ test.describe('Session recovery', () => {
 
   test('C14b · many requests at once still cause only one refresh', async ({
     page,
-    context,
     app,
     guards,
   }) => {
     void app
     void guards
 
-    const tokens = await apiLogin(page.request, SEEDED.partner.phone, SEEDED.partner.password)
-    await seedSession(context, tokens)
-
-    await page.goto('/partner')
+    /*
+     * Through the form, for the same reason as C14: a seeded session is restored
+     * by an init script on every load and would undo the expiry below.
+     */
+    await loginThroughUi(page, SEEDED.partner.phone, SEEDED.partner.password)
     await expectSignedIn(page)
 
     const refreshCalls: string[] = []
@@ -193,15 +193,20 @@ test.describe('Session recovery', () => {
     await expireAccessToken(page)
 
     /*
-     * The dashboard fires several queries at once. Because refresh tokens
-     * rotate, a page that let each one refresh would spend the token on the
-     * first and log itself out on the rest.
+     * A reload rather than a nav click: the dashboard fires its profile, its
+     * three driver counts and its open-rides query together on boot, which is
+     * the concurrency this is about. Clicking a link leaves it to the query
+     * cache whether anything reaches the network at all.
+     *
+     * Refresh tokens rotate, so a page that let each of those refresh would
+     * spend the token on the first and log itself out on the rest.
      */
-    await page.getByRole('link', { name: /^drivers$/i }).click()
-    await expect(page.getByRole('heading', { name: /^drivers$/i })).toBeVisible()
+    await page.reload()
+
+    await expectSignedIn(page)
+    await expect(page.getByRole('link', { name: /^drivers$/i })).toBeVisible()
 
     expect(refreshCalls.length, 'single-flight refresh').toBe(1)
-    await expectSignedIn(page)
   })
 
   test('C16 · no refresh token means a clean trip to the login screen', async ({

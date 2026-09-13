@@ -50,6 +50,9 @@ services:
       # A ride that times out mid-test would be a race nobody can reproduce.
       # RideTimeoutIntegrationTest covers the sweep itself.
       APP_RIDE_TIMEOUT_SWEEP_ENABLED: "false"
+      # Fixed Tirana landmarks, so the browser suite exercises the real
+      # endpoint without sending OpenStreetMap a request per keystroke.
+      GEOCODING_PROVIDER: static
     depends_on:
       postgres:
         condition: service_healthy
