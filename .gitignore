@@ -31,3 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Playwright run output
+frontend/e2e/.results/
+frontend/e2e/.report/
+frontend/test-results/

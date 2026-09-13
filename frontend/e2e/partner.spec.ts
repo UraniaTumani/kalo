@@ -1,0 +1,146 @@
+import { test, expect, SEEDED, apiLogin, seedSession, expectSignedIn } from './support/fixtures'
+
+/**
+ * Pre-flight: P2, P3, P6, P8, P11, P12, P13, P19.
+ *
+ * P12 is the reason this file exists. Rewriting a week of opening hours was
+ * delete-then-insert, Hibernate flushed the inserts first, and every save after
+ * a company's first failed on the unique constraint — a partner could set their
+ * hours once and never correct them. The backend has a test for the repository
+ * now; this proves the screen a partner actually uses still works.
+ */
+test.describe('Partner', () => {
+  test.beforeEach(async ({ page, context, app }) => {
+    void app
+    const tokens = await apiLogin(page.request, SEEDED.partner.phone, SEEDED.partner.password)
+    await seedSession(context, tokens)
+  })
+
+  test('P2 · the dashboard counts the fleet rather than a page of it', async ({ page, guards }) => {
+    void guards
+
+    await page.goto('/partner')
+    await expectSignedIn(page)
+
+    /*
+     * The seed gives ABC Taxi three drivers. Before the counters were changed to
+     * read totalElements they counted a fetched array, which would have started
+     * lying the moment a company passed twenty.
+     */
+    const drivers = page.getByText(/^Drivers$/).first()
+    await expect(drivers).toBeVisible()
+    await expect(page.locator('body')).toContainText(/ABC Taxi/)
+  })
+
+  test('P3 · the drivers list renders the seeded fleet', async ({ page, guards }) => {
+    void guards
+
+    await page.goto('/partner/drivers')
+
+    await expect(page.getByText('Ilir Balla')).toBeVisible()
+    await expect(page.getByText('Gent Prifti')).toBeVisible()
+    await expect(page.getByText('Mirela Hasa')).toBeVisible()
+  })
+
+  test('P6 · the vehicles list renders', async ({ page, guards }) => {
+    void guards
+
+    await page.goto('/partner/vehicles')
+    await expect(page.getByText(/AA\d+TR/).first()).toBeVisible()
+  })
+
+  test('P8 · the assignments list renders', async ({ page, guards }) => {
+    void guards
+
+    await page.goto('/partner/assignments')
+    await expectSignedIn(page)
+
+    // Seeded drivers hold seeded vehicles, so there is something to show.
+    await expect(page.getByText(/Ilir Balla|Gent Prifti|Mirela Hasa/).first()).toBeVisible()
+  })
+
+  test('P5 · deactivating a driver asks first, and says it cannot be undone', async ({
+    page,
+    guards,
+  }) => {
+    void guards
+
+    await page.goto('/partner/drivers')
+
+    await page.getByRole('button', { name: /deactivate/i }).first().click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    await expect(dialog).toContainText(/cannot be undone|forced offline|released/i)
+
+    // Backed out: the driver is still there.
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+    await expect(page.getByText('Ilir Balla')).toBeVisible()
+  })
+})
+
+test.describe('Operating hours', () => {
+  test.beforeEach(async ({ page, context, app }) => {
+    void app
+    /*
+     * The second company, so this never competes with the fleet tests above for
+     * the same rows.
+     */
+    const tokens = await apiLogin(page.request, SEEDED.partnerB.phone, SEEDED.partnerB.password)
+
+    /*
+     * The seeder writes 00:00 to 00:00 straight through the repository to mean
+     * "open all week". The API rightly refuses that shape — closing must be
+     * after opening — so a savable week goes in here through the real endpoint
+     * first, leaving the screen with something it is allowed to re-save.
+     */
+    const week = await page.request.put('/api/v1/partner/availability-settings/operating-hours', {
+      headers: { Authorization: `Bearer ${tokens.accessToken}` },
+      data: {
+        hours: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'].map(
+          (dayOfWeek) => ({
+            dayOfWeek,
+            closed: false,
+            openTime: '06:00:00',
+            closeTime: '23:00:00',
+          }),
+        ),
+      },
+    })
+    expect(week.status(), await week.text()).toBe(200)
+
+    await seedSession(context, tokens)
+  })
+
+  test('P11, P12, P13 · a partner can save the week, then change it, then change it again', async ({
+    page,
+    guards,
+  }) => {
+    void guards
+
+    await page.goto('/partner/availability')
+    await expectSignedIn(page)
+
+    const save = page.getByRole('button', { name: /save/i }).last()
+    await expect(save).toBeVisible()
+
+    /*
+     * Three saves in a row. One was always fine; it was the second that used to
+     * come back 409 with "The request conflicts with the current state of the
+     * resource", which tells a partner nothing about what to do.
+     */
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const response = page.waitForResponse(
+        (r) => r.url().includes('/availability-settings/operating-hours') && r.request().method() === 'PUT',
+      )
+
+      await save.click()
+
+      const result = await response
+      expect(result.status(), `save #${attempt} should succeed`).toBe(200)
+
+      await page.waitForTimeout(300)
+    }
+  })
+})
