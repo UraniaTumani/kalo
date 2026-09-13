@@ -85,3 +85,44 @@ jobs:
 
       - name: Build frontend image
         run: docker build -t kalo-frontend:${{ github.sha }} ./frontend
+
+  e2e:
+    name: Browser tests
+    runs-on: ubuntu-latest
+    # After the unit-level suites: a browser run is the slowest way to discover
+    # something a backend test would have caught in seconds.
+    needs: [backend, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      # Chrome rather than the bundled Chromium: the config uses the `chrome`
+      # channel so the same browser runs here and on a developer's machine.
+      - name: Install Chrome
+        working-directory: frontend
+        run: npx playwright install --with-deps chrome
+
+      # Brings up its own PostgreSQL and backend, seeded fresh, and takes them
+      # down afterwards. Nothing here touches a developer database.
+      - name: Run browser tests
+        working-directory: frontend
+        run: npm run test:e2e
+
+      - name: Publish report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/e2e/.report/
+          retention-days: 7

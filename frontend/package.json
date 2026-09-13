@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "node e2e/run.mjs",
+    "test:e2e:keep": "node e2e/run.mjs --keep-up",
+    "test:e2e:ui": "node e2e/run.mjs --keep-up --ui",
+    "e2e:up": "docker compose -f ../docker-compose.e2e.yml up -d --build --wait",
+    "e2e:down": "docker compose -f ../docker-compose.e2e.yml down -v --remove-orphans"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -27,6 +32,7 @@
     "zod": "^4.6.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^24.13.3",

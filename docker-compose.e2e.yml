@@ -1,0 +1,63 @@
+# The stack the browser tests run against.
+#
+#   npm run test:e2e          (from ./frontend — brings this up and tears it down)
+#   docker compose -f docker-compose.e2e.yml up -d --build --wait
+#
+# Separate from docker-compose.yml on every axis that matters: its own database,
+# its own ports, and no named volume. A developer's kalo_db accumulates whatever
+# manual testing left behind — suspended accounts, changed passwords, half-built
+# fleets — and a suite that reads it is testing that history rather than the
+# product. This starts empty every run and is seeded by DevDataSeeder, so the
+# accounts in e2e/support/fixtures.ts mean the same thing on every machine.
+#
+# The backend runs as a container rather than a spawned JVM, which also keeps it
+# clear of whatever is already listening on 8080.
+
+# Its own compose project, so nothing here collides with docker-compose.yml.
+name: kalo-e2e
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: kalo_e2e
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    # tmpfs, deliberately: the database should not survive the run. Nothing to
+    # clean up, and no chance of a stale row explaining a passing test.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kalo_e2e"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "55432:5432"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://postgres:5432/kalo_e2e
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      # The suite signs in far more often than a person does, and rate limiting
+      # has its own backend tests. Leaving it on would fail tests for being fast.
+      APP_RATE_LIMIT_ENABLED: "false"
+      # A ride that times out mid-test would be a race nobody can reproduce.
+      # RideTimeoutIntegrationTest covers the sweep itself.
+      APP_RIDE_TIMEOUT_SWEEP_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+    ports:
+      - "18080:8080"
