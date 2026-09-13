@@ -9,6 +9,7 @@ import { RideStatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { Pagination } from '@/components/Pagination'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { readPage } from '@/lib/api/page'
 import { MapView } from '@/components/MapPicker'
 import { Spinner } from '@/components/ui/Spinner'
 import {
@@ -171,17 +172,20 @@ function RideActions({ ride, onDone }: { ride: PartnerRideResponse; onDone: () =
   const [driverId, setDriverId] = useState('')
   const [finalAmount, setFinalAmount] = useState('')
 
-  // Only ONLINE drivers can be assigned; the backend rejects anything else.
+  /*
+   * Only ACTIVE, ONLINE drivers can be assigned; the backend rejects anything
+   * else. Asked for by filter rather than fetched whole and narrowed here — on
+   * a paged endpoint the latter would hide an available driver behind a page
+   * boundary and make them unassignable.
+   */
   const driversQuery = useQuery({
-    queryKey: ['partner', 'drivers'],
-    queryFn: () => partnerApi.drivers(),
+    queryKey: ['partner', 'drivers', 'assignable-online'],
+    queryFn: () =>
+      partnerApi.drivers({ status: 'ACTIVE', availabilityStatus: 'ONLINE', size: 100 }),
     enabled: ride.status === 'REQUESTED',
   })
 
-  const assignableDrivers =
-    driversQuery.data?.filter(
-      (driver) => driver.status === 'ACTIVE' && driver.availabilityStatus === 'ONLINE',
-    ) ?? []
+  const assignableDrivers = readPage(driversQuery.data).rows
 
   function runAction<T>(action: () => Promise<T>) {
     return action().then((result) => {

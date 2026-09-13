@@ -191,7 +191,17 @@ export const partnerApi = {
 
   /* fleet */
 
-  drivers: () => api.get<DriverResponse[]>('/api/v1/partner/drivers'),
+  /**
+   * Paged. The pickers pass availabilityStatus/status rather than reading a
+   * whole fleet and filtering in the browser.
+   */
+  drivers: (
+    params?: PageParams & {
+      status?: DriverStatus
+      availabilityStatus?: DriverAvailabilityStatus
+      unassigned?: boolean
+    },
+  ) => api.get<Page<DriverResponse>>('/api/v1/partner/drivers', params),
 
   driver: (driverId: number) => api.get<DriverResponse>(`/api/v1/partner/drivers/${driverId}`),
 
@@ -231,7 +241,8 @@ export const partnerApi = {
   updateDriverLocation: (driverId: number, body: { latitude: number; longitude: number }) =>
     api.put<DriverLocationResponse>(`/api/v1/partner/drivers/${driverId}/location`, body),
 
-  vehicles: () => api.get<VehicleResponse[]>('/api/v1/partner/vehicles'),
+  vehicles: (params?: PageParams & { status?: VehicleStatus; unassigned?: boolean }) =>
+    api.get<Page<VehicleResponse>>('/api/v1/partner/vehicles', params),
 
   createVehicle: (body: {
     plateNumber: string
@@ -264,8 +275,11 @@ export const partnerApi = {
   deactivateVehicle: (vehicleId: number) =>
     api.delete<void>(`/api/v1/partner/vehicles/${vehicleId}`),
 
-  assignments: () =>
-    api.get<DriverVehicleAssignmentResponse[]>('/api/v1/partner/driver-vehicle-assignments'),
+  assignments: (params?: PageParams & { active?: boolean }) =>
+    api.get<Page<DriverVehicleAssignmentResponse>>(
+      '/api/v1/partner/driver-vehicle-assignments',
+      params,
+    ),
 
   createAssignment: (body: { driverId: number; vehicleId: number }) =>
     api.post<DriverVehicleAssignmentResponse>(

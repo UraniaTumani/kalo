@@ -4,6 +4,11 @@ import com.kalo.driver.dto.CreateDriverRequest;
 import com.kalo.driver.dto.DriverResponse;
 import com.kalo.driver.dto.UpdateDriverAvailabilityRequest;
 import com.kalo.driver.dto.UpdateDriverRequest;
+import com.kalo.driver.enums.DriverAvailabilityStatus;
+import com.kalo.driver.enums.DriverStatus;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -13,7 +18,12 @@ public interface DriverService {
             CreateDriverRequest request
     );
 
-    List<DriverResponse> getDrivers();
+    Page<DriverResponse> getDrivers(
+            DriverStatus status,
+            DriverAvailabilityStatus availabilityStatus,
+            Boolean unassigned,
+            Pageable pageable
+    );
 
     DriverResponse getDriverById(
             Long driverId

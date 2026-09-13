@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 public interface DriverVehicleAssignmentRepository
         extends JpaRepository<DriverVehicleAssignment, Long> {
 
@@ -22,8 +25,22 @@ public interface DriverVehicleAssignmentRepository
             Long companyId
     );
 
-    List<DriverVehicleAssignment>
-    findAllByDriverCompanyId(Long companyId);
+    /**
+     * Unassigning only flips the active flag, so this table keeps every
+     * assignment a company has ever made. It is the one partner list that grows
+     * without bound, which is why it is paged and why `active` is filterable.
+     */
+    @org.springframework.data.jpa.repository.Query("""
+            SELECT a
+            FROM DriverVehicleAssignment a
+            WHERE a.driver.company.id = :companyId
+              AND (:active IS NULL OR a.active = :active)
+            """)
+    Page<DriverVehicleAssignment> findAllByDriverCompanyIdFiltered(
+            @org.springframework.data.repository.query.Param("companyId") Long companyId,
+            @org.springframework.data.repository.query.Param("active") Boolean active,
+            Pageable pageable
+    );
 
 
     @Query("""
