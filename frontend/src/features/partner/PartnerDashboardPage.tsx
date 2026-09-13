@@ -6,7 +6,8 @@ import { PageHeader } from '@/components/AppLayout'
 import { StatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Spinner } from '@/components/ui/Spinner'
-import { Alert, Button, Card, CardBody, CardHeader } from '@/components/ui'
+import { Bell, Car, CarFront, PowerOff, Radio } from 'lucide-react'
+import { Alert, Button, Card, CardBody, CardHeader, StatCard } from '@/components/ui'
 
 export function PartnerDashboardPage() {
   const { t } = useTranslation()
@@ -36,6 +37,11 @@ export function PartnerDashboardPage() {
     queryFn: () => partnerApi.drivers({ size: 1 }),
   })
 
+  const vehiclesQuery = useQuery({
+    queryKey: ['partner', 'vehicles', 'count'],
+    queryFn: () => partnerApi.vehicles({ size: 1 }),
+  })
+
   const settingsQuery = useQuery({
     queryKey: ['partner', 'operational-settings'],
     queryFn: () => partnerApi.operationalSettings(),
@@ -56,6 +62,15 @@ export function PartnerDashboardPage() {
   const online = onlineQuery.data?.totalElements ?? 0
   const busy = busyQuery.data?.totalElements ?? 0
   const pendingRides = openRidesQuery.data?.totalElements ?? 0
+  const totalDrivers = totalDriversQuery.data?.totalElements ?? 0
+  const vehicles = vehiclesQuery.data?.totalElements ?? 0
+
+  /*
+   * Derived rather than queried: a driver is online, on a ride, or neither,
+   * and asking the server a third time for a number it has already implied
+   * would be a request per tile.
+   */
+  const offline = Math.max(0, totalDrivers - online - busy)
 
   const approved = company.verificationStatus === 'APPROVED'
   const active = company.status === 'ACTIVE'
@@ -108,11 +123,41 @@ export function PartnerDashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label={t('dashboard.drivers')} value={totalDriversQuery.data?.totalElements ?? 0} />
-        <Stat label={t('dashboard.onlineNow')} value={online} tone="success" />
-        <Stat label={t('dashboard.onARide')} value={busy} tone="info" />
-        <Stat label={t('dashboard.awaitingResponse')} value={pendingRides} tone={pendingRides ? 'warning' : undefined} />
+      {/*
+        Ordered the way a dispatcher asks: what needs me now, who can take it,
+        who is busy, who is idle, and how big is the fleet. Awaiting response
+        leads because it is the only one that is ever a problem.
+      */}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <StatCard
+          label={t('dashboard.awaitingResponse')}
+          value={pendingRides}
+          tone={pendingRides ? 'warn' : 'neutral'}
+          icon={<Bell className="size-4" aria-hidden />}
+        />
+        <StatCard
+          label={t('dashboard.onlineNow')}
+          value={online}
+          tone="good"
+          icon={<Radio className="size-4" aria-hidden />}
+        />
+        <StatCard
+          label={t('dashboard.onARide')}
+          value={busy}
+          tone="brand"
+          icon={<Car className="size-4" aria-hidden />}
+        />
+        <StatCard
+          label={t('dashboard.offline')}
+          value={offline}
+          hint={t('dashboard.fleetHint')}
+          icon={<PowerOff className="size-4" aria-hidden />}
+        />
+        <StatCard
+          label={t('dashboard.vehicles')}
+          value={vehicles}
+          icon={<CarFront className="size-4" aria-hidden />}
+        />
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -161,34 +206,6 @@ export function PartnerDashboardPage() {
         </Card>
       </div>
     </>
-  )
-}
-
-function Stat({
-  label,
-  value,
-  tone,
-}: {
-  label: string
-  value: number
-  tone?: 'success' | 'info' | 'warning'
-}) {
-  const toneClass =
-    tone === 'success'
-      ? 'text-emerald-600'
-      : tone === 'info'
-        ? 'text-brand-600'
-        : tone === 'warning'
-          ? 'text-amber-600'
-          : 'text-ink-900'
-
-  return (
-    <Card>
-      <CardBody>
-        <p className="text-xs font-medium text-ink-500">{label}</p>
-        <p className={`mt-1 text-2xl font-semibold ${toneClass}`}>{value}</p>
-      </CardBody>
-    </Card>
   )
 }
 

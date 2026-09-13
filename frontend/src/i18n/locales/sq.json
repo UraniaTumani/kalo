@@ -508,7 +508,10 @@
     "onboardingHint": "Mund të menaxhoni profilin dhe dokumentet tani, por nuk mund të merrni udhëtime derisa një administrator ta miratojë kompaninë.",
     "goToDocuments": "Shko te dokumentet",
     "notActive": "Kompania juaj nuk është aktive",
-    "notActiveHint": "Nuk do të shfaqeni në kërkimin e udhëtarëve dhe nuk mund të pranoni udhëtime të reja."
+    "notActiveHint": "Nuk do të shfaqeni në kërkimin e udhëtarëve dhe nuk mund të pranoni udhëtime të reja.",
+    "offline": "Jashtë linje",
+    "vehicles": "Automjete",
+    "fleetHint": "Shoferët që nuk po marrin udhëtime tani"
   },
   "confirm": {
     "suspendCompany": {

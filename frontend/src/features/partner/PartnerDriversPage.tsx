@@ -15,6 +15,7 @@ import { readPage } from '@/lib/api/page'
 import { MapView, TIRANA, type LatLng } from '@/components/MapPicker'
 import { getCurrentPosition, GeolocationError } from '@/lib/geolocation'
 import i18n from '@/i18n'
+import { UserX } from 'lucide-react'
 import { useDriverTracking } from './useDriverTracking'
 import { Spinner } from '@/components/ui/Spinner'
 import {
@@ -26,6 +27,7 @@ import {
   EmptyState,
   Field,
   Input,
+  RowActions,
   Table,
   Td,
   Th,
@@ -215,9 +217,8 @@ export function PartnerDriversPage() {
                   <tr>
                     <Th>{t('rating.driver')}</Th>
                     <Th>{t('partner.licence')}</Th>
-                    <Th>{t('ride.status')}</Th>
                     <Th>{t('nav.availability')}</Th>
-                    <Th />
+                    <Th className="text-right" />
                   </tr>
                 </thead>
                 <tbody>
@@ -229,20 +230,26 @@ export function PartnerDriversPage() {
                         </span>
                         <span className="block text-xs text-ink-500">{driver.phone}</span>
                       </Td>
-                      <Td className="text-xs">
-                        {driver.licenseNumber}
-                        <span className="block text-ink-500">
+                      <Td className="whitespace-nowrap text-xs">
+                        <span className="tnum">{driver.licenseNumber}</span>
+                        <span className="tnum block text-ink-500">
                           {t('partner.expiresOn', { date: driver.licenseExpiryDate })}
                         </span>
                       </Td>
                       <Td>
-                        <StatusBadge status={driver.status} namespace="driverStatus" />
+                        <StatusBadge
+                          status={driver.availabilityStatus}
+                          namespace="driverAvailability"
+                        />
+                        {/* Only worth the room when it is not the normal case. */}
+                        {driver.status !== 'ACTIVE' && (
+                          <span className="mt-1 block">
+                            <StatusBadge status={driver.status} namespace="driverStatus" />
+                          </span>
+                        )}
                       </Td>
                       <Td>
-                        <StatusBadge status={driver.availabilityStatus} namespace="driverAvailability" />
-                      </Td>
-                      <Td>
-                        <div className="flex flex-wrap gap-1">
+                        <RowActions>
                           {driver.status === 'ACTIVE' && driver.availabilityStatus !== 'BUSY' && (
                             <Button
                               size="sm"
@@ -275,13 +282,15 @@ export function PartnerDriversPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="text-red-600 hover:bg-red-50"
+                              className="text-ink-400 hover:bg-bad-50 hover:text-bad-600"
+                              title={t('partner.deactivate')}
+                              aria-label={t('partner.deactivate')}
                               onClick={() => setPendingDeactivate(driver)}
                             >
-                              {t('partner.deactivate')}
+                              <UserX className="size-4" aria-hidden />
                             </Button>
                           )}
-                        </div>
+                        </RowActions>
                       </Td>
                     </tr>
                   ))}
