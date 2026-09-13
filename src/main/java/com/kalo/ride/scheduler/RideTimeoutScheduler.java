@@ -13,7 +13,11 @@ import org.springframework.stereotype.Component;
  * test can run one sweep at a known moment instead of racing a timer that fires
  * every five seconds against its own fixtures.
  *
- * Disabled in the test suite for that reason, the same way the rate limiter is.
+ * The timer fires on every instance, so the work is taken through SweepLock and
+ * only one instance actually does it. Scaling out therefore adds capacity to
+ * serve requests without multiplying the background scan.
+ *
+ * Disabled in the test suite, the same way the rate limiter is.
  */
 @Component
 @RequiredArgsConstructor
@@ -25,9 +29,10 @@ import org.springframework.stereotype.Component;
 public class RideTimeoutScheduler {
 
     private final RideTimeoutService rideTimeoutService;
+    private final SweepLock sweepLock;
 
     @Scheduled(fixedDelay = 5000)
     public void sweep() {
-        rideTimeoutService.processTimedOutRides();
+        sweepLock.runExclusively(rideTimeoutService::processTimedOutRides);
     }
 }
