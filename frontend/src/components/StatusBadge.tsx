@@ -32,7 +32,7 @@ const genericTones: Record<string, Tone> = {
   ONLINE: 'success',
   PENDING: 'warning',
   DRAFT: 'neutral',
-  BUSY: 'info',
+  BUSY: 'warning',
   INACTIVE: 'neutral',
   OFFLINE: 'neutral',
   SUSPENDED: 'danger',
@@ -59,9 +59,25 @@ export function useStatusLabel() {
   }
 }
 
+/**
+ * Live states carry a dot; settled ones do not. A partner scanning a column of
+ * rides is looking for the ones that still need something from them.
+ */
+const LIVE_RIDE_STATES = new Set<RideStatus>([
+  'REQUESTED',
+  'DRIVER_ASSIGNED',
+  'DRIVER_ARRIVING',
+  'DRIVER_ARRIVED',
+  'IN_PROGRESS',
+])
+
 export function RideStatusBadge({ status }: { status: RideStatus }) {
   const label = useStatusLabel()
-  return <Badge tone={rideTones[status]}>{label('rideStatus', status)}</Badge>
+  return (
+    <Badge tone={rideTones[status]} dot={LIVE_RIDE_STATES.has(status)}>
+      {label('rideStatus', status)}
+    </Badge>
+  )
 }
 
 export function StatusBadge({
@@ -81,8 +97,15 @@ export function StatusBadge({
 }) {
   const label = useStatusLabel()
 
+  /*
+   * ONLINE and BUSY are things happening right now; OFFLINE, INACTIVE and the
+   * rest are settled. The dot says which without relying on hue alone, which
+   * matters in a column somebody reads at a glance all day.
+   */
+  const live = status === 'ONLINE' || status === 'BUSY'
+
   return (
-    <Badge tone={genericTones[status] ?? 'neutral'}>
+    <Badge tone={genericTones[status] ?? 'neutral'} dot={live}>
       {namespace ? label(namespace, status) : label('companyStatus', status)}
     </Badge>
   )

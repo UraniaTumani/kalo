@@ -1,28 +1,69 @@
 @import 'tailwindcss';
 
+/*
+ * KALO's palette.
+ *
+ * Two decisions shape everything below.
+ *
+ * The neutrals are warm, not cool. A taxi marketplace people trust with where
+ * they are at midnight should not feel like a server admin panel, and the
+ * difference between those two impressions is mostly the temperature of the
+ * greys and whether the page sits on white or on something softer.
+ *
+ * The accent is taxi amber, and it is spent sparingly — the active screen in
+ * the sidebar, the one action a page most wants, a rating star. When everything
+ * is highlighted nothing is, and amber loses its meaning fastest of all.
+ */
 @theme {
-  --color-brand-50: #eef7ff;
-  --color-brand-100: #d9edff;
-  --color-brand-200: #bce0ff;
-  --color-brand-300: #8ecdff;
-  --color-brand-400: #59b0ff;
-  --color-brand-500: #3390fc;
-  --color-brand-600: #1d71f1;
-  --color-brand-700: #165ade;
-  --color-brand-800: #184ab4;
-  --color-brand-900: #19418e;
+  /* Amber. Named brand-* because every component already asks for that. */
+  --color-brand-50: #fef8ec;
+  --color-brand-100: #fbecc9;
+  --color-brand-200: #f7d894;
+  --color-brand-300: #f2be57;
+  --color-brand-400: #eda62b;
+  --color-brand-500: #e08c0f;
+  --color-brand-600: #c26f08;
+  --color-brand-700: #9a520b;
+  --color-brand-800: #7c4110;
+  --color-brand-900: #683710;
 
-  --color-ink-50: #f6f7f9;
-  --color-ink-100: #eceef2;
-  --color-ink-200: #d5dae3;
-  --color-ink-300: #b1bacb;
-  --color-ink-400: #8794ae;
-  --color-ink-500: #687694;
-  --color-ink-600: #535f7a;
-  --color-ink-700: #444d63;
-  --color-ink-800: #3b4253;
-  --color-ink-900: #343a47;
-  --color-ink-950: #23262f;
+  /* Warm charcoal through warm stone. */
+  --color-ink-50: #f7f5f2;
+  --color-ink-100: #efebe5;
+  --color-ink-200: #ded7cd;
+  --color-ink-300: #c8bfb3;
+  --color-ink-400: #a89d8e;
+  --color-ink-500: #877b6b;
+  --color-ink-600: #6d6254;
+  --color-ink-700: #564d43;
+  --color-ink-800: #3e3832;
+  --color-ink-900: #272320;
+  --color-ink-950: #171412;
+
+  /*
+   * Semantic, and deliberately separate from the accent: "this went well" must
+   * not be the same colour as "this is the button we want you to press".
+   */
+  --color-good-50: #ecf7f0;
+  --color-good-100: #d3ecdd;
+  --color-good-500: #1f9254;
+  --color-good-600: #177a45;
+  --color-good-700: #146138;
+
+  --color-warn-50: #fdf4e7;
+  --color-warn-100: #f9e4c2;
+  --color-warn-500: #b8770c;
+  --color-warn-600: #9a6209;
+
+  --color-bad-50: #fdefed;
+  --color-bad-100: #f8d7d2;
+  --color-bad-500: #c23a2b;
+  --color-bad-600: #a32d20;
+  --color-bad-700: #872418;
+
+  /* One shadow language: soft, warm-tinted, never a hard drop. */
+  --shadow-card: 0 1px 2px rgb(39 35 32 / 0.04), 0 8px 24px -16px rgb(39 35 32 / 0.18);
+  --shadow-raised: 0 2px 4px rgb(39 35 32 / 0.05), 0 16px 32px -20px rgb(39 35 32 / 0.25);
 }
 
 html,
@@ -35,7 +76,24 @@ body {
   @apply bg-ink-50 text-ink-900 antialiased;
 }
 
+/*
+ * Tabular numerals wherever figures line up — fares, counts, times. Proportional
+ * digits make a column of prices look crooked.
+ */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Leaflet renders its own panes; keep them under our overlays. */
 .leaflet-container {
   z-index: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

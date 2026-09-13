@@ -74,20 +74,33 @@ export function AppLayout() {
     { to: '/profile', labelKey: 'nav.profile', icon: User },
   ]
 
+  function signOut() {
+    logout()
+    navigate('/login', { replace: true })
+  }
+
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
-      <aside className="flex shrink-0 flex-col border-b border-ink-200 bg-white lg:w-60 lg:border-r lg:border-b-0">
-        <div className="flex items-center gap-2 px-5 py-4">
-          <span className="grid size-8 place-items-center rounded-lg bg-brand-600 text-sm font-bold text-white">
+      {/*
+        A rail on desktop, a scrolling strip of tabs on mobile. The strip keeps
+        the destinations visible rather than hiding them behind a menu button —
+        a partner watching for incoming rides should not have to open anything.
+      */}
+      <aside className="sticky top-0 z-30 shrink-0 border-b border-ink-200/70 bg-white/95 backdrop-blur lg:static lg:flex lg:w-60 lg:flex-col lg:border-b-0 lg:border-r lg:bg-white">
+        <div className="flex items-center gap-2.5 px-5 py-4">
+          <span
+            aria-hidden
+            className="grid size-9 place-items-center rounded-xl bg-brand-400 text-sm font-black text-ink-950"
+          >
             K
           </span>
-          <div>
-            <p className="text-sm font-semibold text-ink-900">KALO</p>
-            <p className="text-[11px] text-ink-500">{t(`roles.${role}`)}</p>
+          <div className="min-w-0">
+            <p className="text-sm font-bold tracking-tight text-ink-900">KALO</p>
+            <p className="truncate text-[11px] font-medium text-ink-500">{t(`roles.${role}`)}</p>
           </div>
         </div>
 
-        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:overflow-visible lg:pb-0">
+        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:mt-1 lg:flex-col lg:overflow-visible lg:pb-0">
           {items.map(({ to, labelKey, icon: Icon, end }) => (
             <NavLink
               key={to}
@@ -95,35 +108,58 @@ export function AppLayout() {
               end={end}
               className={({ isActive }) =>
                 cn(
-                  'flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm transition',
+                  'group relative flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
+                  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600',
                   isActive
-                    ? 'bg-brand-50 font-medium text-brand-800'
+                    ? 'bg-brand-50 text-brand-900'
                     : 'text-ink-600 hover:bg-ink-100 hover:text-ink-900',
                 )
               }
             >
-              <Icon className="size-4" aria-hidden />
-              {t(labelKey)}
+              {({ isActive }) => (
+                <>
+                  {/*
+                    A bar on the active item rather than colour alone: on the
+                    desktop rail it reads instantly, and it is one more signal
+                    for anybody who does not separate these hues easily.
+                  */}
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'absolute left-0 top-1/2 hidden h-5 w-1 -translate-y-1/2 rounded-r-full bg-brand-500 lg:block',
+                      isActive ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
+                  <Icon
+                    className={cn('size-4 shrink-0', isActive ? 'text-brand-700' : 'text-ink-400')}
+                    aria-hidden
+                  />
+                  {t(labelKey)}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
 
-        <div className="mt-auto hidden border-t border-ink-200 px-5 py-4 lg:block">
-          <p className="truncate text-sm font-medium text-ink-800">
-            {user.firstName} {user.lastName}
-          </p>
-          <p className="truncate text-xs text-ink-500">{user.phone}</p>
+        <div className="mt-auto hidden border-t border-ink-100 px-4 py-4 lg:block">
+          <div className="flex items-center gap-2.5">
+            <span
+              aria-hidden
+              className="grid size-8 shrink-0 place-items-center rounded-full bg-ink-100 text-xs font-bold text-ink-600"
+            >
+              {user.firstName.charAt(0)}
+              {user.lastName.charAt(0)}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-ink-800">
+                {user.firstName} {user.lastName}
+              </p>
+              <p className="tnum truncate text-xs text-ink-500">{user.phone}</p>
+            </div>
+          </div>
 
           <div className="mt-3 flex items-center justify-between gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="-ml-2"
-              onClick={() => {
-                logout()
-                navigate('/login', { replace: true })
-              }}
-            >
+            <Button variant="ghost" size="sm" className="-ml-1.5" onClick={signOut}>
               <LogOut className="size-3.5" aria-hidden />
               {t('common.signOut')}
             </Button>
@@ -133,22 +169,15 @@ export function AppLayout() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-4 border-b border-ink-200 bg-white px-5 py-3 lg:hidden">
-          <p className="truncate text-sm font-medium text-ink-800">
+        <header className="flex items-center justify-between gap-3 border-b border-ink-200/70 bg-white px-4 py-2.5 lg:hidden">
+          <p className="truncate text-sm font-semibold text-ink-800">
             {user.firstName} {user.lastName}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <LanguageSwitcher />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                logout()
-                navigate('/login', { replace: true })
-              }}
-            >
+            <Button variant="ghost" size="sm" onClick={signOut}>
               <LogOut className="size-3.5" aria-hidden />
-              {t('common.signOut')}
+              <span className="sr-only sm:not-sr-only">{t('common.signOut')}</span>
             </Button>
           </div>
         </header>
@@ -157,8 +186,11 @@ export function AppLayout() {
           Inside the layout on purpose: a page that fails still leaves the
           navigation usable, and the key resets the boundary on route change so
           navigating away recovers without a reload.
+
+          Capped at 5xl rather than 6xl — a table stretched across a 27-inch
+          monitor is harder to read, not easier.
         */}
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 lg:py-8">
           <ErrorBoundary resetKey={location.pathname}>
             <Outlet />
           </ErrorBoundary>
@@ -168,6 +200,11 @@ export function AppLayout() {
   )
 }
 
+/**
+ * The first thing on every screen: what this page is, and the one action it
+ * most wants. Bigger and better spaced than before, so a page opens with a
+ * clear title rather than running straight into a card.
+ */
 export function PageHeader({
   title,
   description,
@@ -178,12 +215,14 @@ export function PageHeader({
   action?: React.ReactNode
 }) {
   return (
-    <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h1 className="text-lg font-semibold text-ink-900">{title}</h1>
-        {description && <p className="mt-0.5 text-sm text-ink-500">{description}</p>}
+    <div className="mb-6 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+      <div className="min-w-0">
+        <h1 className="text-xl font-bold tracking-tight text-ink-900 sm:text-2xl">{title}</h1>
+        {description && (
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-ink-500">{description}</p>
+        )}
       </div>
-      {action}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   )
 }
