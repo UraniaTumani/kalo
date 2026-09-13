@@ -118,8 +118,22 @@ public class SecurityConfig {
                         )
                         .permitAll()
 
+                        /*
+                         * Liveness only, and nothing else under /actuator.
+                         * A load balancer has to reach this without a token;
+                         * the detail inside it is still gated by
+                         * management.endpoint.health.show-details.
+                         */
                         .requestMatchers("/actuator/health")
                         .permitAll()
+
+                        /*
+                         * Metrics describe the shape of the system — endpoint
+                         * names, traffic, error rates — so they are not for
+                         * any signed-in customer to read.
+                         */
+                        .requestMatchers("/actuator/**")
+                        .hasRole("ADMIN")
 
                         .requestMatchers("/api/v1/partner/**")
                         .hasRole("PARTNER")

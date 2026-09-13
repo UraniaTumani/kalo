@@ -6,7 +6,8 @@ import com.kalo.ride.enums.RideRequestStatus;
 import com.kalo.ride.enums.RideStatus;
 import com.kalo.ride.repository.RideRepository;
 import com.kalo.ride.repository.RideRequestRepository;
-import lombok.RequiredArgsConstructor;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -17,12 +18,32 @@ import java.util.List;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class RideTimeoutServiceImpl
         implements RideTimeoutService {
 
     private final RideRepository rideRepository;
     private final RideRequestRepository rideRequestRepository;
+
+    /**
+     * A company failing to answer is invisible to HTTP metrics: no request is
+     * made, nothing returns an error, and the ride ends in a legitimate state.
+     * This is the only place that failure is countable.
+     */
+    private final Counter timedOutRides;
+
+    public RideTimeoutServiceImpl(
+            RideRepository rideRepository,
+            RideRequestRepository rideRequestRepository,
+            MeterRegistry meterRegistry
+    ) {
+
+        this.rideRepository = rideRepository;
+        this.rideRequestRepository = rideRequestRepository;
+
+        this.timedOutRides = Counter.builder("kalo.ride.timed.out")
+                .description("Rides that ended because the company never answered")
+                .register(meterRegistry);
+    }
 
     @Value("${app.ride.company-response-timeout-seconds}")
     private long companyResponseTimeoutSeconds;
@@ -114,6 +135,8 @@ public class RideTimeoutServiceImpl
             rideRepository.save(
                     ride
             );
+
+            timedOutRides.increment();
 
             log.info(
                     "Ride timed out with no company response: rideId={} companyId={} rideRequestStatus={}",

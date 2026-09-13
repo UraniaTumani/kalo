@@ -30,9 +30,21 @@ public class RideTimeoutScheduler {
 
     private final RideTimeoutService rideTimeoutService;
     private final SweepLock sweepLock;
+    private final SweepHealth sweepHealth;
 
     @Scheduled(fixedDelay = 5000)
     public void sweep() {
-        sweepLock.runExclusively(rideTimeoutService::processTimedOutRides);
+
+        boolean swept = sweepLock.runExclusively(rideTimeoutService::processTimedOutRides);
+
+        /*
+         * Recorded only when this instance did the work and it returned. A
+         * sweep that threw leaves the clock running, which is the point: the
+         * health check is asking whether rides are being timed out, not
+         * whether a timer is ticking.
+         */
+        if (swept) {
+            sweepHealth.recordSuccess();
+        }
     }
 }

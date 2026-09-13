@@ -39,6 +39,9 @@ class SweepLockIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     DataSource dataSource;
 
+    @Autowired
+    SweepHealth sweepHealth;
+
     /** Held open while a test pretends to be another instance. */
     private Connection otherInstance;
 
@@ -122,7 +125,7 @@ class SweepLockIntegrationTest extends AbstractIntegrationTest {
          * timer this test is trying to reason about.
          */
         RideTimeoutScheduler scheduler =
-                new RideTimeoutScheduler(sweeps::incrementAndGet, sweepLock);
+                new RideTimeoutScheduler(sweeps::incrementAndGet, sweepLock, sweepHealth);
 
         scheduler.sweep();
 
@@ -136,7 +139,7 @@ class SweepLockIntegrationTest extends AbstractIntegrationTest {
         AtomicInteger sweeps = new AtomicInteger();
 
         RideTimeoutScheduler scheduler =
-                new RideTimeoutScheduler(sweeps::incrementAndGet, sweepLock);
+                new RideTimeoutScheduler(sweeps::incrementAndGet, sweepLock, sweepHealth);
 
         scheduler.sweep();
 
