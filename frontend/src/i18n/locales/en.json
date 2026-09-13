@@ -508,7 +508,10 @@
     "onboardingHint": "You can manage your profile and documents now, but you cannot take rides until an administrator approves the company.",
     "goToDocuments": "Go to documents",
     "notActive": "Your company is not active",
-    "notActiveHint": "You will not appear in passenger search and cannot accept new rides."
+    "notActiveHint": "You will not appear in passenger search and cannot accept new rides.",
+    "offline": "Offline",
+    "vehicles": "Vehicles",
+    "fleetHint": "Drivers who are not taking rides right now"
   },
   "confirm": {
     "suspendCompany": {
