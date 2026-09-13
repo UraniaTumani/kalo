@@ -104,7 +104,29 @@ Liquibase creates every table on first startup. Do not create tables by hand.
 | `APP_RATE_LIMIT_TRUST_FORWARDED_FOR` | behind a proxy | `false` | Trust `X-Forwarded-For` for rate-limit identity. Enable only when a proxy sets it, or callers can forge it. |
 | `APP_RATE_LIMIT_ENABLED` | no | `true` | Leave on. |
 | `APP_RIDE_TIMEOUT_SWEEP_ENABLED` | no | `true` | Runs the ride-timeout sweep on this instance. **At least one instance must have it on** — with it off everywhere, a company that never answers keeps the ride forever. |
+| `LOG_FORMAT` | no | *(empty)* | Empty prints plain text for a human. Set `ecs` (or `logstash`, `gelf`) wherever something is collecting logs, so they arrive as JSON rather than needing to be parsed out of prose. |
 | `VITE_API_URL` | frontend build, split-origin only | *(empty)* | Baked into the bundle at build time. Empty means same-origin. |
+
+### Monitoring
+
+`/actuator/health` is public, because a load balancer has no token — but it
+shows only `UP`/`DOWN` to an anonymous caller. `/actuator/metrics` and
+`/actuator/prometheus` require an **ADMIN** token: a scrape endpoint describes
+endpoint names, traffic and error rates, which is not something to hand to any
+signed-in customer.
+
+Two metrics exist that nothing else can tell you:
+
+- `kalo_ride_timed_out_total` — rides that ended because the company never
+  answered. No HTTP request is made and nothing returns an error, so request
+  metrics cannot see this at all.
+- `kalo_ride_sweep_seconds_since_success` — how long since the timeout sweep
+  last completed. Only one instance sweeps, so if that instance stops, nothing
+  fails and rides simply sit in `REQUESTED`. **This is the gauge to alert on**;
+  the health indicator turns `DOWN` after two minutes.
+
+Instances that are not sweeping report healthy rather than `DOWN` — otherwise
+scaling out would turn every instance but one red.
 
 There is deliberately **no fallback JWT secret** and **no default profile**.
 
