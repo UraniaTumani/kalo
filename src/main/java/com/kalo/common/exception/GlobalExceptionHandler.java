@@ -165,6 +165,26 @@ public class GlobalExceptionHandler {
      * =========================================================
      */
 
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ErrorResponse> handleUnauthorized(
+            UnauthorizedException exception,
+            HttpServletRequest request
+    ) {
+
+        /*
+         * The message is echoed here, unlike the two below: these are
+         * raised by our own code for a caller who is already known, so
+         * saying "your session expired" reveals nothing and saying
+         * "authentication failed" would send them hunting for a password
+         * problem they do not have.
+         */
+        return build(
+                HttpStatus.UNAUTHORIZED,
+                exception.getMessage(),
+                request
+        );
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(
             BadCredentialsException exception,

@@ -75,6 +75,13 @@ export const authApi = {
       skipAuthRedirect: true,
     }),
 
+  /**
+   * Refreshing itself lives in client.ts, not here: it has to bypass the
+   * retry wrapper that would otherwise call it again.
+   */
+  logout: (refreshToken: string) =>
+    api.post<void>('/api/v1/auth/logout', { refreshToken }, { skipAuthRedirect: true }),
+
   me: () => api.get<UserResponse>('/api/v1/me'),
 
   updateMe: (body: { firstName: string; lastName: string; email?: string | null }) =>

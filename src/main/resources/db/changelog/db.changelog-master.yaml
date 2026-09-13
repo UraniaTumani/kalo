@@ -46,3 +46,5 @@ databaseChangeLog:
       file: db/changelog/changes/018-repair-invalid-company-states.yaml
   - include:
       file: db/changelog/changes/019-normalize-phone-numbers.yaml
+  - include:
+      file: db/changelog/changes/020-create-refresh-tokens.yaml

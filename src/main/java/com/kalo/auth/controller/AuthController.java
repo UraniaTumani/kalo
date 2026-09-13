@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.kalo.auth.dto.LoginRequest;
+import com.kalo.auth.dto.RefreshRequest;
 import com.kalo.auth.dto.LoginResponse;import com.kalo.auth.dto.PartnerRegisterRequest;
 import com.kalo.auth.dto.PartnerRegisterResponse;
 
@@ -57,5 +58,30 @@ public class AuthController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponse> refresh(
+            @Valid @RequestBody RefreshRequest request
+    ) {
+
+        return ResponseEntity.ok(
+                authService.refresh(request)
+        );
+    }
+
+    /**
+     * Answers 204 whether or not the token was still live: a caller signing
+     * out does not need to know, and it saves the client handling a failure
+     * on the way out the door.
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @Valid @RequestBody RefreshRequest request
+    ) {
+
+        authService.logout(request);
+
+        return ResponseEntity.noContent().build();
     }
 }

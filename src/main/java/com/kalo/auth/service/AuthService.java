@@ -14,4 +14,17 @@ public interface AuthService {
     LoginResponse login(
             LoginRequest request
     );
+
+    /**
+     * Exchanges a refresh token for a fresh pair, rotating the refresh
+     * token in the process.
+     */
+    LoginResponse refresh(
+            RefreshRequest request
+    );
+
+    /** Revokes the presented refresh token. Silent when it is already gone. */
+    void logout(
+            RefreshRequest request
+    );
 }

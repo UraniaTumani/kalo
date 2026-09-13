@@ -36,6 +36,14 @@ public class JwtService {
                 .compact();
     }
 
+    /**
+     * Access token lifetime in seconds. Returned at sign-in so the client can
+     * refresh ahead of expiry instead of discovering it through a failed request.
+     */
+    public long getExpirationSeconds() {
+        return jwtExpiration / 1000;
+    }
+
     public String extractUsername(String token) {
         return extractClaim(
                 token,

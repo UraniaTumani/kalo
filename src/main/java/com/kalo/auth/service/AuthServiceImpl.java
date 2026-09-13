@@ -16,7 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.kalo.auth.dto.LoginRequest;
 import com.kalo.auth.dto.LoginResponse;
+import com.kalo.auth.dto.RefreshRequest;
 import com.kalo.auth.security.JwtService;
+import com.kalo.common.exception.UnauthorizedException;
 import com.kalo.auth.dto.PartnerRegisterRequest;
 import com.kalo.auth.dto.PartnerRegisterResponse;
 import com.kalo.partner.entity.TaxiCompany;
@@ -40,6 +42,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final CustomUserDetailsService customUserDetailsService;
     private final TaxiCompanyRepository taxiCompanyRepository;
+    private final RefreshTokenService refreshTokenService;
 
 
     @Override
@@ -270,6 +273,10 @@ public class AuthServiceImpl implements AuthService {
         UserDetails userDetails =
                 customUserDetailsService.loadUserByUsername(phone);
 
+        User user = userRepository
+                .findByPhone(phone)
+                .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
+
         String token =
                 jwtService.generateToken(userDetails);
 
@@ -280,8 +287,56 @@ public class AuthServiceImpl implements AuthService {
 
         return new LoginResponse(
                 token,
-                "Bearer"
+                refreshTokenService.issue(user),
+                "Bearer",
+                jwtService.getExpirationSeconds()
         );
+    }
+
+    @Override
+    @Transactional
+    public LoginResponse refresh(RefreshRequest request) {
+
+        return refreshTokenService
+                .rotate(request.refreshToken())
+                .map(rotation -> {
+
+                    /*
+                     * Reloaded rather than trusted: the account may have been
+                     * suspended since the refresh token was issued, and this is
+                     * the one place that would otherwise hand out a fresh hour
+                     * of access to a locked-out user.
+                     */
+                    UserDetails userDetails =
+                            customUserDetailsService.loadUserByUsername(
+                                    rotation.user().getPhone()
+                            );
+
+                    if (!userDetails.isEnabled() || !userDetails.isAccountNonLocked()) {
+
+                        refreshTokenService.revokeAllForUser(rotation.user().getId());
+
+                        throw new UnauthorizedException(
+                                "This account is no longer active"
+                        );
+                    }
+
+                    return new LoginResponse(
+                            jwtService.generateToken(userDetails),
+                            rotation.refreshToken(),
+                            "Bearer",
+                            jwtService.getExpirationSeconds()
+                    );
+                })
+                .orElseThrow(() -> new UnauthorizedException(
+                        "Session expired, please sign in again"
+                ));
+    }
+
+    @Override
+    @Transactional
+    public void logout(RefreshRequest request) {
+        refreshTokenService.revoke(request.refreshToken());
     }
 
     /**
