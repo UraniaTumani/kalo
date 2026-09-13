@@ -134,32 +134,62 @@ export function CurrentRidePage() {
         <Card>
           <CardHeader title={t('ride.progress')} />
           <CardBody>
-            <ol className="space-y-3">
-              {TIMELINE.map((step) => {
+            {/*
+              A rail, not a list of dots. Somebody checking this page wants one
+              answer — where is my taxi — and the shape of the thing should give
+              it before any of the words are read: filled behind you, hollow
+              ahead, and a ring on where you are now.
+            */}
+            <ol className="relative">
+              {TIMELINE.map((step, index) => {
                 const timestamp = ride[step.at] as string | null
                 const done = Boolean(timestamp)
 
+                const laterDone = TIMELINE.slice(index + 1).some((later) =>
+                  Boolean(ride[later.at]),
+                )
+                const current = done && !laterDone && active
+                const last = index === TIMELINE.length - 1
+
                 return (
-                  <li key={step.status} className="flex items-start gap-3">
+                  <li key={step.status} className="relative flex gap-3.5 pb-5 last:pb-0">
+                    {!last && (
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'absolute left-[11px] top-6 h-full w-0.5 rounded-full',
+                          laterDone ? 'bg-good-500' : 'bg-ink-200',
+                        )}
+                      />
+                    )}
+
                     <span
                       className={cn(
-                        'mt-0.5 grid size-5 shrink-0 place-items-center rounded-full text-white',
-                        done ? 'bg-brand-600' : 'bg-ink-200',
+                        'relative z-10 grid size-6 shrink-0 place-items-center rounded-full border-2 transition',
+                        done
+                          ? 'border-good-500 bg-good-500 text-white'
+                          : 'border-ink-200 bg-white text-transparent',
+                        current && 'ring-4 ring-good-500/20',
                       )}
                     >
-                      {done && <Check className="size-3" aria-hidden />}
+                      {done && <Check className="size-3.5" aria-hidden strokeWidth={3} />}
                     </span>
-                    <span className="flex-1">
+
+                    <span className="flex-1 pt-0.5">
                       <span
                         className={cn(
                           'block text-sm',
-                          done ? 'font-medium text-ink-900' : 'text-ink-400',
+                          current
+                            ? 'font-bold text-ink-900'
+                            : done
+                              ? 'font-medium text-ink-800'
+                              : 'text-ink-400',
                         )}
                       >
                         {t(step.labelKey)}
                       </span>
                       {done && (
-                        <span className="block text-xs text-ink-500">
+                        <span className="tnum mt-0.5 block text-xs text-ink-500">
                           {formatTime(timestamp)}
                         </span>
                       )}
@@ -175,16 +205,24 @@ export function CurrentRidePage() {
               </div>
             )}
 
+            {/*
+              Quiet, and below a divider. Cancelling is the one thing on this
+              screen nobody should do by accident, and a solid red button at the
+              top of a page somebody opens while waiting is an invitation. The
+              dialog does the warning; this only has to be findable.
+            */}
             {cancellable && (
-              <Button
-                variant="danger"
-                size="sm"
-                className="mt-4"
-                loading={cancelMutation.isPending}
-                onClick={() => setConfirmingCancel(true)}
-              >
-                {t('ride.cancelRide')}
-              </Button>
+              <div className="mt-5 border-t border-ink-100 pt-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="-ml-1.5 text-bad-600 hover:bg-bad-50 hover:text-bad-700"
+                  loading={cancelMutation.isPending}
+                  onClick={() => setConfirmingCancel(true)}
+                >
+                  {t('ride.cancelRide')}
+                </Button>
+              </div>
             )}
           </CardBody>
         </Card>
