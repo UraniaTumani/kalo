@@ -9,7 +9,6 @@ import com.kalo.ride.repository.RideRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,8 +27,11 @@ public class RideTimeoutServiceImpl
     @Value("${app.ride.company-response-timeout-seconds}")
     private long companyResponseTimeoutSeconds;
 
+    /**
+     * One sweep. RideTimeoutScheduler decides how often this is called, which
+     * keeps the schedule out of the logic and lets a test run exactly one.
+     */
     @Override
-    @Scheduled(fixedDelay = 5000)
     @Transactional
     public void processTimedOutRides() {
 
