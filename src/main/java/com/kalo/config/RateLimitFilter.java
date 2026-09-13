@@ -59,12 +59,21 @@ public class RateLimitFilter extends OncePerRequestFilter {
      */
     private static final Limit REFRESH = new Limit(20, 60);
 
+    /**
+     * Signed in, but every call costs somebody else a request. Generous enough
+     * for a person typing an address, low enough that a script cannot turn this
+     * into a free geocoding proxy.
+     */
+    private static final Limit GEOCODING = new Limit(60, 60);
+
     private static final Map<String, Limit> LIMITED_PATHS = Map.of(
             "/api/v1/auth/login", LOGIN,
             "/api/v1/auth/register/customer", REGISTER,
             "/api/v1/auth/register/partner", REGISTER,
             "/api/v1/public/taxi-availability", PUBLIC,
-            "/api/v1/auth/refresh", REFRESH
+            "/api/v1/auth/refresh", REFRESH,
+            "/api/v1/geocoding/search", GEOCODING,
+            "/api/v1/geocoding/reverse", GEOCODING
     );
 
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();

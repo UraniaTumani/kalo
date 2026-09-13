@@ -26,11 +26,19 @@ const CHANNEL = process.env.E2E_CHANNEL ?? 'chrome'
 
 export default defineConfig({
   testDir: './e2e',
+
+  /* Compiles every lazy route once, so no test pays that cost for the others. */
+  globalSetup: './e2e/support/warmup.ts',
   outputDir: './e2e/.results',
 
   /* A real ride goes through six state transitions; the default 30s is tight. */
   timeout: 60_000,
-  expect: { timeout: 10_000 },
+  /*
+   * Generous, because the dev server compiles each lazily-loaded route the
+   * first time a test visits it. The alternative is a suite that passes on a
+   * warm machine and fails on a cold one, which is worse than slow.
+   */
+  expect: { timeout: 20_000 },
 
   /* Serial locally: these share one backend and one database. */
   fullyParallel: false,

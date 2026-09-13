@@ -105,7 +105,35 @@ Liquibase creates every table on first startup. Do not create tables by hand.
 | `APP_RATE_LIMIT_ENABLED` | no | `true` | Leave on. |
 | `APP_RIDE_TIMEOUT_SWEEP_ENABLED` | no | `true` | Runs the ride-timeout sweep on this instance. **At least one instance must have it on** — with it off everywhere, a company that never answers keeps the ride forever. |
 | `LOG_FORMAT` | no | *(empty)* | Empty prints plain text for a human. Set `ecs` (or `logstash`, `gelf`) wherever something is collecting logs, so they arrive as JSON rather than needing to be parsed out of prose. |
+| `GEOCODING_PROVIDER` | no | `nominatim` | Which geocoder answers address lookup. `static` is a fixed set of Tirana landmarks, used by the browser tests. |
+| `GEOCODING_USER_AGENT` | no | `KALO/1.0 …` | Sent to Nominatim, whose policy requires an application name and a contact. Put a real address here before launch. |
+| `GEOCODING_CACHE_ENABLED` | no | `true` | Leave on. An address field fires on every pause in typing. |
 | `VITE_API_URL` | frontend build, split-origin only | *(empty)* | Baked into the bundle at build time. Empty means same-origin. |
+
+### Geocoding
+
+Address lookup runs on the backend, at `/api/v1/geocoding`. It used to run in
+the browser, which meant a paid provider key would have had to ship with the
+bundle, requests could not carry the User-Agent Nominatim requires, and every
+visitor re-asked a question somebody else had just asked. The endpoint is
+authenticated — an open geocoding proxy is a thing people find and use — rate
+limited, and cached for six hours.
+
+**Nominatim is not a production answer.** Its usage policy caps traffic at
+roughly one request per second, offers no SLA, and asks people not to use it
+for autocomplete, which is exactly what the booking page does. It is the
+default because it needs no key and makes a demo possible.
+
+Replacing it is one class:
+
+1. Implement `GeocodingProvider` (search, reverse, name) against Google Places
+   or Mapbox.
+2. Add a branch in `GeocodingConfig`, reading the key from the environment.
+3. Set `GEOCODING_PROVIDER` to its name.
+
+Nothing else changes. No controller, no service, no page — the frontend does
+not know which provider is answering, and the CSP already allows only
+`'self'`.
 
 ### Monitoring
 

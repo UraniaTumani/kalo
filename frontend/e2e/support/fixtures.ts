@@ -147,68 +147,21 @@ export async function forceLanguage(context: BrowserContext, language: 'en' | 's
 }
 
 /**
- * The only third party this suite fakes.
+ * Nothing is stubbed any more.
  *
- * Nominatim's usage policy caps traffic at roughly one request per second and
- * explicitly discourages automated use; a suite that hammered it every run would
- * be both unreliable and rude. Everything downstream of the lookup — the request
- * the app sends, the coordinates it books with — stays real.
+ * Address lookup used to go from the browser straight to OpenStreetMap, so this
+ * suite intercepted it — hammering a service whose policy asks people not to
+ * would have been both unreliable and rude. Now the lookup goes through our own
+ * endpoint, and the E2E backend runs a provider of fixed Tirana landmarks
+ * (`GEOCODING_PROVIDER=static`).
+ *
+ * That is strictly better than the interception it replaces: the controller, the
+ * cache, the validation and the authentication are all exercised for real, and
+ * only the last hop to a third party is replaced — on the server, where it
+ * belongs.
  */
-export async function stubGeocoder(context: BrowserContext) {
-  await context.route(/nominatim\.openstreetmap\.org/, async (route) => {
-    const url = route.request().url()
-
-    if (url.includes('/reverse')) {
-      return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ display_name: 'Rruga e Kavajes, Tirane' }),
-      })
-    }
-
-    /*
-     * Answers with places that match what was typed, so filling the two fields
-     * produces two different points. A stub that returned the same first result
-     * for every query would have both ends of the ride land on one spot, and the
-     * backend rightly refuses that.
-     *
-     * place_id matters too: the app keys the suggestion list on it, and React
-     * warns about duplicate keys when it is missing.
-     */
-    const query = decodeURIComponent(new URL(url).searchParams.get('q') ?? '').toLowerCase()
-
-    const places = [
-      {
-        place_id: 1001,
-        name: 'Rruga e Kavajes',
-        display_name: 'Rruga e Kavajes, Tirane, Albania',
-        lat: String(TIRANA.lat),
-        lon: String(TIRANA.lng),
-      },
-      {
-        place_id: 1002,
-        name: 'Sheshi Skenderbej',
-        display_name: 'Sheshi Skenderbej, Tirane, Albania',
-        lat: '41.3320',
-        lon: '19.8230',
-      },
-      {
-        place_id: 1003,
-        name: 'Blloku',
-        display_name: 'Blloku, Tirane, Albania',
-        lat: '41.3210',
-        lon: '19.8170',
-      },
-    ]
-
-    const matched = places.filter((place) => place.name.toLowerCase().includes(query))
-
-    return route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(matched.length ? matched : places),
-    })
-  })
+export async function stubGeocoder(_context: BrowserContext) {
+  /* Intentionally empty; kept so specs read the same either way. */
 }
 
 /* ------------------------------------------------------------- the test */

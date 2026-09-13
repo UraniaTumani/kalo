@@ -39,12 +39,16 @@ test.describe('Admin', () => {
 
     // Scoped to the table: the signed-in admin's own phone is in the sidebar too.
     const table = page.locator('table')
-    await expect(table.getByText(SEEDED.admin.phone)).toBeVisible()
+    await expect(table).toBeVisible()
 
-    const roleFilter = page.getByRole('combobox').first()
-    await roleFilter.selectOption('ADMIN')
+    /*
+     * Asserted only after filtering. Every run registers throwaway customers and
+     * the list is newest first, so whether the seeded admin happens to be on the
+     * first page is a fact about how often this suite has run, not about the
+     * filter.
+     */
+    await page.getByRole('combobox').first().selectOption('ADMIN')
 
-    // The one admin stays; the partners and customers go.
     await expect(table.getByText(SEEDED.admin.phone)).toBeVisible()
     await expect(table.getByText(SEEDED.partner.phone)).toHaveCount(0)
   })
