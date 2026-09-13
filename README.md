@@ -94,6 +94,7 @@ Liquibase creates every table on first startup. Do not create tables by hand.
 | --- | --- | --- | --- |
 | `JWT_SECRET` | **yes** | *(none)* | Base64, at least 256 bits. The application refuses to start without it. |
 | `JWT_EXPIRATION` | no | `3600000` | Token lifetime in milliseconds |
+| `JWT_REFRESH_EXPIRATION` | no | `2592000000` | Refresh token lifetime in milliseconds (30 days). Rotated on every use and revoked when an account is suspended. |
 | `DB_URL` | no | `jdbc:postgresql://localhost:5432/kalo_db` | JDBC URL |
 | `DB_USERNAME` | no | `postgres` | Database user |
 | `DB_PASSWORD` | no | `postgres` | Database password |
@@ -102,6 +103,7 @@ Liquibase creates every table on first startup. Do not create tables by hand.
 | `SWAGGER_ENABLED` | no | `false` | API documentation is off unless a deployment opts in. |
 | `APP_RATE_LIMIT_TRUST_FORWARDED_FOR` | behind a proxy | `false` | Trust `X-Forwarded-For` for rate-limit identity. Enable only when a proxy sets it, or callers can forge it. |
 | `APP_RATE_LIMIT_ENABLED` | no | `true` | Leave on. |
+| `APP_RIDE_TIMEOUT_SWEEP_ENABLED` | no | `true` | Runs the ride-timeout sweep on this instance. **At least one instance must have it on** — with it off everywhere, a company that never answers keeps the ride forever. |
 | `VITE_API_URL` | frontend build, split-origin only | *(empty)* | Baked into the bundle at build time. Empty means same-origin. |
 
 There is deliberately **no fallback JWT secret** and **no default profile**.
