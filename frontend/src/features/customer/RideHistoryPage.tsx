@@ -56,26 +56,35 @@ export function RideHistoryPage() {
                   <Th>{t('ride.route')}</Th>
                   <Th>{t('ride.status')}</Th>
                   <Th className="text-right">{t('ride.fare')}</Th>
-                  <Th />
+                  <Th className="text-right" />
                 </tr>
               </thead>
               <tbody>
                 {data.content.map((ride) => (
                   <tr key={ride.rideId}>
-                    <Td>{formatDateTime(ride.requestedAt)}</Td>
+                    <Td className="tnum whitespace-nowrap text-xs text-ink-600">
+                      {formatDateTime(ride.requestedAt)}
+                    </Td>
                     <Td className="font-medium">{ride.companyName}</Td>
-                    <Td className="text-xs text-ink-500">
-                      {ride.pickupAddress ?? t('ride.mapPoint')} → {ride.destinationAddress ?? t('ride.mapPoint')}
+                    <Td className="max-w-[18rem] text-xs text-ink-500">
+                      <span className="block truncate">
+                        {ride.pickupAddress ?? t('ride.mapPoint')}
+                      </span>
+                      <span className="block truncate text-ink-400">
+                        → {ride.destinationAddress ?? t('ride.mapPoint')}
+                      </span>
                     </Td>
                     <Td>
                       <RideStatusBadge status={ride.status} />
                     </Td>
-                    <Td className="text-right">{formatCurrency(ride.finalAmount)}</Td>
-                    <Td>
+                    <Td className="tnum text-right font-semibold text-ink-900">
+                      {formatCurrency(ride.finalAmount)}
+                    </Td>
+                    <Td className="text-right">
                       {ride.status === 'COMPLETED' && (
                         <Button
                           size="sm"
-                          variant="secondary"
+                          variant={ratingRideId === ride.rideId ? 'secondary' : 'primary'}
                           onClick={() =>
                             setRatingRideId(ratingRideId === ride.rideId ? null : ride.rideId)
                           }
