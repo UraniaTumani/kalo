@@ -256,6 +256,11 @@ public class TestDataFactory {
         return assignmentRepository.save(assignment);
     }
 
+    /** Persists a change made to an assignment, e.g. retiring it. */
+    public DriverVehicleAssignment saveAssignment(DriverVehicleAssignment assignment) {
+        return assignmentRepository.save(assignment);
+    }
+
     public DriverLocation location(Driver driver, double lat, double lng, Instant updatedAt) {
 
         DriverLocation location = new DriverLocation();

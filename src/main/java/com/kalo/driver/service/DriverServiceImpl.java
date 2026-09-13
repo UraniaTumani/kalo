@@ -26,6 +26,8 @@ import com.kalo.driver.dto.UpdateDriverAvailabilityRequest;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Slf4j
 @Service
@@ -179,18 +181,25 @@ public class DriverServiceImpl
     }
     @Override
     @Transactional(readOnly = true)
-    public List<DriverResponse> getDrivers() {
+    public Page<DriverResponse> getDrivers(
+            DriverStatus status,
+            DriverAvailabilityStatus availabilityStatus,
+            Boolean unassigned,
+            Pageable pageable
+    ) {
 
         TaxiCompany company =
                 getCurrentCompany();
 
         return driverRepository
-                .findAllByCompanyId(
-                        company.getId()
+                .findAllByCompanyIdFiltered(
+                        company.getId(),
+                        status,
+                        availabilityStatus,
+                        unassigned,
+                        pageable
                 )
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
+                .map(this::mapToResponse);
     }
 
     @Override

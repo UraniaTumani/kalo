@@ -10,6 +10,8 @@ import { PageHeader } from '@/components/AppLayout'
 import { StatusBadge, useStatusLabel } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { Pagination } from '@/components/Pagination'
+import { readPage } from '@/lib/api/page'
 import { Spinner } from '@/components/ui/Spinner'
 import {
   Button,
@@ -53,10 +55,14 @@ export function PartnerVehiclesPage() {
   const label = useStatusLabel()
   const queryClient = useQueryClient()
 
+  const [page, setPage] = useState(0)
+
   const vehiclesQuery = useQuery({
-    queryKey: ['partner', 'vehicles'],
-    queryFn: () => partnerApi.vehicles(),
+    queryKey: ['partner', 'vehicles', page],
+    queryFn: () => partnerApi.vehicles({ page, size: 20 }),
   })
+
+  const { rows: vehicles, page: pageData, isEmpty } = readPage(vehiclesQuery.data)
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['partner'] })
 
@@ -107,11 +113,11 @@ export function PartnerVehiclesPage() {
               </div>
             )}
 
-            {vehiclesQuery.data?.length === 0 && (
+            {isEmpty && (
               <EmptyState title={t('partner.noVehicles')} description={t('partner.noVehiclesHint')} />
             )}
 
-            {vehiclesQuery.data && vehiclesQuery.data.length > 0 && (
+            {vehicles.length > 0 && (
               <Table>
                 <thead>
                   <tr>
@@ -124,7 +130,7 @@ export function PartnerVehiclesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {vehiclesQuery.data.map((vehicle) => (
+                  {vehicles.map((vehicle) => (
                     <tr key={vehicle.id}>
                       <Td className="font-medium">{vehicle.plateNumber}</Td>
                       <Td>
@@ -155,6 +161,8 @@ export function PartnerVehiclesPage() {
                 </tbody>
               </Table>
             )}
+
+            <Pagination page={pageData} onPageChange={setPage} />
           </Card>
         </div>
 

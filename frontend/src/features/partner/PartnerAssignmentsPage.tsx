@@ -7,6 +7,8 @@ import { PageHeader } from '@/components/AppLayout'
 import { Badge } from '@/components/ui'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { Pagination } from '@/components/Pagination'
+import { readPage } from '@/lib/api/page'
 import { Spinner } from '@/components/ui/Spinner'
 import {
   Alert,
@@ -29,19 +31,35 @@ export function PartnerAssignmentsPage() {
   const [driverId, setDriverId] = useState('')
   const [vehicleId, setVehicleId] = useState('')
 
+  const [page, setPage] = useState(0)
+
   const assignmentsQuery = useQuery({
-    queryKey: ['partner', 'assignments'],
-    queryFn: () => partnerApi.assignments(),
+    queryKey: ['partner', 'assignments', page],
+    queryFn: () => partnerApi.assignments({ page, size: 20 }),
   })
 
-  const driversQuery = useQuery({
-    queryKey: ['partner', 'drivers'],
-    queryFn: () => partnerApi.drivers(),
+  const { rows: assignments, page: pageData, isEmpty } = readPage(assignmentsQuery.data)
+
+  /*
+   * The pickers ask the backend for exactly what can be assigned rather than
+   * reading the whole fleet and every assignment ever made and working it out
+   * here. The candidate set is small by construction — an active driver who is
+   * off duty and not already holding a vehicle — so one page is the whole of it.
+   */
+  const availableDriversQuery = useQuery({
+    queryKey: ['partner', 'drivers', 'assignable'],
+    queryFn: () =>
+      partnerApi.drivers({
+        status: 'ACTIVE',
+        availabilityStatus: 'OFFLINE',
+        unassigned: true,
+        size: 100,
+      }),
   })
 
-  const vehiclesQuery = useQuery({
-    queryKey: ['partner', 'vehicles'],
-    queryFn: () => partnerApi.vehicles(),
+  const availableVehiclesQuery = useQuery({
+    queryKey: ['partner', 'vehicles', 'assignable'],
+    queryFn: () => partnerApi.vehicles({ status: 'ACTIVE', unassigned: true, size: 100 }),
   })
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['partner'] })
@@ -67,27 +85,8 @@ export function PartnerAssignmentsPage() {
     onSuccess: invalidate,
   })
 
-  // The backend requires the driver to be OFFLINE and ACTIVE, and the vehicle
-  // ACTIVE and unassigned, so only offer combinations that can succeed.
-  const assignedDriverIds = new Set(
-    assignmentsQuery.data?.filter((a) => a.active).map((a) => a.driverId) ?? [],
-  )
-  const assignedVehicleIds = new Set(
-    assignmentsQuery.data?.filter((a) => a.active).map((a) => a.vehicleId) ?? [],
-  )
-
-  const availableDrivers =
-    driversQuery.data?.filter(
-      (driver) =>
-        driver.status === 'ACTIVE' &&
-        driver.availabilityStatus === 'OFFLINE' &&
-        !assignedDriverIds.has(driver.id),
-    ) ?? []
-
-  const availableVehicles =
-    vehiclesQuery.data?.filter(
-      (vehicle) => vehicle.status === 'ACTIVE' && !assignedVehicleIds.has(vehicle.id),
-    ) ?? []
+  const availableDrivers = readPage(availableDriversQuery.data).rows
+  const availableVehicles = readPage(availableVehiclesQuery.data).rows
 
   return (
     <>
@@ -107,14 +106,14 @@ export function PartnerAssignmentsPage() {
               </div>
             )}
 
-            {assignmentsQuery.data?.length === 0 && (
+            {isEmpty && (
               <EmptyState
                 title={t('partner.noAssignments')}
                 description={t('partner.noAssignmentsHint')}
               />
             )}
 
-            {assignmentsQuery.data && assignmentsQuery.data.length > 0 && (
+            {assignments.length > 0 && (
               <Table>
                 <thead>
                   <tr>
@@ -126,7 +125,7 @@ export function PartnerAssignmentsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {assignmentsQuery.data.map((assignment) => (
+                  {assignments.map((assignment) => (
                     <tr key={assignment.assignmentId}>
                       <Td className="font-medium">{assignment.driverName}</Td>
                       <Td>
@@ -160,6 +159,8 @@ export function PartnerAssignmentsPage() {
                 </tbody>
               </Table>
             )}
+
+            <Pagination page={pageData} onPageChange={setPage} />
           </Card>
         </div>
 

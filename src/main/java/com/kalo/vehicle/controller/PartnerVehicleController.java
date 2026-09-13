@@ -4,9 +4,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.vehicle.dto.CreateVehicleRequest;
 import com.kalo.vehicle.dto.UpdateVehicleRequest;
 import com.kalo.vehicle.dto.VehicleResponse;
+import com.kalo.vehicle.enums.VehicleStatus;
 import com.kalo.vehicle.service.VehicleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,11 +42,29 @@ public class PartnerVehicleController {
     }
 
     @GetMapping
-    public ResponseEntity<List<VehicleResponse>>
-    getVehicles() {
+    public ResponseEntity<Page<VehicleResponse>>
+    getVehicles(
+            @RequestParam(required = false)
+            VehicleStatus status,
+
+            /** Excludes vehicles a driver already holds; see the driver endpoint. */
+            @RequestParam(required = false)
+            Boolean unassigned,
+
+            @PageableDefault(
+                    size = 20,
+                    sort = "createdAt",
+                    direction = Sort.Direction.DESC
+            )
+            Pageable pageable
+    ) {
 
         return ResponseEntity.ok(
-                vehicleService.getVehicles()
+                vehicleService.getVehicles(
+                        status,
+                        unassigned,
+                        pageable
+                )
         );
     }
 

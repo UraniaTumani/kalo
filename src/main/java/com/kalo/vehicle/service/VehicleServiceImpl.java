@@ -27,6 +27,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Slf4j
 @Service
@@ -121,18 +123,23 @@ public class VehicleServiceImpl
 
     @Override
     @Transactional(readOnly = true)
-    public List<VehicleResponse> getVehicles() {
+    public Page<VehicleResponse> getVehicles(
+            VehicleStatus status,
+            Boolean unassigned,
+            Pageable pageable
+    ) {
 
         TaxiCompany company =
                 getCurrentCompany();
 
         return vehicleRepository
-                .findAllByCompanyId(
-                        company.getId()
+                .findAllByCompanyIdFiltered(
+                        company.getId(),
+                        status,
+                        unassigned,
+                        pageable
                 )
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
+                .map(this::mapToResponse);
     }
 
     @Override

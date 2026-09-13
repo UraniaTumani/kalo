@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useEffect, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -10,6 +10,8 @@ import { PageHeader } from '@/components/AppLayout'
 import { StatusBadge } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { Pagination } from '@/components/Pagination'
+import { readPage } from '@/lib/api/page'
 import { MapView, TIRANA, type LatLng } from '@/components/MapPicker'
 import { getCurrentPosition, GeolocationError } from '@/lib/geolocation'
 import i18n from '@/i18n'
@@ -48,10 +50,14 @@ export function PartnerDriversPage() {
   const queryClient = useQueryClient()
   const [locationFor, setLocationFor] = useState<DriverResponse | null>(null)
 
+  const [page, setPage] = useState(0)
+
   const driversQuery = useQuery({
-    queryKey: ['partner', 'drivers'],
-    queryFn: () => partnerApi.drivers(),
+    queryKey: ['partner', 'drivers', page],
+    queryFn: () => partnerApi.drivers({ page, size: 20 }),
   })
+
+  const { rows: drivers, page: pageData, isEmpty } = readPage(driversQuery.data)
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['partner'] })
 
@@ -107,19 +113,32 @@ export function PartnerDriversPage() {
     },
   })
 
-  // A driver taken offline elsewhere (a completed ride, another device) must
-  // not keep this device uploading positions for them.
-  useEffect(() => {
-    const drivers = driversQuery.data
-    if (!drivers) return
+  /*
+   * A driver taken offline elsewhere (a completed ride, another device) must
+   * not keep this device uploading positions for them.
+   *
+   * Asked per tracked driver rather than read off the list: once the list is
+   * paged, a tracked driver can sit on a page nobody is looking at, and this
+   * device would go on reporting a position for someone who is off duty.
+   * There are only ever a handful of tracked ids — this device is holding
+   * their phones.
+   */
+  const trackedDriverQueries = useQueries({
+    queries: tracking.trackedDriverIds.map((driverId) => ({
+      queryKey: ['partner', 'driver', driverId],
+      queryFn: () => partnerApi.driver(driverId),
+      refetchInterval: 30_000,
+    })),
+  })
 
-    for (const driverId of tracking.trackedDriverIds) {
-      const driver = drivers.find((candidate) => candidate.id === driverId)
+  useEffect(() => {
+    for (const query of trackedDriverQueries) {
+      const driver = query.data
       if (driver && driver.availabilityStatus === 'OFFLINE') {
-        tracking.stopTracking(driverId)
+        tracking.stopTracking(driver.id)
       }
     }
-  }, [driversQuery.data, tracking])
+  }, [trackedDriverQueries, tracking])
 
   /* Held while the partner confirms; null means no dialog is open. */
   const [pendingDeactivate, setPendingDeactivate] = useState<DriverResponse | null>(null)
@@ -183,14 +202,14 @@ export function PartnerDriversPage() {
               </CardBody>
             )}
 
-            {driversQuery.data?.length === 0 && (
+            {isEmpty && (
               <EmptyState
                 title={t('partner.noDrivers')}
                 description={t('partner.noDriversHint')}
               />
             )}
 
-            {driversQuery.data && driversQuery.data.length > 0 && (
+            {drivers.length > 0 && (
               <Table>
                 <thead>
                   <tr>
@@ -202,7 +221,7 @@ export function PartnerDriversPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {driversQuery.data.map((driver) => (
+                  {drivers.map((driver) => (
                     <tr key={driver.id}>
                       <Td>
                         <span className="font-medium">
@@ -269,6 +288,8 @@ export function PartnerDriversPage() {
                 </tbody>
               </Table>
             )}
+
+            <Pagination page={pageData} onPageChange={setPage} />
           </Card>
 
           {locationFor && (

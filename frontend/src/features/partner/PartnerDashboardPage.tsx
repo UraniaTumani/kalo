@@ -16,9 +16,24 @@ export function PartnerDashboardPage() {
     queryFn: () => partnerApi.profile(),
   })
 
-  const driversQuery = useQuery({
-    queryKey: ['partner', 'drivers'],
-    queryFn: () => partnerApi.drivers(),
+  /*
+   * Counters, not a list: ask for one row and read totalElements, the way the
+   * open-rides tile already does. Counting a fetched array would only ever have
+   * counted the drivers on the first page.
+   */
+  const onlineQuery = useQuery({
+    queryKey: ['partner', 'drivers', 'count', 'ONLINE'],
+    queryFn: () => partnerApi.drivers({ availabilityStatus: 'ONLINE', size: 1 }),
+  })
+
+  const busyQuery = useQuery({
+    queryKey: ['partner', 'drivers', 'count', 'BUSY'],
+    queryFn: () => partnerApi.drivers({ availabilityStatus: 'BUSY', size: 1 }),
+  })
+
+  const totalDriversQuery = useQuery({
+    queryKey: ['partner', 'drivers', 'count', 'ALL'],
+    queryFn: () => partnerApi.drivers({ size: 1 }),
   })
 
   const settingsQuery = useQuery({
@@ -38,9 +53,8 @@ export function PartnerDashboardPage() {
   if (profileQuery.error) return <ErrorMessage error={profileQuery.error} />
 
   const company = profileQuery.data!
-  const drivers = driversQuery.data ?? []
-  const online = drivers.filter((driver) => driver.availabilityStatus === 'ONLINE').length
-  const busy = drivers.filter((driver) => driver.availabilityStatus === 'BUSY').length
+  const online = onlineQuery.data?.totalElements ?? 0
+  const busy = busyQuery.data?.totalElements ?? 0
   const pendingRides = openRidesQuery.data?.totalElements ?? 0
 
   const approved = company.verificationStatus === 'APPROVED'
@@ -95,7 +109,7 @@ export function PartnerDashboardPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label={t('dashboard.drivers')} value={drivers.length} />
+        <Stat label={t('dashboard.drivers')} value={totalDriversQuery.data?.totalElements ?? 0} />
         <Stat label={t('dashboard.onlineNow')} value={online} tone="success" />
         <Stat label={t('dashboard.onARide')} value={busy} tone="info" />
         <Stat label={t('dashboard.awaitingResponse')} value={pendingRides} tone={pendingRides ? 'warning' : undefined} />

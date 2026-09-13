@@ -25,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 @RequiredArgsConstructor
@@ -124,18 +126,21 @@ public class DriverVehicleAssignmentServiceImpl
 
     @Override
     @Transactional(readOnly = true)
-    public List<DriverVehicleAssignmentResponse> getAssignments() {
+    public Page<DriverVehicleAssignmentResponse> getAssignments(
+            Boolean active,
+            Pageable pageable
+    ) {
 
         TaxiCompany company =
                 getCurrentCompany();
 
         return assignmentRepository
-                .findAllByDriverCompanyId(
-                        company.getId()
+                .findAllByDriverCompanyIdFiltered(
+                        company.getId(),
+                        active,
+                        pageable
                 )
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
+                .map(this::mapToResponse);
     }
 
     @Override
