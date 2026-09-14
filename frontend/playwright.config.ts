@@ -57,7 +57,17 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'off',
-    actionTimeout: 15_000,
+    /*
+     * Raised from 15s after four separate false failures, every one of them a
+     * page that had not finished rendering rather than a wrong assertion: the
+     * shell missing, a form field missing, a lazy route still compiling. Each
+     * cost a full suite re-run to disprove.
+     *
+     * This does not weaken any assertion. It only changes how long the suite
+     * is willing to wait for something that is supposed to appear, and on a
+     * loaded machine 15s was not long enough for a cold route.
+     */
+    actionTimeout: 30_000,
   },
 
   projects: [

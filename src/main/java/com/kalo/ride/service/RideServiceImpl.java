@@ -59,6 +59,12 @@ public class RideServiceImpl implements RideService {
     private final CompanyAvailabilityChecker companyAvailabilityChecker;
 
     /*
+     * Read-only here. Ratings are written by RideRatingService; this side only
+     * needs to tell a rated ride from an unrated one when describing it.
+     */
+    private final com.kalo.rating.repository.RideRatingRepository rideRatingRepository;
+
+    /*
      * =========================================================
      * CUSTOMER SELECTS TAXI COMPANY
      * =========================================================
@@ -732,12 +738,37 @@ public class RideServiceImpl implements RideService {
         User customer =
                 getCurrentCustomer();
 
-        return rideRepository
-                .findAllByCustomerId(
-                        customer.getId(),
-                        pageable
-                )
-                .map(this::mapToResponse);
+        org.springframework.data.domain.Page<Ride> rides =
+                rideRepository
+                        .findAllByCustomerId(
+                                customer.getId(),
+                                pageable
+                        );
+
+        /*
+         * Ratings for the whole page in one query, rather than one per row.
+         * History is the screen that has to distinguish rated rides from
+         * unrated ones, so it is also the screen where an N+1 would show.
+         */
+        java.util.Map<Long, com.kalo.rating.entity.RideRating> ratings =
+                rides.getContent().isEmpty()
+                        ? java.util.Map.of()
+                        : rideRatingRepository
+                        .findAllByRideIdIn(
+                                rides.getContent()
+                                        .stream()
+                                        .map(Ride::getId)
+                                        .toList()
+                        )
+                        .stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                                rating -> rating.getRide().getId(),
+                                rating -> rating
+                        ));
+
+        return rides.map(ride ->
+                mapToResponse(ride, ratings.get(ride.getId()))
+        );
     }
 
     /*
@@ -1128,6 +1159,26 @@ public class RideServiceImpl implements RideService {
             Ride ride
     ) {
 
+        /*
+         * One extra query when describing a single ride. The paged history
+         * takes the batched path below instead, so a page of ten costs two
+         * queries rather than eleven.
+         */
+        return mapToResponse(
+                ride,
+                ride.getId() == null
+                        ? null
+                        : rideRatingRepository
+                        .findByRideId(ride.getId())
+                        .orElse(null)
+        );
+    }
+
+    private RideResponse mapToResponse(
+            Ride ride,
+            com.kalo.rating.entity.RideRating rating
+    ) {
+
         RideRequest rideRequest =
                 ride.getRideRequest();
 
@@ -1154,7 +1205,12 @@ public class RideServiceImpl implements RideService {
                 ride.getDriverArrivedAt(),
                 ride.getStartedAt(),
                 ride.getCompletedAt(),
-                ride.getFinalAmount()
+                ride.getFinalAmount(),
+
+                rating != null,
+
+                rating == null ? null : rating.getDriverRating(),
+                rating == null ? null : rating.getCompanyRating()
         );
     }
 

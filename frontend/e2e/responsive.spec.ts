@@ -99,6 +99,14 @@ function suite(
   test.describe(`${role} at 375px`, () => {
     test.use({ viewport: PHONE })
 
+    /*
+     * One test here visits up to nine routes, so it legitimately needs several
+     * times the budget of a test that looks at one screen. The default 60s was
+     * tight enough that a loaded machine failed it on the shell rather than on
+     * a measurement.
+     */
+    test.setTimeout(180_000)
+
     test(`every ${role} page fits a phone screen`, async ({ page, context, app, guards }) => {
       void app
       void guards
@@ -116,6 +124,8 @@ function suite(
 
   test.describe(`${role} on desktop`, () => {
     test.use({ viewport: DESKTOP })
+
+    test.setTimeout(180_000)
 
     test(`every ${role} page fits a desktop screen`, async ({ page, context, app, guards }) => {
       void app

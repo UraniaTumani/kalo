@@ -220,7 +220,10 @@
     "rate": "Vlerëso",
     "thanks": "Faleminderit për vlerësimin",
     "recorded": "Vlerësimi juaj u regjistrua.",
-    "outOfFive": "{{score}} nga 5"
+    "outOfFive": "{{score}} nga 5",
+    "alreadyRatedTitle": "Ky udhëtim është vlerësuar tashmë",
+    "alreadyRatedBody": "Vlerësimi juaj i mëparshëm mbetet. Një udhëtim mund të vlerësohet vetëm një herë.",
+    "rated": "I vlerësuar"
   },
   "partner": {
     "ridesTitle": "Udhëtimet",

@@ -1,0 +1,79 @@
+databaseChangeLog:
+  - changeSet:
+      id: 022-create-company-notifications
+      author: kalo
+      comment: >
+        Notifications a taxi company keeps until it has seen them. A company is
+        not watching the screen when a passenger rates a ride an hour after it
+        finished, so anything that only exists in the moment is something
+        nobody receives.
+
+        ride_id is a plain column rather than a foreign key on purpose: a
+        notification records something that happened and should outlive
+        whatever becomes of the row it refers to.
+      changes:
+        - createTable:
+            tableName: company_notifications
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_company_notifications_company
+                    references: taxi_companies(id)
+                    deleteCascade: true
+              - column:
+                  name: type
+                  type: VARCHAR(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ride_id
+                  type: BIGINT
+              - column:
+                  name: message
+                  type: VARCHAR(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: read_at
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+        # The only read a partner can make: their own, newest first.
+        - createIndex:
+            tableName: company_notifications
+            indexName: idx_company_notifications_company_created
+            columns:
+              - column:
+                  name: company_id
+              - column:
+                  name: created_at
+                  descending: true
+
+        # The unread badge asks this on every dashboard load.
+        - createIndex:
+            tableName: company_notifications
+            indexName: idx_company_notifications_unread
+            columns:
+              - column:
+                  name: company_id
+              - column:
+                  name: read_at

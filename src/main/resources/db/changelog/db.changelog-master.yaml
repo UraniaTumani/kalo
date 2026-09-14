@@ -50,3 +50,5 @@ databaseChangeLog:
       file: db/changelog/changes/020-create-refresh-tokens.yaml
   - include:
       file: db/changelog/changes/021-create-support-requests.yaml
+  - include:
+      file: db/changelog/changes/022-create-company-notifications.yaml

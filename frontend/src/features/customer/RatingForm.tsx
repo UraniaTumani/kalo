@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Star } from 'lucide-react'
 import { rideApi } from '@/lib/api/endpoints'
 import { ApiError } from '@/lib/api/client'
@@ -14,6 +14,8 @@ export function RatingForm({ rideId }: { rideId: number }) {
   const [companyRating, setCompanyRating] = useState(0)
   const [comment, setComment] = useState('')
 
+  const queryClient = useQueryClient()
+
   const mutation = useMutation({
     mutationFn: () =>
       rideApi.rate(rideId, {
@@ -21,13 +23,38 @@ export function RatingForm({ rideId }: { rideId: number }) {
         companyRating,
         comment: comment.trim() || null,
       }),
+    /*
+     * History carries the rating now, so the row this was opened from has to
+     * be re-read — otherwise it keeps offering a Rate button until the next
+     * reload, which is the same stale state this whole change is about.
+     */
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ride'] }),
   })
 
-  // The backend enforces one rating per ride with a unique constraint, so a
-  // 409 here means it was already rated — not a failure worth alarming about.
+  /*
+   * One rating per ride, enforced by a unique constraint, so a 409 means this
+   * ride was already rated — by an earlier visit, or another tab.
+   *
+   * It used to be shown as "Your rating has been recorded", which was untrue:
+   * the submission was refused and the stored rating is somebody's earlier
+   * one. Saying so plainly costs nothing and stops the screen claiming credit
+   * for work it did not do.
+   */
   const alreadyRated = mutation.error instanceof ApiError && mutation.error.status === 409
 
-  if (mutation.isSuccess || alreadyRated) {
+  if (alreadyRated) {
+    return (
+      <Card>
+        <CardBody>
+          <Alert tone="info" title={t('rating.alreadyRatedTitle')}>
+            {t('rating.alreadyRatedBody')}
+          </Alert>
+        </CardBody>
+      </Card>
+    )
+  }
+
+  if (mutation.isSuccess) {
     return (
       <Card>
         <CardBody>

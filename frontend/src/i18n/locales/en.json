@@ -220,7 +220,10 @@
     "rate": "Rate",
     "thanks": "Thanks for the feedback",
     "recorded": "Your rating has been recorded.",
-    "outOfFive": "{{score}} of 5"
+    "outOfFive": "{{score}} of 5",
+    "alreadyRatedTitle": "This ride was already rated",
+    "alreadyRatedBody": "Your earlier rating stands. A ride can only be rated once.",
+    "rated": "Rated"
   },
   "partner": {
     "ridesTitle": "Rides",
