@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { DriverVehicleAssignmentResponse } from '@/lib/api/types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { partnerApi } from '@/lib/api/endpoints'
+import { ArrowRight, Unlink } from 'lucide-react'
 import { PageHeader } from '@/components/AppLayout'
 import { Badge } from '@/components/ui'
 import { ErrorMessage } from '@/components/ErrorMessage'
@@ -18,16 +19,19 @@ import {
   CardHeader,
   EmptyState,
   Field,
+  RowActions,
   Select,
   Table,
   Td,
   Th,
 } from '@/components/ui'
-import { formatDateTime } from '@/lib/utils'
+import { cn, formatDateTime } from '@/lib/utils'
+import { useIsCompact } from '@/lib/useIsCompact'
 
 export function PartnerAssignmentsPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const compact = useIsCompact()
   const [driverId, setDriverId] = useState('')
   const [vehicleId, setVehicleId] = useState('')
 
@@ -114,50 +118,179 @@ export function PartnerAssignmentsPage() {
             )}
 
             {assignments.length > 0 && (
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>{t('rating.driver')}</Th>
-                    <Th>{t('partner.vehicle')}</Th>
-                    <Th>{t('ride.from')}</Th>
-                    <Th>{t('ride.status')}</Th>
-                    <Th />
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                {/*
+                  On a phone the pairing stacks instead of scrolling: driver
+                  above, vehicle below, the arrow turned to point down between
+                  them. Same relationship, read top to bottom rather than left to
+                  right.
+                */}
+                {compact ? (
+                <div className="space-y-2 p-4">
                   {assignments.map((assignment) => (
-                    <tr key={assignment.assignmentId}>
-                      <Td className="font-medium">{assignment.driverName}</Td>
-                      <Td>
-                        {assignment.plateNumber}
-                        <span className="block text-xs text-ink-500">
-                          {assignment.vehicleDescription}
-                        </span>
-                      </Td>
-                      <Td className="text-xs">{formatDateTime(assignment.assignedFrom)}</Td>
-                      <Td>
+                    <div
+                      key={assignment.assignmentId}
+                      className={cn(
+                        'rounded-xl border p-3',
+                        assignment.active
+                          ? 'border-ink-200/70 bg-white'
+                          : 'border-ink-200/40 bg-ink-50/60',
+                      )}
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-2">
                         {assignment.active ? (
-                          <Badge tone="success">{t('companyStatus.ACTIVE')}</Badge>
+                          <Badge tone="success" dot>
+                            {t('partner.activeAssignment')}
+                          </Badge>
                         ) : (
-                          <Badge>{t('partner.ended')}</Badge>
+                          <Badge>{t('partner.endedAssignment')}</Badge>
                         )}
-                      </Td>
-                      <Td>
-                        {assignment.active && (
+                        <span className="tnum text-xs text-ink-500">
+                          {formatDateTime(assignment.assignedFrom)}
+                        </span>
+                      </div>
+
+                      <p
+                        className={cn(
+                          'text-sm font-semibold',
+                          assignment.active ? 'text-ink-900' : 'text-ink-400',
+                        )}
+                      >
+                        {assignment.driverName}
+                      </p>
+
+                      <ArrowRight
+                        className={cn(
+                          'my-1 size-4 rotate-90',
+                          assignment.active ? 'text-brand-500' : 'text-ink-300',
+                        )}
+                        aria-hidden
+                      />
+
+                      <p
+                        className={cn(
+                          'tnum text-sm font-semibold',
+                          assignment.active ? 'text-ink-900' : 'text-ink-400',
+                        )}
+                      >
+                        {assignment.plateNumber}
+                      </p>
+                      <p className="truncate text-xs text-ink-500">
+                        {assignment.vehicleDescription}
+                      </p>
+
+                      {assignment.active && (
+                        <div className="mt-3 flex justify-end">
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="text-red-600 hover:bg-red-50"
+                            className="text-bad-600 hover:bg-bad-50"
                             onClick={() => setPendingRemove(assignment)}
                           >
                             {t('partner.unassign')}
                           </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                ) : (
+                <div>
+                  <Table>
+                    <thead>
+                      <tr>
+                        <Th>{t('rating.driver')}</Th>
+                        <Th />
+                    <Th>{t('partner.vehicle')}</Th>
+                    <Th>{t('ride.from')}</Th>
+                    <Th>{t('ride.status')}</Th>
+                    <Th className="text-right" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {assignments.map((assignment) => (
+                    <tr
+                      key={assignment.assignmentId}
+                      /* A pairing that has ended is history; it should not compete
+                         with the ones currently on the road. */
+                      className={cn(!assignment.active && 'text-ink-400')}
+                    >
+                      <Td
+                        className={cn(
+                          'whitespace-nowrap font-semibold',
+                          assignment.active ? 'text-ink-900' : 'text-ink-400',
                         )}
+                      >
+                        {assignment.driverName}
+                      </Td>
+
+                      {/*
+                        The arrow is the point of this screen. A driver and a
+                        vehicle in two adjacent columns are two facts; an arrow
+                        between them is one relationship, which is what a fleet
+                        manager is actually reading.
+                      */}
+                      <Td className="w-8 px-0 text-center">
+                        <ArrowRight
+                          className={cn(
+                            'mx-auto size-4',
+                            assignment.active ? 'text-brand-500' : 'text-ink-300',
+                          )}
+                          aria-hidden
+                        />
+                      </Td>
+
+                      <Td>
+                        <span
+                          className={cn(
+                            'tnum block font-semibold',
+                            assignment.active ? 'text-ink-900' : 'text-ink-400',
+                          )}
+                        >
+                          {assignment.plateNumber}
+                        </span>
+                        <span className="block truncate text-xs text-ink-500">
+                          {assignment.vehicleDescription}
+                        </span>
+                      </Td>
+
+                      <Td className="tnum whitespace-nowrap text-xs">
+                        {formatDateTime(assignment.assignedFrom)}
+                      </Td>
+
+                      <Td>
+                        {assignment.active ? (
+                          <Badge tone="success" dot>
+                            {t('partner.activeAssignment')}
+                          </Badge>
+                        ) : (
+                          <Badge>{t('partner.endedAssignment')}</Badge>
+                        )}
+                      </Td>
+
+                      <Td>
+                        <RowActions>
+                          {assignment.active && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-ink-400 hover:bg-bad-50 hover:text-bad-600"
+                              title={t('partner.unassign')}
+                              aria-label={t('partner.unassign')}
+                              onClick={() => setPendingRemove(assignment)}
+                            >
+                              <Unlink className="size-4" aria-hidden />
+                            </Button>
+                          )}
+                        </RowActions>
                       </Td>
                     </tr>
                   ))}
                 </tbody>
-              </Table>
+                  </Table>
+                </div>
+                )}
+              </>
             )}
 
             <Pagination page={pageData} onPageChange={setPage} />

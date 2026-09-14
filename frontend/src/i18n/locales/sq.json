@@ -317,7 +317,20 @@
     "expiresAt": "Skadon më",
     "noDocumentsYet": "Asnjë dokument",
     "noDocumentsHint": "Shtoni regjistrimin e biznesit dhe licencën e taksisë.",
-    "documentUrlHint": "URL e skedarit të publikuar — ngarkimi nuk është pjesë e MVP-së."
+    "documentUrlHint": "URL e skedarit të publikuar — ngarkimi nuk është pjesë e MVP-së.",
+    "paperwork": "Dokumentet",
+    "registrationShort": "Regjistrimi",
+    "insuranceShort": "Sigurimi",
+    "inspectionShort": "Kontrolli teknik",
+    "expired": "Skaduar",
+    "expiringSoon": "Skadon së shpejti",
+    "validUntil": "I vlefshëm deri më {{date}}",
+    "noExpirySet": "Pa datë",
+    "allValid": "Të gjitha në rregull",
+    "assignedTo": "Caktuar te",
+    "noVehicleAssigned": "Pa automjet",
+    "activeAssignment": "Aktiv",
+    "endedAssignment": "Përfunduar"
   },
   "availability": {
     "title": "Disponueshmëria",

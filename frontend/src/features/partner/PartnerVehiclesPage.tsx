@@ -13,7 +13,11 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Pagination } from '@/components/Pagination'
 import { readPage } from '@/lib/api/page'
 import { Spinner } from '@/components/ui/Spinner'
+import { CarFront } from 'lucide-react'
+import { ExpiryPill, PaperworkSummary } from './ExpiryPill'
+import { useIsCompact } from '@/lib/useIsCompact'
 import {
+  Badge,
   Button,
   Card,
   CardBody,
@@ -21,6 +25,7 @@ import {
   EmptyState,
   Field,
   Input,
+  RowActions,
   Select,
   Table,
   Td,
@@ -53,6 +58,7 @@ type VehicleValues = z.infer<typeof vehicleSchema>
 export function PartnerVehiclesPage() {
   const { t } = useTranslation()
   const label = useStatusLabel()
+  const compact = useIsCompact()
   const queryClient = useQueryClient()
 
   const [page, setPage] = useState(0)
@@ -118,48 +124,137 @@ export function PartnerVehiclesPage() {
             )}
 
             {vehicles.length > 0 && (
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>{t('partner.plate')}</Th>
-                    <Th>{t('partner.vehicle')}</Th>
-                    <Th>{t('partner.type')}</Th>
-                    <Th>{t('partner.seats')}</Th>
-                    <Th>{t('ride.status')}</Th>
-                    <Th />
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                {/*
+                  Cards on a phone, a table from sm up. A vehicle carries a plate,
+                  a description, a type, a seat count, a status and three expiry
+                  dates — a row nobody can read at 375px, and scrolling it
+                  sideways only ever shows half of it.
+                */}
+                {compact ? (
+                <div className="space-y-2 p-4">
                   {vehicles.map((vehicle) => (
-                    <tr key={vehicle.id}>
-                      <Td className="font-medium">{vehicle.plateNumber}</Td>
-                      <Td>
-                        {vehicle.brand} {vehicle.model}
-                        <span className="block text-xs text-ink-500">
-                          {vehicle.manufactureYear}
-                        </span>
-                      </Td>
-                      <Td>{label('vehicleType', vehicle.vehicleType)}</Td>
-                      <Td>{vehicle.seats}</Td>
-                      <Td>
+                    <div key={vehicle.id} className="rounded-xl border border-ink-200/70 p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="tnum text-base font-bold tracking-tight text-ink-900">
+                            {vehicle.plateNumber}
+                          </p>
+                          <p className="truncate text-xs text-ink-500">
+                            {vehicle.brand} {vehicle.model} · {vehicle.manufactureYear}
+                          </p>
+                        </div>
                         <StatusBadge status={vehicle.status} namespace="vehicleStatus" />
-                      </Td>
-                      <Td>
-                        {vehicle.status === 'ACTIVE' && (
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <Badge>{label('vehicleType', vehicle.vehicleType)}</Badge>
+                        <Badge>
+                          {vehicle.seats} · {t('partner.seats')}
+                        </Badge>
+                      </div>
+
+                      <div className="mt-3 space-y-1.5 rounded-lg bg-ink-50 px-2.5 py-2">
+                        <ExpiryPill
+                          label={t('partner.registrationShort')}
+                          value={vehicle.registrationExpiryDate}
+                        />
+                        <ExpiryPill
+                          label={t('partner.insuranceShort')}
+                          value={vehicle.insuranceExpiryDate}
+                        />
+                        <ExpiryPill
+                          label={t('partner.inspectionShort')}
+                          value={vehicle.technicalInspectionExpiryDate}
+                        />
+                      </div>
+
+                      {vehicle.status === 'ACTIVE' && (
+                        <div className="mt-3 flex justify-end">
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="text-red-600 hover:bg-red-50"
+                            className="text-bad-600 hover:bg-bad-50"
                             onClick={() => setPendingDeactivate(vehicle)}
                           >
                             {t('partner.deactivate')}
                           </Button>
-                        )}
-                      </Td>
-                    </tr>
+                        </div>
+                      )}
+                    </div>
                   ))}
-                </tbody>
-              </Table>
+                </div>
+                ) : (
+                <div>
+                  <Table>
+                    <thead>
+                      <tr>
+                        <Th>{t('partner.plate')}</Th>
+                        <Th>{t('partner.vehicle')}</Th>
+                        <Th>{t('partner.type')}</Th>
+                        <Th>{t('partner.paperwork')}</Th>
+                        <Th>{t('ride.status')}</Th>
+                        <Th className="text-right" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {vehicles.map((vehicle) => (
+                        <tr key={vehicle.id}>
+                          {/* The plate is how a fleet refers to a car, so it leads. */}
+                          <Td className="tnum whitespace-nowrap font-bold text-ink-900">
+                            {vehicle.plateNumber}
+                          </Td>
+                          <Td>
+                            <span className="block truncate">
+                              {vehicle.brand} {vehicle.model}
+                            </span>
+                            <span className="tnum block text-xs text-ink-500">
+                              {vehicle.manufactureYear} · {vehicle.seats} {t('partner.seats')}
+                            </span>
+                          </Td>
+                          <Td>
+                            <Badge>{label('vehicleType', vehicle.vehicleType)}</Badge>
+                          </Td>
+                          {/*
+                            One answer per vehicle, not three dates to compare.
+                            The card view spells them out; here the question is
+                            only whether this car can legally be on the road.
+                          */}
+                          <Td>
+                            <PaperworkSummary
+                              values={[
+                                vehicle.registrationExpiryDate,
+                                vehicle.insuranceExpiryDate,
+                                vehicle.technicalInspectionExpiryDate,
+                              ]}
+                            />
+                          </Td>
+                          <Td>
+                            <StatusBadge status={vehicle.status} namespace="vehicleStatus" />
+                          </Td>
+                          <Td>
+                            <RowActions>
+                              {vehicle.status === 'ACTIVE' && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-ink-400 hover:bg-bad-50 hover:text-bad-600"
+                                  title={t('partner.deactivate')}
+                                  aria-label={t('partner.deactivate')}
+                                  onClick={() => setPendingDeactivate(vehicle)}
+                                >
+                                  <CarFront className="size-4" aria-hidden />
+                                </Button>
+                              )}
+                            </RowActions>
+                          </Td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+                )}
+              </>
             )}
 
             <Pagination page={pageData} onPageChange={setPage} />

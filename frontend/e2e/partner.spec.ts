@@ -122,6 +122,14 @@ test.describe('Operating hours', () => {
     await page.goto('/partner/availability')
     await expectSignedIn(page)
 
+    /*
+     * Waits for the week itself, not just the button. The button renders before
+     * the hours arrive, and clicking it then submits nothing — which on a cold
+     * stack showed up as this test timing out waiting for a request that was
+     * never sent, while passing every time the page was already warm.
+     */
+    await expect(page.getByRole('checkbox').first()).toBeVisible({ timeout: 30_000 })
+
     const save = page.getByRole('button', { name: /save/i }).last()
     await expect(save).toBeVisible()
 
@@ -131,6 +139,14 @@ test.describe('Operating hours', () => {
      * resource", which tells a partner nothing about what to do.
      */
     for (let attempt = 1; attempt <= 3; attempt++) {
+      /*
+       * Saving invalidates the hours query, and while the refetch is in flight
+       * the form reads as incomplete, which disables this button. Clicking
+       * through that window sends nothing — which is how this test timed out
+       * waiting for a request on a cold stack and passed on a warm one.
+       */
+      await expect(save).toBeEnabled({ timeout: 30_000 })
+
       const response = page.waitForResponse(
         (r) => r.url().includes('/availability-settings/operating-hours') && r.request().method() === 'PUT',
       )
@@ -139,8 +155,6 @@ test.describe('Operating hours', () => {
 
       const result = await response
       expect(result.status(), `save #${attempt} should succeed`).toBe(200)
-
-      await page.waitForTimeout(300)
     }
   })
 })
