@@ -26,8 +26,17 @@ const ROOT = path.resolve(FRONTEND, '..')
 
 const WINDOWS = process.platform === 'win32'
 
-/** `./mvnw` on POSIX, `mvnw.cmd` on Windows. */
-const MVNW = WINDOWS ? 'mvnw.cmd' : './mvnw'
+/**
+ * An absolute path to the wrapper, not a bare name.
+ *
+ * `mvnw.cmd` alone is resolved against PATH rather than the working directory
+ * once Node routes the call through a shell, so it fails with "not recognized"
+ * even though the file is sitting right there. Quoted because the checkout may
+ * live under a path with a space in it.
+ */
+const MVNW = WINDOWS
+  ? `"${path.join(ROOT, 'mvnw.cmd')}"`
+  : path.join(ROOT, 'mvnw')
 
 function run(command, args, cwd) {
   return new Promise((resolve) => {
