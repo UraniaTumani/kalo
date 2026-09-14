@@ -4,6 +4,7 @@ import type {
   AdminPartnerResponse,
   AdminRideDetailResponse,
   AdminRideResponse,
+  AdminSupportRequestResponse,
   AdminUserResponse,
   CompanyStatus,
   DocumentResponse,
@@ -29,6 +30,9 @@ import type {
   RideSearchResponse,
   RideStatus,
   ServiceAreaResponse,
+  SupportCategory,
+  SupportRequestResponse,
+  SupportStatus,
   UserResponse,
   UserRole,
   UserStatus,
@@ -128,6 +132,20 @@ export const rideApi = {
     rideId: number,
     body: { driverRating: number; companyRating: number; comment?: string | null },
   ) => api.post<RideRatingResponse>(`/api/v1/rides/${rideId}/rating`, body),
+}
+
+/* --------------------------------------------------------------- support */
+
+/**
+ * Shared by customers and partners. Neither call takes a user id — the backend
+ * reads the submitter from the token — so there is no id here to get wrong.
+ */
+export const supportApi = {
+  create: (body: { category: SupportCategory; subject: string; message: string }) =>
+    api.post<SupportRequestResponse>('/api/v1/support/requests', body),
+
+  mine: (params?: PageParams) =>
+    api.get<Page<SupportRequestResponse>>('/api/v1/support/requests', params),
 }
 
 /* --------------------------------------------------------------- partner */
@@ -349,4 +367,13 @@ export const adminApi = {
     api.get<Page<AdminRideResponse>>('/api/v1/admin/rides', params),
 
   ride: (rideId: number) => api.get<AdminRideDetailResponse>(`/api/v1/admin/rides/${rideId}`),
+
+  supportRequests: (params?: PageParams & { status?: SupportStatus }) =>
+    api.get<Page<AdminSupportRequestResponse>>('/api/v1/admin/support/requests', params),
+
+  updateSupportStatus: (requestId: number, status: SupportStatus) =>
+    api.patch<AdminSupportRequestResponse>(
+      `/api/v1/admin/support/requests/${requestId}/status`,
+      { status },
+    ),
 }

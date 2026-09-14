@@ -1,0 +1,83 @@
+databaseChangeLog:
+  - changeSet:
+      id: 021-create-support-requests
+      author: kalo
+      comment: >
+        Help & Support. A leaf table: it references users and nothing else, so
+        nothing in the ride flow gains a dependency on the help desk. The
+        submitter's role is stored on the row rather than read back through the
+        user, so a ticket keeps the role it was raised under even if that
+        account later becomes a partner.
+      changes:
+        - createTable:
+            tableName: support_requests
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_support_requests_user
+                    references: users(id)
+                    deleteCascade: true
+              - column:
+                  name: role
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: subject
+                  type: VARCHAR(150)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: message
+                  type: VARCHAR(4000)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+        # Every read a non-admin can make is "my requests, newest first".
+        - createIndex:
+            tableName: support_requests
+            indexName: idx_support_requests_user_created
+            columns:
+              - column:
+                  name: user_id
+              - column:
+                  name: created_at
+                  descending: true
+
+        # The admin queue is filtered by status far more often than not.
+        - createIndex:
+            tableName: support_requests
+            indexName: idx_support_requests_status
+            columns:
+              - column:
+                  name: status

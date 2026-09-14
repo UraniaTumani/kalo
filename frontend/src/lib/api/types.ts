@@ -396,6 +396,39 @@ export interface AdminRideDetailResponse {
   finalAmount: number | null
 }
 
+/* --------------------------------------------------------------- support */
+
+export type SupportCategory =
+  | 'RIDE_ISSUE'
+  | 'PAYMENT'
+  | 'ACCOUNT'
+  | 'DRIVER_OR_VEHICLE'
+  | 'TECHNICAL'
+  | 'OTHER'
+
+export type SupportStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED'
+
+/** What the person who raised the request gets back — their own words only. */
+export interface SupportRequestResponse {
+  id: number
+  category: SupportCategory
+  subject: string
+  message: string
+  status: SupportStatus
+  createdAt: string
+  updatedAt: string
+}
+
+/** The admin queue's view: the same, plus who sent it. */
+export interface AdminSupportRequestResponse extends SupportRequestResponse {
+  userId: number
+  userFirstName: string
+  userLastName: string
+  userPhone: string
+  userEmail: string | null
+  role: UserRole
+}
+
 /* ------------------------------------------------------------ pagination */
 
 export interface Page<T> {

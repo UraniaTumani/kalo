@@ -48,3 +48,5 @@ databaseChangeLog:
       file: db/changelog/changes/019-normalize-phone-numbers.yaml
   - include:
       file: db/changelog/changes/020-create-refresh-tokens.yaml
+  - include:
+      file: db/changelog/changes/021-create-support-requests.yaml
