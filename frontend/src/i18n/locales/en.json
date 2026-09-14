@@ -317,7 +317,20 @@
     "expiresAt": "Expires at",
     "noDocumentsYet": "No documents",
     "noDocumentsHint": "Add your business registration and taxi licence.",
-    "documentUrlHint": "Hosted file URL — upload is not part of the MVP."
+    "documentUrlHint": "Hosted file URL — upload is not part of the MVP.",
+    "paperwork": "Paperwork",
+    "registrationShort": "Registration",
+    "insuranceShort": "Insurance",
+    "inspectionShort": "Inspection",
+    "expired": "Expired",
+    "expiringSoon": "Expires soon",
+    "validUntil": "Valid until {{date}}",
+    "noExpirySet": "Not set",
+    "allValid": "All valid",
+    "assignedTo": "Assigned to",
+    "noVehicleAssigned": "No vehicle",
+    "activeAssignment": "Active",
+    "endedAssignment": "Ended"
   },
   "availability": {
     "title": "Availability",

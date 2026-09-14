@@ -31,6 +31,16 @@ export function formatQueueTime(value?: string | null) {
   })
 }
 
+/** A plain calendar date — expiry dates carry no useful time of day. */
+export function formatDate(value?: string | null) {
+  if (!value) return '—'
+  return new Date(value).toLocaleDateString(i18n.language, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
 export function formatTime(value?: string | null) {
   if (!value) return '—'
   return new Date(value).toLocaleTimeString(i18n.language, {
