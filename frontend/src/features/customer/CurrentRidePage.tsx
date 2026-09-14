@@ -130,7 +130,7 @@ export function CurrentRidePage() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <Card>
           <CardHeader title={t('ride.progress')} />
           <CardBody>

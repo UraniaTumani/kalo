@@ -46,7 +46,7 @@ export function AdminVerificationPage() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_24rem]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <Card>
           {pendingQuery.isLoading && (
             <div className="p-5">

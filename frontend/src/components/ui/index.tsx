@@ -412,9 +412,23 @@ export function PageSkeleton({ rows = 4 }: { rows?: number }) {
 
 /* ----------------------------------------------------------------- Table */
 
+/**
+ * Scrolls sideways inside its own box, so a wide table never takes the page with
+ * it.
+ *
+ * `min-w-0` is the part that actually does the work: a grid or flex item is
+ * `min-width: auto` by default and refuses to shrink below its content, so
+ * without it the table's own minimum width pushes its whole column past the edge
+ * of a phone and the body scrolls sideways.
+ *
+ * There is deliberately no negative margin. One assumed a parent with matching
+ * padding — true inside CardBody, false for the several tables that sit straight
+ * in a Card, where it pulled them twenty pixels past each edge and was the cause
+ * of the overflow this comment exists to prevent returning.
+ */
 export function Table({ children }: { children: ReactNode }) {
   return (
-    <div className="-mx-5 overflow-x-auto px-5">
+    <div className="w-full min-w-0 overflow-x-auto">
       <table className="w-full min-w-[34rem] border-collapse text-left text-sm">{children}</table>
     </div>
   )
