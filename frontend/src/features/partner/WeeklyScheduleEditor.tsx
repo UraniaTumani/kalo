@@ -185,28 +185,22 @@ export function WeeklyScheduleEditor({
             </div>
 
             {/*
-              Both of these states exist in the database — the seeder writes
-              equal times straight through the repository — but the API refuses
-              to accept either: it requires the closing time to be strictly after
-              the opening one. So a partner can open this editor, see a day the
-              product created, and be unable to save the form at all until they
-              change it.
-
-              Until the backend rule changes, the honest thing is to name the
-              state and say plainly that it will not save, rather than describe
-              it as a feature the way the old copy did.
+              Both now save. Read as a statement of what the day means, not a
+              warning: a night shift is ordinary work for a taxi company, and
+              the reason to name it is that "20:00 – 04:00" on its own looks
+              like a typo until you are told it runs past midnight.
             */}
             {isAllDay(entry) && (
-              <p className="mt-1.5 flex items-start gap-1.5 pl-[5.5rem] text-xs font-medium text-warn-600">
-                <Sun className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                {t('availability.allDayBlocked')}
+              <p className="mt-1.5 flex items-start gap-1.5 pl-[5.5rem] text-xs text-ink-500">
+                <Sun className="mt-0.5 size-3.5 shrink-0 text-brand-500" aria-hidden />
+                {t('availability.allDay')}
               </p>
             )}
 
             {isOvernight(entry) && (
-              <p className="mt-1.5 flex items-start gap-1.5 pl-[5.5rem] text-xs font-medium text-warn-600">
-                <Moon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                {t('availability.overnightBlocked')}
+              <p className="mt-1.5 flex items-start gap-1.5 pl-[5.5rem] text-xs text-ink-500">
+                <Moon className="mt-0.5 size-3.5 shrink-0 text-brand-500" aria-hidden />
+                {t('availability.overnight')}
               </p>
             )}
 

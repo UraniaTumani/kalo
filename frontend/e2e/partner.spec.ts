@@ -157,4 +157,56 @@ test.describe('Operating hours', () => {
       expect(result.status(), `save #${attempt} should succeed`).toBe(200)
     }
   })
+
+  /*
+   * A night shift is most of the week for a lot of taxi companies, and until
+   * recently the API refused it outright: it wanted the closing time strictly
+   * after the opening one, so 20:00 -> 04:00 could not be expressed at all.
+   * The screen let you type it and then failed on save.
+   */
+  test('a partner can save a shift that runs past midnight', async ({ page, guards }) => {
+    void guards
+
+    await page.goto('/partner/availability')
+    await expectSignedIn(page)
+
+    await expect(page.getByRole('checkbox').first()).toBeVisible({ timeout: 30_000 })
+
+    const opens = page.getByLabel(/opens/i).first()
+    const closes = page.getByLabel(/closes/i).first()
+
+    await opens.fill('20:00')
+    await closes.fill('04:00')
+
+    // The screen names the shape rather than leaving "20:00 – 04:00" looking
+    // like a typo.
+    await expect(page.getByText(/closes the next morning/i).first()).toBeVisible()
+
+    const save = page.getByRole('button', { name: /save/i }).last()
+    await expect(save).toBeEnabled({ timeout: 30_000 })
+
+    const response = page.waitForResponse(
+      (r) =>
+        r.url().includes('/availability-settings/operating-hours') &&
+        r.request().method() === 'PUT',
+    )
+
+    await save.click()
+    expect((await response).status(), 'an overnight shift should save').toBe(200)
+
+    /*
+     * And it survives the round trip rather than being silently normalised to
+     * something the backend found acceptable.
+     *
+     * Matched loosely on the seconds: the API answers in HH:mm:ss and the
+     * editor puts that string straight into the time input, so the DOM value
+     * is "20:00:00" where the control's own format is "20:00". True of every
+     * saved day, not just this one — what matters here is the hour and minute.
+     */
+    await page.reload()
+    await expect(page.getByLabel(/opens/i).first()).toHaveValue(/^20:00(:00)?$/, {
+      timeout: 30_000,
+    })
+    await expect(page.getByLabel(/closes/i).first()).toHaveValue(/^04:00(:00)?$/)
+  })
 })

@@ -215,9 +215,14 @@ class AvailabilitySettingsIntegrationTest extends AbstractIntegrationTest {
                     .andExpect(status().isBadRequest());
         }
 
+        /**
+         * A night shift is ordinary work for a taxi company, and this used to
+         * be refused: the rule wanted close strictly after open, so 20:00 to
+         * 04:00 could not be expressed at all.
+         */
         @Test
-        @DisplayName("closing before opening is refused")
-        void rejectsBackwardsDay() throws Exception {
+        @DisplayName("a shift that closes the next morning is accepted and read back")
+        void acceptsOvernightDay() throws Exception {
 
             TaxiCompany company = fixtures.approvedCompany();
 
@@ -231,11 +236,50 @@ class AvailabilitySettingsIntegrationTest extends AbstractIntegrationTest {
                                     .content("""
                                             {"hours":[
                                               {"dayOfWeek":"MONDAY","closed":false,
-                                               "openTime":"18:00:00","closeTime":"08:00:00"}
+                                               "openTime":"20:00:00","closeTime":"04:00:00"}
                                             ]}
                                             """)
                     )
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isOk());
+
+            mockMvc.perform(
+                            get("/api/v1/partner/availability-settings/operating-hours")
+                                    .header(
+                                            "Authorization",
+                                            bearer(tokenFor(company.getOwner()))
+                                    )
+                    )
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].openTime").value("20:00:00"))
+                    .andExpect(jsonPath("$[0].closeTime").value("04:00:00"));
+        }
+
+        /**
+         * Equal times mean open around the clock. The seeder and the test
+         * fixtures have always written rows in this shape, so refusing it made
+         * the API disagree with the data the rest of the system runs on.
+         */
+        @Test
+        @DisplayName("equal opening and closing times are accepted as open all day")
+        void acceptsAllDay() throws Exception {
+
+            TaxiCompany company = fixtures.approvedCompany();
+
+            mockMvc.perform(
+                            put("/api/v1/partner/availability-settings/operating-hours")
+                                    .header(
+                                            "Authorization",
+                                            bearer(tokenFor(company.getOwner()))
+                                    )
+                                    .contentType(APPLICATION_JSON)
+                                    .content("""
+                                            {"hours":[
+                                              {"dayOfWeek":"MONDAY","closed":false,
+                                               "openTime":"00:00:00","closeTime":"00:00:00"}
+                                            ]}
+                                            """)
+                    )
+                    .andExpect(status().isOk());
         }
 
         @Test
