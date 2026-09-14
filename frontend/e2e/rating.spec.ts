@@ -94,6 +94,15 @@ async function completedRide(request: APIRequestContext) {
 }
 
 test.describe('Rating a ride', () => {
+  /*
+   * Each test here drives a whole ride to COMPLETED through six API calls
+   * before it touches the browser, and the first then loads history, rates,
+   * reloads and re-asserts. Standalone that is eight seconds; inside the full
+   * suite the same test spent its entire 60s default budget waiting for the
+   * shell to render and failed on it.
+   */
+  test.setTimeout(180_000)
+
   test('a rating survives a reload and history stops offering to rate again', async ({
     page,
     context,
