@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Star } from 'lucide-react'
 import { rideApi } from '@/lib/api/endpoints'
 import { PageHeader } from '@/components/AppLayout'
 import { RideStatusBadge } from '@/components/StatusBadge'
@@ -81,17 +82,35 @@ export function RideHistoryPage() {
                       {formatCurrency(ride.finalAmount)}
                     </Td>
                     <Td className="text-right">
-                      {ride.status === 'COMPLETED' && (
-                        <Button
-                          size="sm"
-                          variant={ratingRideId === ride.rideId ? 'secondary' : 'primary'}
-                          onClick={() =>
-                            setRatingRideId(ratingRideId === ride.rideId ? null : ride.rideId)
-                          }
-                        >
-                          {ratingRideId === ride.rideId ? t('common.close') : t('rating.rate')}
-                        </Button>
-                      )}
+                      {/*
+                        A rated ride shows its score, not another Rate button.
+                        The API used to return no rating state at all, so every
+                        completed ride offered rating forever and the only way
+                        to find out it was already done was to fill the form in
+                        and have it refused.
+                      */}
+                      {ride.status === 'COMPLETED' &&
+                        (ride.rated ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-ink-500">
+                            <Star
+                              className="size-3.5 fill-brand-400 text-brand-400"
+                              aria-hidden
+                            />
+                            <span className="tnum">
+                              {t('rating.outOfFive', { score: ride.driverRating })}
+                            </span>
+                          </span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant={ratingRideId === ride.rideId ? 'secondary' : 'primary'}
+                            onClick={() =>
+                              setRatingRideId(ratingRideId === ride.rideId ? null : ride.rideId)
+                            }
+                          >
+                            {ratingRideId === ride.rideId ? t('common.close') : t('rating.rate')}
+                          </Button>
+                        ))}
                     </Td>
                   </tr>
                 ))}

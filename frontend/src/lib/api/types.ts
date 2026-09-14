@@ -168,6 +168,15 @@ export interface RideResponse {
   startedAt: string | null
   completedAt: string | null
   finalAmount: number | null
+  /**
+   * Whether this ride already carries a rating, and what it was.
+   *
+   * Without these, history could not tell a rated ride from an unrated one and
+   * offered a Rate button on every completed ride forever.
+   */
+  rated: boolean
+  driverRating: number | null
+  companyRating: number | null
 }
 
 export interface RideRatingResponse {

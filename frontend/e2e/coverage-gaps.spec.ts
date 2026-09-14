@@ -5,6 +5,7 @@ import {
   apiLogin,
   seedSession,
   expectSignedIn,
+  RENDER_TIMEOUT,
 } from './support/fixtures'
 
 /**
@@ -146,7 +147,7 @@ test.describe('Admin screens with no previous coverage', () => {
 
       await next.click()
 
-      await expect(range).not.toHaveText(before ?? '', { timeout: 15_000 })
+      await expect(range).not.toHaveText(before ?? '', { timeout: RENDER_TIMEOUT })
       await expect(page.getByRole('button', { name: /previous/i })).toBeEnabled()
     }
   })

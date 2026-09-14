@@ -1,4 +1,10 @@
-import { test, expect, uniquePhone, registerCustomer } from './support/fixtures'
+import {
+  test,
+  expect,
+  uniquePhone,
+  registerCustomer,
+  RENDER_TIMEOUT,
+} from './support/fixtures'
 
 /**
  * Pre-flight: G1, G2.
@@ -35,7 +41,7 @@ test.describe('Registration', () => {
      * two spellings are the same person, and the app has to say so.
      */
     await expect(page.getByText(/already|taken|registered|in use/i).first()).toBeVisible({
-      timeout: 15_000,
+      timeout: RENDER_TIMEOUT,
     })
 
     await expect(page).toHaveURL(/\/register/)
@@ -84,6 +90,6 @@ test.describe('Registration', () => {
     await page.getByRole('button', { name: /create passenger account/i }).click()
 
     // Straight into the app, or to the login screen — either way, not an error.
-    await expect(page).not.toHaveURL(/\/register$/, { timeout: 15_000 })
+    await expect(page).not.toHaveURL(/\/register$/, { timeout: RENDER_TIMEOUT })
   })
 })

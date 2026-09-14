@@ -26,6 +26,16 @@ export const STORAGE = {
 /** Tirana, matching the seeded companies' service area. */
 export const TIRANA = { lat: 41.3275, lng: 19.8187 }
 
+/**
+ * How long the suite waits for the app to finish rendering something.
+ *
+ * Matches the config's actionTimeout deliberately. Every false failure in this
+ * suite has been a page that had not finished -- the shell, a lazy route, a
+ * form field -- rather than a wrong assertion, and a helper that hardcodes a
+ * shorter wait silently opts out of that budget.
+ */
+export const RENDER_TIMEOUT = 30_000
+
 let phoneCounter = 0
 
 /**
@@ -233,7 +243,9 @@ export async function loginThroughUi(page: Page, phone: string, password: string
 
 /** Waits for the app shell rather than a specific screen. */
 export async function expectSignedIn(page: Page) {
-  await expect(page.getByRole('button', { name: /sign out/i })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('button', { name: /sign out/i })).toBeVisible({
+    timeout: RENDER_TIMEOUT,
+  })
 }
 
 export async function readStorage(page: Page, key: string): Promise<string | null> {

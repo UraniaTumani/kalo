@@ -81,6 +81,14 @@ test.describe('Partner', () => {
 })
 
 test.describe('Operating hours', () => {
+  /*
+   * These two do far more than a normal test: load the week, edit it, save,
+   * wait for the refetch, and in one case reload and re-assert. Three or four
+   * full page renders each, and the default 60s budget was being spent on
+   * rendering rather than on anything the test is actually checking.
+   */
+  test.setTimeout(180_000)
+
   test.beforeEach(async ({ page, context, app }) => {
     void app
     /*

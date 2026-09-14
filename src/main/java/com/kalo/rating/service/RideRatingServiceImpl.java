@@ -33,6 +33,7 @@ public class RideRatingServiceImpl
     private final UserRepository userRepository;
     private final DriverRepository driverRepository;
     private final TaxiCompanyRepository taxiCompanyRepository;
+    private final com.kalo.notification.service.CompanyNotificationService notificationService;
 
     @Override
     @Transactional
@@ -131,6 +132,22 @@ public class RideRatingServiceImpl
 
         updateCompanyRating(
                 company
+        );
+
+        /*
+         * In the same transaction as the rating, deliberately.
+         *
+         * A company that is never told about a rating cannot answer it, and
+         * the aggregate on their profile moves with no explanation attached.
+         * Writing it here means a notification exists for exactly the ratings
+         * that exist — no delivery job to fall behind, and nothing to
+         * reconcile later.
+         */
+        notificationService.rideRated(
+                company,
+                ride.getId(),
+                savedRating.getDriverRating(),
+                savedRating.getCompanyRating()
         );
 
         return mapToResponse(

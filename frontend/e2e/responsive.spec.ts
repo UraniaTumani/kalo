@@ -91,6 +91,34 @@ async function ready(page: Page) {
   })
 }
 
+/**
+ * Waits for a list screen to have actually finished loading its rows.
+ *
+ * `ready` only proves the shell is up, which is enough to measure the page but
+ * not enough to assert that something is *absent*. Asserting "there is no
+ * table here" while the query is still in flight passes for the wrong reason —
+ * and did: the mobile-card test was green for three runs against a page that
+ * renders a table, because the table had not arrived yet.
+ *
+ * Waiting for the spinner to go and for real content to appear makes the
+ * absence mean what it says.
+ */
+async function gotoSettledList(page: Page, route: string, apiPath: string) {
+  const loaded = page.waitForResponse(
+    (response) => response.url().includes(apiPath) && response.status() === 200,
+    { timeout: 30_000 },
+  )
+
+  await page.goto(route)
+  await ready(page)
+
+  /* The data is in the browser... */
+  await loaded
+
+  /* ...and React has finished putting it on the screen. */
+  await expect(page.locator('.animate-spin')).toHaveCount(0, { timeout: 30_000 })
+}
+
 function suite(
   role: 'customer' | 'partner' | 'admin',
   routes: string[],
@@ -98,6 +126,14 @@ function suite(
 ) {
   test.describe(`${role} at 375px`, () => {
     test.use({ viewport: PHONE })
+
+    /*
+     * One test here visits up to nine routes, so it legitimately needs several
+     * times the budget of a test that looks at one screen. The default 60s was
+     * tight enough that a loaded machine failed it on the shell rather than on
+     * a measurement.
+     */
+    test.setTimeout(180_000)
 
     test(`every ${role} page fits a phone screen`, async ({ page, context, app, guards }) => {
       void app
@@ -116,6 +152,8 @@ function suite(
 
   test.describe(`${role} on desktop`, () => {
     test.use({ viewport: DESKTOP })
+
+    test.setTimeout(180_000)
 
     test(`every ${role} page fits a desktop screen`, async ({ page, context, app, guards }) => {
       void app
@@ -136,6 +174,58 @@ function suite(
 suite('customer', CUSTOMER_ROUTES, SEEDED.customer)
 suite('partner', PARTNER_ROUTES, SEEDED.partner)
 suite('admin', ADMIN_ROUTES, SEEDED.admin)
+
+/**
+ * The schedule editor's row, measured rather than assumed.
+ *
+ * A generic page-overflow check caught this once and I fixed the wrong thing:
+ * the grid looked guilty, so the grid got changed, the suite went green on one
+ * run, and the real cause — a row forbidden from wrapping inside a column too
+ * narrow for it — was still there. This asserts the row itself fits its
+ * container, which is the fact that was false.
+ */
+test.describe('The weekly schedule editor fits its column', () => {
+  for (const [name, viewport] of [
+    ['desktop', DESKTOP],
+    ['phone', PHONE],
+  ] as const) {
+    test(`every day row fits on ${name}`, async ({ page, context, app, guards }) => {
+      void app
+      void guards
+
+      await page.setViewportSize(viewport)
+
+      const tokens = await apiLogin(page.request, SEEDED.partner.phone, SEEDED.partner.password)
+      await seedSession(context, tokens)
+
+      await page.goto('/partner/availability')
+      await ready(page)
+
+      await expect(page.getByRole('checkbox').first()).toBeVisible({ timeout: 30_000 })
+
+      const spill = await page.evaluate(() => {
+        const rows = Array.from(
+          document.querySelectorAll<HTMLElement>('input[type="time"]'),
+        ).map((input) => input.closest('div.flex') as HTMLElement | null)
+
+        return rows
+          .filter((row): row is HTMLElement => row !== null)
+          .map((row) => ({
+            width: Math.round(row.getBoundingClientRect().width),
+            needs: row.scrollWidth,
+          }))
+          .filter((row) => row.needs > row.width + 1)
+      })
+
+      expect(
+        spill,
+        'a schedule row needs more width than its column gives it',
+      ).toEqual([])
+
+      await expectNoHorizontalOverflow(page, `/partner/availability at ${name}`)
+    })
+  }
+})
 
 test.describe('Phone layout behaviour', () => {
   test.use({ viewport: PHONE })
@@ -158,11 +248,26 @@ test.describe('Phone layout behaviour', () => {
     const tokens = await apiLogin(page.request, SEEDED.partner.phone, SEEDED.partner.password)
     await seedSession(context, tokens)
 
-    for (const route of ['/partner/drivers', '/partner/vehicles', '/partner/assignments']) {
-      await page.goto(route)
-      await ready(page)
+    const lists = [
+      ['/partner/drivers', '/api/v1/partner/drivers'],
+      ['/partner/vehicles', '/api/v1/partner/vehicles'],
+      ['/partner/assignments', '/api/v1/partner/driver-vehicle-assignments'],
+      ['/partner/rides', '/api/v1/partner/rides'],
+    ] as const
 
-      await expect(page.locator('table'), `${route} should render cards on a phone`).toHaveCount(0)
+    for (const [route, api] of lists) {
+      await gotoSettledList(page, route, api)
+
+      /*
+       * Only meaningful once the rows are on the screen. This assertion used
+       * to run against a list that was still loading, so "no table" was true
+       * for the wrong reason and stayed green for three runs against a page
+       * that renders one.
+       */
+      await expect(
+        page.locator('table'),
+        `${route} should render cards on a phone, not a table`,
+      ).toHaveCount(0)
     }
   })
 

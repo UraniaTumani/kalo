@@ -37,7 +37,21 @@ public record RideResponse(
 
         Instant completedAt,
 
-        BigDecimal finalAmount
+        BigDecimal finalAmount,
+
+        /**
+         * Whether this ride already carries a rating, and what it was.
+         *
+         * Without these the history screen had no way to tell a rated ride from
+         * an unrated one: it offered a Rate button on every completed ride, and
+         * the only way a passenger discovered they had already rated was to fill
+         * the form in and have it refused.
+         */
+        boolean rated,
+
+        Integer driverRating,
+
+        Integer companyRating
 
 ) {
 }
