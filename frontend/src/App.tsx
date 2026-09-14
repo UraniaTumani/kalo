@@ -4,9 +4,22 @@ import { useAuth, homePathFor } from '@/auth/AuthContext'
 import { ProtectedRoute } from '@/auth/ProtectedRoute'
 import { AppLayout } from '@/components/AppLayout'
 import { Spinner } from '@/components/ui/Spinner'
+/*
+ * Login and registration stay eager: they are where most visits start, and a
+ * suspense flash on the first screen buys nothing.
+ */
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RegisterPage } from '@/features/auth/RegisterPage'
-import { GuestLandingPage } from '@/features/guest/GuestLandingPage'
+
+/*
+ * The landing page is lazy because it shows a map, and importing it eagerly
+ * put Leaflet in the entry bundle — so everyone downloaded the map library
+ * before they had even reached the login form. The note below about Leaflet
+ * only loading on map pages was true of every route except this one.
+ */
+const GuestLandingPage = lazy(() =>
+  import('@/features/guest/GuestLandingPage').then((m) => ({ default: m.GuestLandingPage })),
+)
 
 // Loaded on demand: no role pulls in another role's screens, and Leaflet only
 // reaches the browser on the pages that actually show a map.

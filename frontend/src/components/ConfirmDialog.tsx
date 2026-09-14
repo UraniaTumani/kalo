@@ -51,6 +51,69 @@ export function ConfirmDialog({
     }
   }, [open])
 
+  /*
+   * Puts focus back where it came from.
+   *
+   * Without this, dismissing the dialog drops focus onto <body>, so the next
+   * Tab starts again from the top of the page — a keyboard user has to travel
+   * back through the whole screen to reach the row they were working on.
+   */
+  const restoreRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+
+    restoreRef.current = document.activeElement as HTMLElement | null
+
+    return () => restoreRef.current?.focus?.()
+  }, [open])
+
+  /*
+   * Keeps Tab inside the dialog.
+   *
+   * `aria-modal` tells a screen reader to ignore the page behind, but it does
+   * nothing to the tab order: Tab from the last button moved into content the
+   * user could no longer see, and on a destructive confirmation that means
+   * typing into a form that is hidden behind an overlay. The panel is the only
+   * thing on screen, so it should be the only thing reachable.
+   */
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Tab') return
+
+      const panel = panelRef.current
+      if (!panel) return
+
+      const focusable = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.offsetParent !== null)
+
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      const active = document.activeElement
+
+      /* Wrap at both ends, and pull focus back in if it has already escaped. */
+      if (event.shiftKey && (active === first || !panel.contains(active))) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && (active === last || !panel.contains(active))) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [open])
+
   useEffect(() => {
     if (!open) {
       return
@@ -103,7 +166,10 @@ export function ConfirmDialog({
         }}
       />
 
-      <div className="relative w-full max-w-md rounded-xl bg-white p-5 shadow-xl shadow-ink-900/10">
+      <div
+        ref={panelRef}
+        className="relative w-full max-w-md rounded-xl bg-white p-5 shadow-xl shadow-ink-900/10"
+      >
         <h2 id="confirm-dialog-title" className="text-sm font-semibold text-ink-900">
           {title}
         </h2>
