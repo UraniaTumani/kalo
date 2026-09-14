@@ -69,6 +69,12 @@ const AdminUsersPage = lazy(() =>
 const AdminRidesPage = lazy(() =>
   import('@/features/admin/AdminRidesPage').then((m) => ({ default: m.AdminRidesPage })),
 )
+const AdminSupportPage = lazy(() =>
+  import('@/features/admin/AdminSupportPage').then((m) => ({ default: m.AdminSupportPage })),
+)
+const SupportPage = lazy(() =>
+  import('@/features/support/SupportPage').then((m) => ({ default: m.SupportPage })),
+)
 const ProfilePage = lazy(() =>
   import('@/features/profile/ProfilePage').then((m) => ({ default: m.ProfilePage })),
 )
@@ -110,6 +116,16 @@ export default function App() {
         </Route>
       </Route>
 
+      {/*
+        Support is for the two roles that need help from KALO. An admin is the
+        one answering, so their entry point is the queue under /admin/support.
+      */}
+      <Route element={<ProtectedRoute allow={['CUSTOMER', 'PARTNER']} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/support" element={<SupportPage />} />
+        </Route>
+      </Route>
+
       <Route element={<ProtectedRoute allow={['CUSTOMER']} />}>
         <Route element={<AppLayout />}>
           <Route path="/ride" element={<BookRidePage />} />
@@ -137,6 +153,7 @@ export default function App() {
           <Route path="/admin/companies" element={<AdminCompaniesPage />} />
           <Route path="/admin/users" element={<AdminUsersPage />} />
           <Route path="/admin/rides" element={<AdminRidesPage />} />
+          <Route path="/admin/support" element={<AdminSupportPage />} />
         </Route>
       </Route>
 

@@ -54,7 +54,8 @@
     "availability": "Availability",
     "verification": "Verification",
     "companies": "Companies",
-    "users": "Users"
+    "users": "Users",
+    "support": "Help & Support"
   },
   "auth": {
     "signInTitle": "Sign in",
@@ -431,7 +432,16 @@
     "noUsersHint": "Try a different role or status.",
     "noCompaniesHint": "Try a different verification or status filter.",
     "noRidesMatchHint": "Try a different status, or set the filter back to all.",
-    "loadFailedHint": "The list could not be fetched. Reload the page once the backend is back."
+    "loadFailedHint": "The list could not be fetched. Reload the page once the backend is back.",
+    "supportTitle": "Help & Support",
+    "supportSubtitle": "Requests from customers and taxi companies.",
+    "noSupportRequests": "No requests here",
+    "noSupportRequestsHint": "Nothing matches this status. Customers and partners write from their own Help & Support page.",
+    "moveTo": {
+      "OPEN": "Reopen",
+      "IN_PROGRESS": "Start working",
+      "RESOLVED": "Mark resolved"
+    }
   },
   "profile": {
     "title": "Profile",
@@ -584,5 +594,94 @@
       "action": "Delete document"
     },
     "keep": "Keep it"
+  },
+  "supportStatus": {
+    "OPEN": "Open",
+    "IN_PROGRESS": "In progress",
+    "RESOLVED": "Resolved"
+  },
+  "support": {
+    "title": "Help & Support",
+    "subtitle": "Answers to the usual questions, and a way to reach us when they are not enough.",
+    "faqTitle": "Common questions",
+    "faqSubtitle": "Most problems are answered here.",
+    "contactTitle": "Write to us",
+    "contactSubtitle": "Tell us what happened and we will look into it.",
+    "categoryLabel": "What is this about?",
+    "subjectLabel": "Subject",
+    "subjectPlaceholder": "A few words about the problem",
+    "messageLabel": "Message",
+    "messagePlaceholder": "What happened, and when?",
+    "messageHint": "Dates, times and the name of the company or driver help us find it faster.",
+    "send": "Send request",
+    "sent": "Your request has been sent. You can follow it below.",
+    "responseNote": "We reply during business hours. Never send passwords or card numbers here.",
+    "myRequestsTitle": "Your requests",
+    "myRequestsSubtitle": "Only you and KALO can see these.",
+    "noRequests": "You have not written to us yet",
+    "noRequestsHint": "Anything you send will appear here with its status.",
+    "loadFailedHint": "Your requests could not be fetched. Try again in a moment.",
+    "category": {
+      "RIDE_ISSUE": "A ride",
+      "PAYMENT": "Payment",
+      "ACCOUNT": "My account",
+      "DRIVER_OR_VEHICLE": "A driver or vehicle",
+      "TECHNICAL": "Something is broken",
+      "OTHER": "Something else"
+    },
+    "faq": {
+      "howBooking": {
+        "q": "How does booking a taxi work?",
+        "a": "You enter where you are and where you are going, and KALO asks the taxi companies nearby. Each one that can take you sends an offer with its name, rating and estimated price. You choose the company, and the company assigns one of its own drivers."
+      },
+      "finalPrice": {
+        "q": "Why is the final price different from the estimate?",
+        "a": "The estimate is what the trip should cost based on distance. What you pay is the real taximeter amount at the end of the ride, which changes with traffic, the route taken and waiting time."
+      },
+      "payment": {
+        "q": "How do I pay?",
+        "a": "You pay the driver directly, in cash or by card where the company accepts it. KALO does not take your payment and never asks for card details."
+      },
+      "cancelRide": {
+        "q": "Can I cancel a ride?",
+        "a": "Yes, from the Current ride page, up until the ride starts. Cancelling repeatedly after a driver is already on the way is noticed by the companies."
+      },
+      "noDriver": {
+        "q": "No company answered my request. What now?",
+        "a": "It means no company nearby had a free driver at that moment. Wait a minute and search again, or try from a slightly different pickup point."
+      },
+      "lostItem": {
+        "q": "I left something in the taxi.",
+        "a": "Write to us with the date, time and the company name from your ride history. We will pass it to the company, which can reach the driver."
+      },
+      "verification": {
+        "q": "How long does verification take?",
+        "a": "An administrator reviews your company once you submit it with your documents. Until it is approved your company does not appear to passengers. If something is missing you will be told why, and you can fix it and submit again."
+      },
+      "assignDriver": {
+        "q": "Why can I not assign a driver to a ride?",
+        "a": "A driver has to be active, online and paired with an active vehicle. If the driver does not appear in the list, check the assignment and the vehicle status first."
+      },
+      "operatingHours": {
+        "q": "Why is my company not receiving requests?",
+        "a": "Check three things: booking is enabled in Settings, today falls inside your operating hours, and the pickup point is inside your service area."
+      },
+      "expiredPaperwork": {
+        "q": "What happens when a vehicle document expires?",
+        "a": "An expired registration, insurance or inspection is shown in red on the Vehicles page. Renew it and update the date — a vehicle should not be carrying passengers on expired papers."
+      },
+      "missedRequests": {
+        "q": "What happens if we do not answer a request?",
+        "a": "It expires and the passenger chooses another company. Requests waiting for you are highlighted at the top of the Rides queue."
+      },
+      "changeLanguage": {
+        "q": "How do I change the language?",
+        "a": "Use the SQ / EN switch at the top of the sidebar. Your choice is remembered on this device."
+      },
+      "accountSecurity": {
+        "q": "I think somebody else has access to my account.",
+        "a": "Change your password from your Profile straight away. That signs out every other device. Then write to us so we can check the account."
+      }
+    }
   }
 }

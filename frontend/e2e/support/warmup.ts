@@ -36,7 +36,7 @@ async function globalSetup(config: FullConfig) {
 
   try {
     for (const [tokens, routes] of [
-      [customer, ['/ride', '/ride/current', '/ride/history', '/profile']],
+      [customer, ['/ride', '/ride/current', '/ride/history', '/support', '/profile']],
       [
         partner,
         [
@@ -48,9 +48,10 @@ async function globalSetup(config: FullConfig) {
           '/partner/documents',
           '/partner/settings',
           '/partner/availability',
+          '/support',
         ],
       ],
-      [admin, ['/admin', '/admin/companies', '/admin/users', '/admin/rides']],
+      [admin, ['/admin', '/admin/companies', '/admin/users', '/admin/rides', '/admin/support']],
     ] as const) {
       const context = await browser.newContext({ baseURL })
 

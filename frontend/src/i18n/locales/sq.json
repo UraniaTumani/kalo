@@ -54,7 +54,8 @@
     "availability": "Disponueshmëria",
     "verification": "Verifikimi",
     "companies": "Kompanitë",
-    "users": "Përdoruesit"
+    "users": "Përdoruesit",
+    "support": "Ndihmë & Mbështetje"
   },
   "auth": {
     "signInTitle": "Hyr në llogari",
@@ -431,7 +432,16 @@
     "noUsersHint": "Provoni një rol ose status tjetër.",
     "noCompaniesHint": "Provoni një filtër tjetër verifikimi ose statusi.",
     "noRidesMatchHint": "Provoni një status tjetër, ose kthejeni filtrin te të gjithë.",
-    "loadFailedHint": "Lista nuk u mor dot. Rifreskoni faqen kur backend-i të jetë online."
+    "loadFailedHint": "Lista nuk u mor dot. Rifreskoni faqen kur backend-i të jetë online.",
+    "supportTitle": "Ndihmë & Mbështetje",
+    "supportSubtitle": "Kërkesat nga klientët dhe kompanitë e taksive.",
+    "noSupportRequests": "Asnjë kërkesë këtu",
+    "noSupportRequestsHint": "Asgjë nuk përputhet me këtë status. Klientët dhe partnerët shkruajnë nga faqja e tyre e Ndihmës.",
+    "moveTo": {
+      "OPEN": "Rihap",
+      "IN_PROGRESS": "Fillo punën",
+      "RESOLVED": "Shëno si të zgjidhur"
+    }
   },
   "profile": {
     "title": "Profili",
@@ -584,5 +594,94 @@
       "action": "Fshi dokumentin"
     },
     "keep": "Mos e prek"
+  },
+  "supportStatus": {
+    "OPEN": "E hapur",
+    "IN_PROGRESS": "Në proces",
+    "RESOLVED": "E zgjidhur"
+  },
+  "support": {
+    "title": "Ndihmë & Mbështetje",
+    "subtitle": "Përgjigje për pyetjet e zakonshme, dhe një mënyrë për të na shkruar kur ato nuk mjaftojnë.",
+    "faqTitle": "Pyetje të shpeshta",
+    "faqSubtitle": "Shumica e problemeve gjejnë përgjigje këtu.",
+    "contactTitle": "Na shkruani",
+    "contactSubtitle": "Na tregoni çfarë ndodhi dhe do ta shohim.",
+    "categoryLabel": "Për çfarë bëhet fjalë?",
+    "subjectLabel": "Subjekti",
+    "subjectPlaceholder": "Disa fjalë për problemin",
+    "messageLabel": "Mesazhi",
+    "messagePlaceholder": "Çfarë ndodhi, dhe kur?",
+    "messageHint": "Data, ora dhe emri i kompanisë ose i shoferit na ndihmojnë ta gjejmë më shpejt.",
+    "send": "Dërgo kërkesën",
+    "sent": "Kërkesa juaj u dërgua. Mund ta ndiqni më poshtë.",
+    "responseNote": "Përgjigjemi brenda orarit të punës. Mos dërgoni kurrë fjalëkalime ose numra karte këtu.",
+    "myRequestsTitle": "Kërkesat tuaja",
+    "myRequestsSubtitle": "Vetëm ju dhe KALO i shihni këto.",
+    "noRequests": "Nuk na keni shkruar ende",
+    "noRequestsHint": "Çdo gjë që dërgoni do të shfaqet këtu me statusin e saj.",
+    "loadFailedHint": "Kërkesat tuaja nuk u morën dot. Provoni sërish pas pak.",
+    "category": {
+      "RIDE_ISSUE": "Një udhëtim",
+      "PAYMENT": "Pagesa",
+      "ACCOUNT": "Llogaria ime",
+      "DRIVER_OR_VEHICLE": "Një shofer ose automjet",
+      "TECHNICAL": "Diçka nuk punon",
+      "OTHER": "Diçka tjetër"
+    },
+    "faq": {
+      "howBooking": {
+        "q": "Si funksionon rezervimi i një taksie?",
+        "a": "Ju vendosni ku ndodheni dhe ku doni të shkoni, dhe KALO pyet kompanitë e taksive aty pranë. Secila që mund t’ju marrë dërgon një ofertë me emrin, vlerësimin dhe çmimin e parashikuar. Ju zgjidhni kompaninë, dhe kompania cakton një nga shoferët e saj."
+      },
+      "finalPrice": {
+        "q": "Pse çmimi përfundimtar ndryshon nga parashikimi?",
+        "a": "Parashikimi është sa duhet të kushtojë udhëtimi sipas distancës. Ajo që paguani është shuma reale e taksimetrit në fund, e cila ndryshon me trafikun, rrugën e zgjedhur dhe kohën e pritjes."
+      },
+      "payment": {
+        "q": "Si paguaj?",
+        "a": "Paguani shoferin drejtpërdrejt, në para në dorë ose me kartë aty ku kompania e pranon. KALO nuk e merr pagesën tuaj dhe nuk kërkon kurrë të dhëna karte."
+      },
+      "cancelRide": {
+        "q": "A mund ta anuloj një udhëtim?",
+        "a": "Po, nga faqja e udhëtimit aktual, derisa udhëtimi të fillojë. Anulimet e përsëritura pasi shoferi është nisur vihen re nga kompanitë."
+      },
+      "noDriver": {
+        "q": "Asnjë kompani nuk m’u përgjigj. Çfarë të bëj?",
+        "a": "Do të thotë se asnjë kompani aty pranë nuk kishte shofer të lirë në atë moment. Prisni një minutë dhe kërkoni sërish, ose provoni nga një pikë marrjeje pak më ndryshe."
+      },
+      "lostItem": {
+        "q": "Kam harruar diçka në taksi.",
+        "a": "Na shkruani me datën, orën dhe emrin e kompanisë nga historiku i udhëtimeve. Do t’ia përcjellim kompanisë, e cila mund të kontaktojë shoferin."
+      },
+      "verification": {
+        "q": "Sa zgjat verifikimi?",
+        "a": "Një administrator e shqyrton kompaninë tuaj pasi ta dërgoni me dokumentet. Derisa të miratohet, kompania nuk u shfaqet pasagjerëve. Nëse mungon diçka, do t’ju thuhet arsyeja dhe mund ta ndreqni e ta dërgoni sërish."
+      },
+      "assignDriver": {
+        "q": "Pse nuk mund të caktoj një shofer për një udhëtim?",
+        "a": "Shoferi duhet të jetë aktiv, online dhe i çiftuar me një automjet aktiv. Nëse shoferi nuk shfaqet në listë, kontrolloni së pari caktimin dhe statusin e automjetit."
+      },
+      "operatingHours": {
+        "q": "Pse kompania ime nuk merr kërkesa?",
+        "a": "Kontrolloni tri gjëra: rezervimi është i aktivizuar te Cilësimet, dita e sotme bie brenda orarit tuaj, dhe pika e marrjes është brenda zonës suaj të shërbimit."
+      },
+      "expiredPaperwork": {
+        "q": "Çfarë ndodh kur skadon një dokument i automjetit?",
+        "a": "Një regjistrim, sigurim ose kontroll teknik i skaduar shfaqet me të kuqe te faqja e Automjeteve. Rinovojeni dhe përditësoni datën — një automjet nuk duhet të mbajë pasagjerë me dokumente të skaduara."
+      },
+      "missedRequests": {
+        "q": "Çfarë ndodh nëse nuk i përgjigjemi një kërkese?",
+        "a": "Ajo skadon dhe pasagjeri zgjedh një kompani tjetër. Kërkesat që presin për ju janë të theksuara në krye të radhës së Udhëtimeve."
+      },
+      "changeLanguage": {
+        "q": "Si e ndryshoj gjuhën?",
+        "a": "Përdorni çelësin SQ / EN në krye të menysë anësore. Zgjedhja juaj mbahet mend në këtë pajisje."
+      },
+      "accountSecurity": {
+        "q": "Mendoj se dikush tjetër ka akses në llogarinë time.",
+        "a": "Ndryshoni menjëherë fjalëkalimin nga Profili juaj. Kjo ju nxjerr nga të gjitha pajisjet e tjera. Pastaj na shkruani që ta kontrollojmë llogarinë."
+      }
+    }
   }
 }

@@ -7,6 +7,7 @@ import type {
   DriverAvailabilityStatus,
   DriverStatus,
   RideStatus,
+  SupportStatus,
   UserStatus,
   VehicleStatus,
   VerificationStatus,
@@ -76,6 +77,27 @@ export function RideStatusBadge({ status }: { status: RideStatus }) {
   return (
     <Badge tone={rideTones[status]} dot={LIVE_RIDE_STATES.has(status)}>
       {label('rideStatus', status)}
+    </Badge>
+  )
+}
+
+/**
+ * OPEN and IN_PROGRESS still need somebody, so they carry the dot. RESOLVED is
+ * the only settled one — and it is green rather than grey, because a person
+ * looking at their own request wants the answer to read as good news.
+ */
+const supportTones: Record<SupportStatus, Tone> = {
+  OPEN: 'warning',
+  IN_PROGRESS: 'info',
+  RESOLVED: 'success',
+}
+
+export function SupportStatusBadge({ status }: { status: SupportStatus }) {
+  const label = useStatusLabel()
+
+  return (
+    <Badge tone={supportTones[status]} dot={status !== 'RESOLVED'}>
+      {label('supportStatus', status)}
     </Badge>
   )
 }

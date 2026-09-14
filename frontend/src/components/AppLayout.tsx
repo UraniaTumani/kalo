@@ -8,6 +8,7 @@ import {
   FileText,
   Gauge,
   History,
+  LifeBuoy,
   LogOut,
   MapPin,
   Settings,
@@ -34,6 +35,7 @@ const customerNav: NavItem[] = [
   { to: '/ride', labelKey: 'nav.book', icon: MapPin, end: true },
   { to: '/ride/current', labelKey: 'nav.currentRide', icon: Car },
   { to: '/ride/history', labelKey: 'nav.history', icon: History },
+  { to: '/support', labelKey: 'nav.support', icon: LifeBuoy },
 ]
 
 const partnerNav: NavItem[] = [
@@ -45,6 +47,7 @@ const partnerNav: NavItem[] = [
   { to: '/partner/documents', labelKey: 'nav.documents', icon: FileText },
   { to: '/partner/settings', labelKey: 'nav.settings', icon: Settings },
   { to: '/partner/availability', labelKey: 'nav.availability', icon: Clock },
+  { to: '/support', labelKey: 'nav.support', icon: LifeBuoy },
 ]
 
 const adminNav: NavItem[] = [
@@ -52,6 +55,7 @@ const adminNav: NavItem[] = [
   { to: '/admin/companies', labelKey: 'nav.companies', icon: Building2 },
   { to: '/admin/users', labelKey: 'nav.users', icon: Users },
   { to: '/admin/rides', labelKey: 'nav.rides', icon: ClipboardList },
+  { to: '/admin/support', labelKey: 'nav.support', icon: LifeBuoy },
 ]
 
 const navByRole = {
