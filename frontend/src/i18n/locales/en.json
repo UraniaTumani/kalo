@@ -26,7 +26,8 @@
     "notSet": "Not set",
     "saved": "Saved.",
     "page": "Page {{current}} of {{total}}",
-    "totalItems": "{{count}} total"
+    "totalItems": "{{count}} total",
+    "showingRange": "Showing {{from}}–{{to}} of {{total}}"
   },
   "language": {
     "label": "Language",
@@ -422,7 +423,15 @@
     "noRideSelectedHint": "Pick a ride to see its detail.",
     "documentsCount": "Documents ({{count}})",
     "noDocuments": "No documents. Approval requires at least one pending document.",
-    "accepted": "Accepted"
+    "accepted": "Accepted",
+    "filterRole": "Role",
+    "filterStatus": "Status",
+    "filterVerification": "Verification",
+    "filters": "Filters",
+    "noUsersHint": "Try a different role or status.",
+    "noCompaniesHint": "Try a different verification or status filter.",
+    "noRidesMatchHint": "Try a different status, or set the filter back to all.",
+    "loadFailedHint": "The list could not be fetched. Reload the page once the backend is back."
   },
   "profile": {
     "title": "Profile",

@@ -26,7 +26,8 @@
     "notSet": "E pacaktuar",
     "saved": "U ruajt.",
     "page": "Faqja {{current}} nga {{total}}",
-    "totalItems": "{{count}} gjithsej"
+    "totalItems": "{{count}} gjithsej",
+    "showingRange": "Duke shfaqur {{from}}–{{to}} nga {{total}}"
   },
   "language": {
     "label": "Gjuha",
@@ -422,7 +423,15 @@
     "noRideSelectedHint": "Zgjidhni një udhëtim për të parë detajet.",
     "documentsCount": "Dokumentet ({{count}})",
     "noDocuments": "Asnjë dokument. Miratimi kërkon të paktën një dokument në pritje.",
-    "accepted": "Pranuar"
+    "accepted": "Pranuar",
+    "filterRole": "Roli",
+    "filterStatus": "Statusi",
+    "filterVerification": "Verifikimi",
+    "filters": "Filtrat",
+    "noUsersHint": "Provoni një rol ose status tjetër.",
+    "noCompaniesHint": "Provoni një filtër tjetër verifikimi ose statusi.",
+    "noRidesMatchHint": "Provoni një status tjetër, ose kthejeni filtrin te të gjithë.",
+    "loadFailedHint": "Lista nuk u mor dot. Rifreskoni faqen kur backend-i të jetë online."
   },
   "profile": {
     "title": "Profili",

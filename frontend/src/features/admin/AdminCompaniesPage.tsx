@@ -10,7 +10,8 @@ import { Pagination } from '@/components/Pagination'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Spinner } from '@/components/ui/Spinner'
-import { Alert, Button, Card, EmptyState, Select, Table, Td, Th } from '@/components/ui'
+import { Alert, Button, Card, EmptyState, Field, FilterBar, Select, Table, Td, Th } from '@/components/ui'
+import { useIsCompact } from '@/lib/useIsCompact'
 
 const VERIFICATION: (VerificationStatus | 'ALL')[] = [
   'ALL',
@@ -25,6 +26,7 @@ const COMPANY: (CompanyStatus | 'ALL')[] = ['ALL', 'ACTIVE', 'INACTIVE', 'SUSPEN
 export function AdminCompaniesPage() {
   const { t } = useTranslation()
   const label = useStatusLabel()
+  const compact = useIsCompact()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(0)
   const [verification, setVerification] = useState<VerificationStatus | 'ALL'>('ALL')
@@ -63,39 +65,44 @@ export function AdminCompaniesPage() {
       <PageHeader
         title={t('admin.companiesTitle')}
         description={t('admin.companiesSubtitle')}
-        action={
-          <div className="flex gap-2">
-            <Select
-              value={verification}
-              onChange={(event) => {
-                setVerification(event.target.value as VerificationStatus | 'ALL')
-                setPage(0)
-              }}
-              className="w-40"
-            >
-              {VERIFICATION.map((value) => (
-                <option key={value} value={value}>
-                  {value === 'ALL' ? t('admin.allVerification') : label('verificationStatus', value)}
-                </option>
-              ))}
-            </Select>
-            <Select
-              value={companyStatus}
-              onChange={(event) => {
-                setCompanyStatus(event.target.value as CompanyStatus | 'ALL')
-                setPage(0)
-              }}
-              className="w-36"
-            >
-              {COMPANY.map((value) => (
-                <option key={value} value={value}>
-                  {value === 'ALL' ? t('partner.allStatuses') : label('companyStatus', value)}
-                </option>
-              ))}
-            </Select>
-          </div>
-        }
       />
+
+      {/* Labelled, and given room, rather than tucked beside the heading. */}
+      <FilterBar className="mb-4">
+        <Field label={t('admin.filterVerification')}>
+          <Select
+            value={verification}
+            onChange={(event) => {
+              setVerification(event.target.value as VerificationStatus | 'ALL')
+              setPage(0)
+            }}
+            className="w-full sm:w-44"
+          >
+            {VERIFICATION.map((value) => (
+              <option key={value} value={value}>
+                {value === 'ALL' ? t('admin.allVerification') : label('verificationStatus', value)}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        <Field label={t('admin.filterStatus')}>
+          <Select
+            value={companyStatus}
+            onChange={(event) => {
+              setCompanyStatus(event.target.value as CompanyStatus | 'ALL')
+              setPage(0)
+            }}
+            className="w-full sm:w-40"
+          >
+            {COMPANY.map((value) => (
+              <option key={value} value={value}>
+                {value === 'ALL' ? t('partner.allStatuses') : label('companyStatus', value)}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </FilterBar>
 
       {(companiesQuery.error || suspendMutation.error || reactivateMutation.error) && (
         <div className="mb-4">
@@ -115,16 +122,43 @@ export function AdminCompaniesPage() {
         {companiesQuery.isError && !companiesQuery.isLoading && (
           <EmptyState
             title={t('errors.loadFailed')}
-
+            description={t('admin.loadFailedHint')}
           />
         )}
 
         {!companiesQuery.isLoading && !companiesQuery.isError && isEmpty && (
-          <EmptyState title={t('admin.noCompanies')} />
+          <EmptyState title={t('admin.noCompanies')} description={t('admin.noCompaniesHint')} />
         )}
 
         {rows.length > 0 && (
           <>
+            {compact ? (
+              <div className="space-y-2 p-4">
+                {rows.map((company) => (
+                  <div key={company.companyId} className="rounded-xl border border-ink-200/70 p-3">
+                    <p className="font-semibold text-ink-900">{company.displayName}</p>
+                    <p className="truncate text-xs text-ink-500">{company.legalName}</p>
+                    <p className="tnum mt-0.5 text-xs text-ink-400">NIPT {company.nipt}</p>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                      <StatusBadge
+                        status={company.verificationStatus}
+                        namespace="verificationStatus"
+                      />
+                      <StatusBadge status={company.companyStatus} namespace="companyStatus" />
+                    </div>
+
+                    <div className="mt-3 flex justify-end">
+                      <CompanyActions
+                        company={company}
+                        onSuspend={() => setPendingSuspend(company)}
+                        onReactivate={() => reactivateMutation.mutate(company.companyId)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
             <Table>
               <thead>
                 <tr>
@@ -160,16 +194,14 @@ export function AdminCompaniesPage() {
                 ))}
               </tbody>
             </Table>
+            )}
             <Pagination page={pageData} onPageChange={setPage} />
           </>
         )}
       </Card>
 
       <div className="mt-4">
-        <Alert tone="info">
-          {t('admin.suspensionNote')}
-
-        </Alert>
+        <Alert tone="info">{t('admin.suspensionNote')}</Alert>
       </div>
 
       <ConfirmDialog
