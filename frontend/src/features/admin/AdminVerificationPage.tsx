@@ -21,9 +21,12 @@ import {
   Textarea,
   Th,
 } from '@/components/ui'
+import { useIsCompact } from '@/lib/useIsCompact'
+import { cn } from '@/lib/utils'
 
 export function AdminVerificationPage() {
   const { t } = useTranslation()
+  const compact = useIsCompact()
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
   const pendingQuery = useQuery({
@@ -57,6 +60,7 @@ export function AdminVerificationPage() {
           {pendingQuery.isError && !pendingQuery.isLoading && (
             <EmptyState
               title={t('errors.loadFailed')}
+              description={t('admin.loadFailedHint')}
             />
           )}
 
@@ -67,7 +71,31 @@ export function AdminVerificationPage() {
             />
           )}
 
-          {rows.length > 0 && (
+          {rows.length > 0 && compact && (
+            <div className="space-y-2 p-4">
+              {rows.map((partner) => (
+                <button
+                  key={partner.companyId}
+                  type="button"
+                  onClick={() => setSelectedId(partner.companyId)}
+                  className={cn(
+                    'block w-full rounded-xl border p-3 text-left transition',
+                    selectedId === partner.companyId
+                      ? 'border-brand-400 bg-brand-50/40'
+                      : 'border-ink-200/70 hover:bg-ink-50',
+                  )}
+                >
+                  <p className="font-semibold text-ink-900">{partner.displayName}</p>
+                  <p className="truncate text-xs text-ink-500">{partner.legalName}</p>
+                  <p className="tnum mt-1 text-xs text-ink-400">
+                    NIPT {partner.nipt} · {partner.phone}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {rows.length > 0 && !compact && (
             <Table>
               <thead>
                 <tr>
@@ -105,18 +133,23 @@ export function AdminVerificationPage() {
           )}
         </Card>
 
-        <div>
-          {selectedId ? (
+        {/* The placeholder only earns its space where there is a second column. */}
+        {selectedId ? (
+          <div>
             <ReviewPanel companyId={selectedId} onDone={() => setSelectedId(null)} />
-          ) : (
-            <Card>
-              <EmptyState
-                title={t('admin.noCompanySelected')}
-                description={t('admin.noCompanySelectedHint')}
-              />
-            </Card>
-          )}
-        </div>
+          </div>
+        ) : (
+          !compact && (
+            <div>
+              <Card>
+                <EmptyState
+                  title={t('admin.noCompanySelected')}
+                  description={t('admin.noCompanySelectedHint')}
+                />
+              </Card>
+            </div>
+          )
+        )}
       </div>
     </>
   )

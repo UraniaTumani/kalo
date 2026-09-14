@@ -16,12 +16,16 @@ import {
   CardBody,
   CardHeader,
   EmptyState,
+  Field,
+  FilterBar,
+  RowActions,
   Select,
   Table,
   Td,
   Th,
 } from '@/components/ui'
-import { formatCurrency, formatDateTime } from '@/lib/utils'
+import { cn, formatCurrency, formatDateTime } from '@/lib/utils'
+import { useIsCompact } from '@/lib/useIsCompact'
 
 const FILTERS: (RideStatus | 'ALL')[] = [
   'ALL',
@@ -39,6 +43,7 @@ const FILTERS: (RideStatus | 'ALL')[] = [
 export function AdminRidesPage() {
   const { t } = useTranslation()
   const label = useStatusLabel()
+  const compact = useIsCompact()
   const [page, setPage] = useState(0)
   const [status, setStatus] = useState<RideStatus | 'ALL'>('ALL')
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -57,17 +62,17 @@ export function AdminRidesPage() {
 
   return (
     <>
-      <PageHeader
-        title={t('admin.ridesTitle')}
-        description={t('admin.ridesSubtitle')}
-        action={
+      <PageHeader title={t('admin.ridesTitle')} description={t('admin.ridesSubtitle')} />
+
+      <FilterBar className="mb-4">
+        <Field label={t('ride.status')}>
           <Select
             value={status}
             onChange={(event) => {
               setStatus(event.target.value as RideStatus | 'ALL')
               setPage(0)
             }}
-            className="w-48"
+            className="w-full sm:w-52"
           >
             {FILTERS.map((value) => (
               <option key={value} value={value}>
@@ -75,8 +80,8 @@ export function AdminRidesPage() {
               </option>
             ))}
           </Select>
-        }
-      />
+        </Field>
+      </FilterBar>
 
       {ridesQuery.error && <ErrorMessage error={ridesQuery.error} />}
 
@@ -91,16 +96,56 @@ export function AdminRidesPage() {
           {ridesQuery.isError && !ridesQuery.isLoading && (
             <EmptyState
               title={t('errors.loadFailed')}
-
+              description={t('admin.loadFailedHint')}
             />
           )}
 
           {!ridesQuery.isLoading && !ridesQuery.isError && isEmpty && (
-            <EmptyState title={t('admin.noRidesMatch')} />
+            <EmptyState
+              title={t('admin.noRidesMatch')}
+              description={t('admin.noRidesMatchHint')}
+            />
           )}
 
           {rows.length > 0 && (
             <>
+              {compact ? (
+                <div className="space-y-2 p-4">
+                  {rows.map((ride) => (
+                    <button
+                      key={ride.rideId}
+                      type="button"
+                      onClick={() => setSelectedId(ride.rideId)}
+                      className={cn(
+                        'block w-full rounded-xl border p-3 text-left transition',
+                        selectedId === ride.rideId
+                          ? 'border-brand-400 bg-brand-50/40'
+                          : 'border-ink-200/70 hover:bg-ink-50',
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-ink-900">{ride.customerName}</p>
+                          <p className="truncate text-xs text-ink-500">
+                            {ride.companyName}
+                            {ride.driverName ? ` · ${ride.driverName}` : ''}
+                          </p>
+                        </div>
+                        <RideStatusBadge status={ride.status} />
+                      </div>
+
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <span className="tnum text-xs text-ink-400">
+                          {formatDateTime(ride.requestedAt)}
+                        </span>
+                        <span className="tnum text-sm font-semibold text-ink-900">
+                          {formatCurrency(ride.finalAmount)}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
               <Table>
                 <thead>
                   <tr>
@@ -114,8 +159,12 @@ export function AdminRidesPage() {
                 </thead>
                 <tbody>
                   {rows.map((ride) => (
-                    <tr key={ride.rideId}>
-                      <Td className="whitespace-nowrap text-xs">
+                    <tr
+                      key={ride.rideId}
+                      /* The detail panel is beside the table, so the row it belongs to says so. */
+                      className={selectedId === ride.rideId ? 'bg-brand-50/50' : undefined}
+                    >
+                      <Td className="tnum whitespace-nowrap text-xs">
                         {formatDateTime(ride.requestedAt)}
                       </Td>
                       <Td className="font-medium">{ride.customerName}</Td>
@@ -128,34 +177,51 @@ export function AdminRidesPage() {
                       <Td>
                         <RideStatusBadge status={ride.status} />
                       </Td>
-                      <Td className="text-right">{formatCurrency(ride.finalAmount)}</Td>
+                      <Td className="tnum whitespace-nowrap text-right">
+                        {formatCurrency(ride.finalAmount)}
+                      </Td>
                       <Td>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => setSelectedId(ride.rideId)}
-                        >
-                          {t('admin.view')}
-                        </Button>
+                        <RowActions>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => setSelectedId(ride.rideId)}
+                          >
+                            {t('admin.view')}
+                          </Button>
+                        </RowActions>
                       </Td>
                     </tr>
                   ))}
                 </tbody>
               </Table>
+              )}
               <Pagination page={pageData} onPageChange={setPage} />
             </>
           )}
         </Card>
 
-        <div>
-          {selectedId ? (
+        {/*
+          On a phone the placeholder card is just a wall between the list and
+          the rest of the page, so it only appears where there is a column for
+          it to sit in.
+        */}
+        {selectedId ? (
+          <div>
             <RideDetail rideId={selectedId} onClose={() => setSelectedId(null)} />
-          ) : (
-            <Card>
-              <EmptyState title={t('admin.noRideSelected')} description={t('admin.noRideSelectedHint')} />
-            </Card>
-          )}
-        </div>
+          </div>
+        ) : (
+          !compact && (
+            <div>
+              <Card>
+                <EmptyState
+                  title={t('admin.noRideSelected')}
+                  description={t('admin.noRideSelectedHint')}
+                />
+              </Card>
+            </div>
+          )
+        )}
       </div>
     </>
   )
