@@ -355,7 +355,7 @@
     "closesAt": "Mbyllet",
     "allDay": "Hapur 24 orë",
     "overnight": "Gjatë natës — mbyllet të nesërmen në mëngjes",
-    "openAllDayHint": "Ora e hapjes dhe e mbylljes duhet të jenë të ndryshme — një ditë që hapet dhe mbyllet në të njëjtën orë, ose që mbyllet të nesërmen, nuk mund të ruhet ende.",
+    "openAllDayHint": "Vendosni të njëjtën orë hapjeje dhe mbylljeje për një ditë që punoni pa ndërprerje, ose një orë mbylljeje më të hershëm për një turn që kalon mesnatën.",
     "copyToAll": "Zbato për çdo ditë",
     "notApprovedYet": "Këto cilësime bëhen të disponueshme pasi kompania juaj të miratohet.",
     "weeklySchedule": "Orari javor",
@@ -376,9 +376,7 @@
       "FRIDAY": "Pre",
       "SATURDAY": "Sht",
       "SUNDAY": "Die"
-    },
-    "allDayBlocked": "Hapur 24 orë — kjo nuk mund të ruhet. Vendosni një orë mbylljeje.",
-    "overnightBlocked": "Mbyllet të nesërmen — kjo nuk mund të ruhet ende. Vendosni një orë mbylljeje më vonë se ora e hapjes."
+    }
   },
   "admin": {
     "verificationTitle": "Verifikimi i partnerëve",

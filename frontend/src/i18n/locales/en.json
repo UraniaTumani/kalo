@@ -355,7 +355,7 @@
     "closesAt": "Closes",
     "allDay": "Open 24 hours",
     "overnight": "Overnight — closes the next morning",
-    "openAllDayHint": "Opening and closing must be real, different times — a day that opens and closes at the same hour, or closes the next morning, cannot be saved yet.",
+    "openAllDayHint": "Set the same opening and closing time for a day you work around the clock, or an earlier closing time for a shift that runs past midnight.",
     "copyToAll": "Apply to every day",
     "notApprovedYet": "These settings become available once your company is approved.",
     "weeklySchedule": "Weekly schedule",
@@ -376,9 +376,7 @@
       "FRIDAY": "Fri",
       "SATURDAY": "Sat",
       "SUNDAY": "Sun"
-    },
-    "allDayBlocked": "Open 24 hours — this cannot be saved. Set a closing time.",
-    "overnightBlocked": "Closes the next morning — this cannot be saved yet. Set a closing time later than the opening time."
+    }
   },
   "admin": {
     "verificationTitle": "Partner verification",

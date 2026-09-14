@@ -198,14 +198,21 @@ public class PartnerAvailabilitySettingsServiceImpl
                 );
             }
 
-            if (!item.openTime()
-                    .isBefore(item.closeTime())) {
-
-                throw new InvalidOperationException(
-                        "Open time must be before close time for "
-                                + item.dayOfWeek()
-                );
-            }
+            /*
+             * No ordering rule. All three arrangements of the two times mean
+             * something, and CompanyAvailabilityChecker has always read them
+             * that way:
+             *
+             *   08:00 -> 22:00   a normal day
+             *   20:00 -> 04:00   overnight, closing the next morning
+             *   00:00 -> 00:00   open around the clock
+             *
+             * Requiring close to be strictly after open rejected the last two,
+             * which is most of a taxi company's working week. It also made the
+             * write path disagree with the read path: the seeder and the test
+             * fixtures both write open-all-day rows straight to the repository,
+             * so the system ran happily on data its own API refused to accept.
+             */
         }
     }
 
