@@ -85,7 +85,7 @@ export function AdminRidesPage() {
 
       {ridesQuery.error && <ErrorMessage error={ridesQuery.error} />}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <Card>
           {ridesQuery.isLoading && (
             <div className="p-5">

@@ -58,8 +58,13 @@ public abstract class AbstractIntegrationTest {
     @Autowired
     protected TestDataFactory fixtures;
 
+    /**
+     * Protected so a test can set up a state the API cannot reach — a refresh
+     * token already past its expiry, say, which no test can produce by waiting
+     * thirty days.
+     */
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    protected JdbcTemplate jdbcTemplate;
 
     /**
      * Empties every application table before each test.
