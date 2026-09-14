@@ -173,6 +173,64 @@ class PartnerVerificationIntegrationTest extends AbstractIntegrationTest {
         assertThat(reload(company).getStatus()).isEqualTo(CompanyStatus.INACTIVE);
     }
 
+    /**
+     * The way back in after a rejection.
+     *
+     * A rejection names something the company has to fix, so it has to be
+     * followed by a second attempt — otherwise the first mistake is permanent
+     * and the only remedy is a new account. Nothing covered this path, even
+     * though the service allows REJECTED alongside DRAFT as a submittable
+     * state.
+     */
+    @Test
+    @DisplayName("a rejected company can fix the problem and submit again")
+    void rejectedCompanyCanResubmit() throws Exception {
+
+        TaxiCompany company = pendingCompany();
+        String admin = tokenFor(fixtures.admin());
+        String partner = tokenFor(company.getOwner());
+
+        mockMvc.perform(
+                        post("/api/v1/admin/partners/" + company.getId() + "/reject")
+                                .header("Authorization", bearer(admin))
+                                .contentType(APPLICATION_JSON)
+                                .content("""
+                                        {"reason":"Licence document is unreadable"}
+                                        """)
+                )
+                .andExpect(status().isOk());
+
+        mockMvc.perform(
+                        post("/api/v1/partner/submit-verification")
+                                .header("Authorization", bearer(partner))
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.verificationStatus").value("PENDING"));
+
+        /* And the second review can approve, so the loop actually closes. */
+        mockMvc.perform(
+                        post("/api/v1/admin/partners/" + company.getId() + "/approve")
+                                .header("Authorization", bearer(admin))
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.verificationStatus").value("APPROVED"));
+
+        assertThat(reload(company).getStatus()).isEqualTo(CompanyStatus.ACTIVE);
+    }
+
+    @Test
+    @DisplayName("a company already awaiting review cannot submit again")
+    void pendingCompanyCannotResubmit() throws Exception {
+
+        TaxiCompany company = pendingCompany();
+
+        mockMvc.perform(
+                        post("/api/v1/partner/submit-verification")
+                                .header("Authorization", bearer(tokenFor(company.getOwner())))
+                )
+                .andExpect(status().is4xxClientError());
+    }
+
     @Test
     @DisplayName("an admin cannot approve a company that was already rejected")
     void adminCannotApproveRejected() throws Exception {

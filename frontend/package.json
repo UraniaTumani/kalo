@@ -12,7 +12,8 @@
     "test:e2e:keep": "node e2e/run.mjs --keep-up",
     "test:e2e:ui": "node e2e/run.mjs --keep-up --ui",
     "e2e:up": "docker compose -f ../docker-compose.e2e.yml up -d --build --wait",
-    "e2e:down": "docker compose -f ../docker-compose.e2e.yml down -v --remove-orphans"
+    "e2e:down": "docker compose -f ../docker-compose.e2e.yml down -v --remove-orphans",
+    "test:regression": "node e2e/regression.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

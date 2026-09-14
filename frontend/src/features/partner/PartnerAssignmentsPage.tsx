@@ -99,7 +99,7 @@ export function PartnerAssignmentsPage() {
         description={t('partner.assignmentsSubtitle')}
       />
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-4">
           {removeMutation.error && <ErrorMessage error={removeMutation.error} />}
 

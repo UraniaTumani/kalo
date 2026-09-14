@@ -105,6 +105,70 @@ class RefreshTokenIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * The expiry itself, which nothing covered.
+     *
+     * A refresh token lasts thirty days, so no test can wait one out; the row's
+     * expiry is moved into the past instead. The token is otherwise perfectly
+     * valid — present, unrevoked, and belonging to an active user — so this is
+     * the only thing that can refuse it, and if the expiry check were ever lost
+     * a stolen token would work forever.
+     */
+    @Test
+    @DisplayName("a refresh token past its expiry is refused")
+    void expiredTokenIsRejected() throws Exception {
+
+        User customer = fixtures.customer();
+        String refreshToken = refreshTokenFor(customer);
+
+        jdbcTemplate.update(
+                """
+                UPDATE refresh_tokens
+                SET expires_at = now() - interval '1 minute'
+                WHERE revoked_at IS NULL
+                """
+        );
+
+        mockMvc.perform(
+                        post("/api/v1/auth/refresh")
+                                .contentType(APPLICATION_JSON)
+                                .content(refreshBody(refreshToken))
+                )
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("an expired token is refused even though the account is fine")
+    void expiryIsAboutTheTokenNotTheUser() throws Exception {
+
+        User customer = fixtures.customer();
+        String refreshToken = refreshTokenFor(customer);
+
+        jdbcTemplate.update(
+                """
+                UPDATE refresh_tokens
+                SET expires_at = now() - interval '1 minute'
+                WHERE revoked_at IS NULL
+                """
+        );
+
+        mockMvc.perform(
+                        post("/api/v1/auth/refresh")
+                                .contentType(APPLICATION_JSON)
+                                .content(refreshBody(refreshToken))
+                )
+                .andExpect(status().isUnauthorized());
+
+        /* Signing in again works, so the account was never the problem. */
+        mockMvc.perform(
+                        post("/api/v1/auth/login")
+                                .contentType(APPLICATION_JSON)
+                                .content(credentials(customer))
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.refreshToken").isNotEmpty());
+    }
+
     @Test
     @DisplayName("signing out revokes the refresh token")
     void logoutRevokes() throws Exception {

@@ -99,7 +99,7 @@ export function SupportPage() {
     <>
       <PageHeader title={t('support.title')} description={t('support.subtitle')} />
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="space-y-4">
           <Card>
             <CardHeader
