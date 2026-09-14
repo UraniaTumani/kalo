@@ -1,4 +1,9 @@
-import { test, expect, uniquePhone, registerCustomer   RENDER_TIMEOUT,
+import {
+  test,
+  expect,
+  uniquePhone,
+  registerCustomer,
+  RENDER_TIMEOUT,
 } from './support/fixtures'
 
 /**
