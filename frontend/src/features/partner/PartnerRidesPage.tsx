@@ -26,7 +26,7 @@ import {
   Td,
   Th,
 } from '@/components/ui'
-import { formatDateTime } from '@/lib/utils'
+import { cn, formatQueueTime } from '@/lib/utils'
 
 const FILTERS: (RideStatus | 'ALL')[] = [
   'ALL',
@@ -114,33 +114,59 @@ export function PartnerRidesPage() {
                     <Th>{t('partner.passenger')}</Th>
                     <Th>{t('ride.route')}</Th>
                     <Th>{t('ride.status')}</Th>
-                    <Th />
+                    <Th className="text-right" />
                   </tr>
                 </thead>
                 <tbody>
-                  {ridesQuery.data.content.map((ride) => (
-                    <tr key={ride.rideId}>
-                      <Td className="whitespace-nowrap">{formatDateTime(ride.requestedAt)}</Td>
+                  {ridesQuery.data.content.map((ride) => {
+                    const waiting = ride.status === 'REQUESTED'
+                    const live = isActiveRide(ride.status)
+
+                    return (
+                    <tr
+                      key={ride.rideId}
+                      className={cn(
+                        waiting && 'bg-warn-50/40',
+                        ride.rideId === selected?.rideId && 'bg-brand-50/60',
+                      )}
+                    >
+                      <Td
+                        className={cn(
+                          'tnum whitespace-nowrap border-l-[3px] text-xs',
+                          waiting ? 'border-l-warn-500' : 'border-l-transparent',
+                        )}
+                      >
+                        {formatQueueTime(ride.requestedAt)}
+                      </Td>
                       <Td>
                         <span className="font-medium">
                           {ride.customerFirstName} {ride.customerLastName}
                         </span>
                         <span className="block text-xs text-ink-500">{ride.customerPhone}</span>
                       </Td>
-                      <Td className="text-xs text-ink-500">
-                        {ride.pickupAddress ?? t('ride.mapPoint')} →{' '}
-                        {ride.destinationAddress ?? t('ride.mapPoint')}
+                      <Td className="max-w-[10rem] text-xs text-ink-500">
+                        <span className="block truncate">
+                          {ride.pickupAddress ?? t('ride.mapPoint')}
+                        </span>
+                        <span className="block truncate text-ink-400">
+                          → {ride.destinationAddress ?? t('ride.mapPoint')}
+                        </span>
                       </Td>
                       <Td>
                         <RideStatusBadge status={ride.status} />
                       </Td>
-                      <Td>
-                        <Button size="sm" variant="secondary" onClick={() => setSelected(ride)}>
+                      <Td className="text-right">
+                        <Button
+                          size="sm"
+                          variant={waiting ? 'primary' : live ? 'secondary' : 'ghost'}
+                          onClick={() => setSelected(ride)}
+                        >
                           {t('partner.manage')}
                         </Button>
                       </Td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </Table>
               <Pagination page={ridesQuery.data} onPageChange={setPage} />
@@ -232,9 +258,9 @@ function RideActions({ ride, onDone }: { ride: PartnerRideResponse; onDone: () =
           description={`${ride.customerFirstName} ${ride.customerLastName} · ${ride.customerPhone}`}
           action={<RideStatusBadge status={ride.status} />}
         />
-        <CardBody className="space-y-4">
+        <CardBody className="flex flex-col gap-4">
           <MapView
-            className="h-44 w-full rounded-lg"
+            className="order-last h-44 w-full rounded-xl"
             markers={[
               {
                 position: { lat: ride.pickupLatitude, lng: ride.pickupLongitude },
@@ -271,25 +297,25 @@ function RideActions({ ride, onDone }: { ride: PartnerRideResponse; onDone: () =
                 </Field>
               )}
 
-              <div className="flex gap-2">
-                <Button
-                  variant="success"
-                  className="flex-1"
-                  disabled={!driverId}
-                  loading={accept.isPending}
-                  onClick={() => accept.mutate()}
-                >
-                  {t('partner.accept')}
-                </Button>
-                <Button
-                  variant="danger"
-                  className="flex-1"
-                  loading={decline.isPending}
-                  onClick={() => setConfirmingDecline(true)}
-                >
-                  {t('partner.decline')}
-                </Button>
-              </div>
+              <Button
+                size="lg"
+                className="w-full"
+                disabled={!driverId}
+                loading={accept.isPending}
+                onClick={() => accept.mutate()}
+              >
+                {t('partner.accept')}
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-bad-600 hover:bg-bad-50 hover:text-bad-700"
+                loading={decline.isPending}
+                onClick={() => setConfirmingDecline(true)}
+              >
+                {t('partner.decline')}
+              </Button>
             </div>
           )}
 

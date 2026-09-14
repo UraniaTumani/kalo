@@ -14,6 +14,23 @@ export function formatDateTime(value?: string | null) {
   })
 }
 
+/**
+ * Short form for a live queue: the day and the time, no year.
+ *
+ * A dispatcher reads this column to see how long somebody has been waiting, and
+ * the year is never the answer — it only made the column wide enough to push the
+ * rest of the table out of view.
+ */
+export function formatQueueTime(value?: string | null) {
+  if (!value) return '—'
+  return new Date(value).toLocaleString(i18n.language, {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export function formatTime(value?: string | null) {
   if (!value) return '—'
   return new Date(value).toLocaleTimeString(i18n.language, {
