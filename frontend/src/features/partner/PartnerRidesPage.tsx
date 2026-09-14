@@ -12,6 +12,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { readPage } from '@/lib/api/page'
 import { MapView } from '@/components/MapPicker'
 import { Spinner } from '@/components/ui/Spinner'
+import { useIsCompact } from '@/lib/useIsCompact'
 import {
   Alert,
   Button,
@@ -44,6 +45,7 @@ const FILTERS: (RideStatus | 'ALL')[] = [
 export function PartnerRidesPage() {
   const { t } = useTranslation()
   const label = useStatusLabel()
+  const compact = useIsCompact()
   const [status, setStatus] = useState<RideStatus | 'ALL'>('ALL')
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<PartnerRideResponse | null>(null)
@@ -105,7 +107,67 @@ export function PartnerRidesPage() {
             />
           )}
 
-          {ridesQuery.data && !ridesQuery.data.empty && (
+          {ridesQuery.data && !ridesQuery.data.empty && compact && (
+            <div className="space-y-2 p-4">
+              {/*
+                Cards on a phone, matching the vehicles and assignments lists.
+
+                The table did not overflow — its container scrolls — but at
+                375px it showed 341 of 558 pixels, which left Status and the
+                Manage button off-screen. This is the queue a dispatcher works
+                from, and accepting a waiting ride was the thing hidden.
+              */}
+              {ridesQuery.data.content.map((ride) => {
+                const waiting = ride.status === 'REQUESTED'
+                const live = isActiveRide(ride.status)
+
+                return (
+                  <div
+                    key={ride.rideId}
+                    className={cn(
+                      'rounded-xl border p-3',
+                      waiting
+                        ? 'border-l-[3px] border-ink-200/70 border-l-warn-500 bg-warn-50/40'
+                        : 'border-ink-200/70',
+                      ride.rideId === selected?.rideId && 'bg-brand-50/60',
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-ink-900">
+                          {ride.customerFirstName} {ride.customerLastName}
+                        </p>
+                        <p className="tnum truncate text-xs text-ink-500">{ride.customerPhone}</p>
+                      </div>
+                      <RideStatusBadge status={ride.status} />
+                    </div>
+
+                    <div className="mt-2 text-xs text-ink-500">
+                      <p className="truncate">{ride.pickupAddress ?? t('ride.mapPoint')}</p>
+                      <p className="truncate text-ink-400">
+                        → {ride.destinationAddress ?? t('ride.mapPoint')}
+                      </p>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <span className="tnum text-xs text-ink-400">
+                        {formatQueueTime(ride.requestedAt)}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant={waiting ? 'primary' : live ? 'secondary' : 'ghost'}
+                        onClick={() => setSelected(ride)}
+                      >
+                        {t('partner.manage')}
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {ridesQuery.data && !ridesQuery.data.empty && !compact && (
             <>
               <Table>
                 <thead>

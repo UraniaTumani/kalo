@@ -81,7 +81,22 @@ export function WeeklyScheduleEditor({
               open ? 'border-ink-200/70 bg-white' : 'border-ink-200/40 bg-ink-50/60',
             )}
           >
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:flex-nowrap">
+            {/*
+              Wraps at any width, deliberately.
+
+              This used to be `sm:flex-nowrap`, which reads as "past a phone
+              there is always room for one line". There is not: the editor
+              lives in one half of a two-column grid, so its column is about
+              438px while the row's content needs 490 — the day name, the
+              toggle, two 6.75rem time inputs and the copy button. The time
+              group cannot absorb the difference either, because a flex item's
+              min-width is auto, so it refuses to shrink below its content.
+
+              The result was 78px spilling out of the row and 12px out of the
+              page. Letting the row wrap costs a little height on a narrow
+              column and nothing at all on a wide one.
+            */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <span
                 className={cn(
                   'w-[5.5rem] shrink-0 text-sm font-semibold',

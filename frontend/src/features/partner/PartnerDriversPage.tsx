@@ -17,6 +17,7 @@ import { getCurrentPosition, GeolocationError } from '@/lib/geolocation'
 import i18n from '@/i18n'
 import { UserX } from 'lucide-react'
 import { useDriverTracking } from './useDriverTracking'
+import { useIsCompact } from '@/lib/useIsCompact'
 import { Spinner } from '@/components/ui/Spinner'
 import {
   Alert,
@@ -50,6 +51,7 @@ type DriverValues = z.infer<typeof driverSchema>
 export function PartnerDriversPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const compact = useIsCompact()
   const [locationFor, setLocationFor] = useState<DriverResponse | null>(null)
 
   const [page, setPage] = useState(0)
@@ -211,7 +213,79 @@ export function PartnerDriversPage() {
               />
             )}
 
-            {drivers.length > 0 && (
+            {/*
+              Cards on a phone, the same pattern the vehicles and assignments
+              lists already use.
+
+              The table did not overflow the page — its container scrolls — but
+              at 375px it showed 341 of 544 pixels, which put Availability and
+              the go-online control off-screen. That is the column this page
+              exists for, so a dispatcher had to scroll sideways to do the one
+              thing they came to do.
+            */}
+            {drivers.length > 0 && compact && (
+              <div className="space-y-2 p-4">
+                {drivers.map((driver) => (
+                  <div key={driver.id} className="rounded-xl border border-ink-200/70 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-ink-900">
+                          {driver.firstName} {driver.lastName}
+                        </p>
+                        <p className="tnum truncate text-xs text-ink-500">{driver.phone}</p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <StatusBadge
+                          status={driver.availabilityStatus}
+                          namespace="driverAvailability"
+                        />
+                        {driver.status !== 'ACTIVE' && (
+                          <StatusBadge status={driver.status} namespace="driverStatus" />
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="tnum mt-2 text-xs text-ink-500">
+                      {driver.licenseNumber} ·{' '}
+                      {t('partner.expiresOn', { date: driver.licenseExpiryDate })}
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap justify-end gap-2">
+                      {driver.status === 'ACTIVE' && driver.availabilityStatus !== 'BUSY' && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() =>
+                            availabilityMutation.mutate({
+                              id: driver.id,
+                              online: driver.availabilityStatus !== 'ONLINE',
+                            })
+                          }
+                        >
+                          {driver.availabilityStatus === 'ONLINE'
+                            ? t('partner.goOffline')
+                            : t('partner.goOnline')}
+                        </Button>
+                      )}
+                      {driver.status === 'ACTIVE' && (
+                        /* Spelled out here: no hover on a phone to reveal a title. */
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-bad-600 hover:bg-bad-50"
+                          onClick={() => setPendingDeactivate(driver)}
+                        >
+                          <UserX className="size-4" aria-hidden />
+                          {t('partner.deactivate')}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {drivers.length > 0 && !compact && (
               <Table>
                 <thead>
                   <tr>
