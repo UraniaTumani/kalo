@@ -7,6 +7,7 @@ import {
   expectSignedIn,
   registerCustomer,
   loginThroughUi,
+  RENDER_TIMEOUT,
 } from './support/fixtures'
 
 /**
@@ -112,7 +113,7 @@ test.describe('Admin', () => {
 
     const returning = await context.newPage()
     await loginThroughUi(returning, victim.phone, victim.password)
-    await expect(returning.getByRole('button', { name: /sign out/i })).toBeVisible({ timeout: 15_000 })
+    await expect(returning.getByRole('button', { name: /sign out/i })).toBeVisible({ timeout: RENDER_TIMEOUT })
     await returning.close()
   })
 
