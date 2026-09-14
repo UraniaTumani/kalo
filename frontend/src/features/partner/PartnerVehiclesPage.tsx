@@ -102,7 +102,7 @@ export function PartnerVehiclesPage() {
     <>
       <PageHeader title={t('partner.vehiclesTitle')} description={t('partner.vehiclesSubtitle')} />
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-4">
           {deactivateMutation.error && <ErrorMessage error={deactivateMutation.error} />}
 
