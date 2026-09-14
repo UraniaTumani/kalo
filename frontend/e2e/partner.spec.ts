@@ -194,9 +194,19 @@ test.describe('Operating hours', () => {
     await save.click()
     expect((await response).status(), 'an overnight shift should save').toBe(200)
 
-    // And it survives the round trip rather than being silently normalised.
+    /*
+     * And it survives the round trip rather than being silently normalised to
+     * something the backend found acceptable.
+     *
+     * Matched loosely on the seconds: the API answers in HH:mm:ss and the
+     * editor puts that string straight into the time input, so the DOM value
+     * is "20:00:00" where the control's own format is "20:00". True of every
+     * saved day, not just this one — what matters here is the hour and minute.
+     */
     await page.reload()
-    await expect(page.getByLabel(/opens/i).first()).toHaveValue('20:00', { timeout: 30_000 })
-    await expect(page.getByLabel(/closes/i).first()).toHaveValue('04:00')
+    await expect(page.getByLabel(/opens/i).first()).toHaveValue(/^20:00(:00)?$/, {
+      timeout: 30_000,
+    })
+    await expect(page.getByLabel(/closes/i).first()).toHaveValue(/^04:00(:00)?$/)
   })
 })
