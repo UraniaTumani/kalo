@@ -97,7 +97,16 @@ export default defineConfig({
       ? [
           {
             name: 'mobile-safari',
-            use: { ...devices['iPhone 13'] },
+            use: {
+              ...devices['iPhone 13'],
+              /*
+               * Cleared deliberately. The top-level `use` sets channel: 'chrome'
+               * for every project, and WebKit refuses it — "Unsupported webkit
+               * channel" killed all 19 tests at launch, each in a millisecond.
+               * devices['iPhone 13'] already selects the webkit browser.
+               */
+              channel: undefined,
+            },
             testMatch: /(auth|customer)\.spec\.ts/,
           },
         ]
