@@ -73,7 +73,14 @@ export function PartnerRidesPage() {
         title={t('partner.ridesTitle')}
         description={t('partner.ridesSubtitle')}
         action={
+          /*
+             Named, because it sits in the header with no visible label beside
+             it — the only filter in the app that does. A screen reader read it
+             out as an unlabelled combo box, which says nothing about what it
+             narrows.
+          */
           <Select
+            aria-label={t('ride.status')}
             value={status}
             onChange={(event) => {
               setStatus(event.target.value as RideStatus | 'ALL')
