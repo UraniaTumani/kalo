@@ -53,7 +53,12 @@ export default defineConfig({
 
   use: {
     baseURL: FRONTEND,
-    channel: CHANNEL,
+    /*
+     * `channel` belongs to the Chrome project, not to every project. Setting it
+     * here made WebKit inherit "chrome" and refuse to launch, and clearing it
+     * per-project does not work: Playwright's config merge ignores an
+     * `undefined` value rather than treating it as an override.
+     */
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'off',
@@ -97,16 +102,8 @@ export default defineConfig({
       ? [
           {
             name: 'mobile-safari',
-            use: {
-              ...devices['iPhone 13'],
-              /*
-               * Cleared deliberately. The top-level `use` sets channel: 'chrome'
-               * for every project, and WebKit refuses it — "Unsupported webkit
-               * channel" killed all 19 tests at launch, each in a millisecond.
-               * devices['iPhone 13'] already selects the webkit browser.
-               */
-              channel: undefined,
-            },
+            /* devices['iPhone 13'] already selects the webkit browser. */
+            use: { ...devices['iPhone 13'] },
             testMatch: /(auth|customer)\.spec\.ts/,
           },
         ]
