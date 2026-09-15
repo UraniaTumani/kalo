@@ -40,23 +40,19 @@ export function ConfirmDialog({
   const { t } = useTranslation()
   const cancelRef = useRef<HTMLButtonElement>(null)
 
-  /*
+  /**
+   * Remembers what opened the dialog, moves focus into it, and puts focus back
+   * on the way out.
+   *
    * Focus lands on Cancel rather than Confirm: someone who opened this by
    * accident should be one Enter away from backing out, not from going through
    * with it.
-   */
-  useEffect(() => {
-    if (open) {
-      cancelRef.current?.focus()
-    }
-  }, [open])
-
-  /*
-   * Puts focus back where it came from.
    *
-   * Without this, dismissing the dialog drops focus onto <body>, so the next
-   * Tab starts again from the top of the page — a keyboard user has to travel
-   * back through the whole screen to reach the row they were working on.
+   * Capture and move have to happen in this order inside a single effect. Split
+   * across two, the effect that focuses Cancel runs first and the capture then
+   * records *Cancel* as the thing to restore to; on close that button no longer
+   * exists, so focus lands on <body> and the next Tab starts again from the top
+   * of the page. Which is exactly the bug this was meant to fix.
    */
   const restoreRef = useRef<HTMLElement | null>(null)
 
@@ -64,6 +60,8 @@ export function ConfirmDialog({
     if (!open) return
 
     restoreRef.current = document.activeElement as HTMLElement | null
+
+    cancelRef.current?.focus()
 
     return () => restoreRef.current?.focus?.()
   }, [open])

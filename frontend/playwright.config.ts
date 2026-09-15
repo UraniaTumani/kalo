@@ -75,6 +75,33 @@ export default defineConfig({
       name: 'desktop',
       use: { ...devices['Desktop Chrome'], channel: CHANNEL, viewport: { width: 1280, height: 900 } },
     },
+
+    /*
+     * A real WebKit pass over the customer journey on an iPhone viewport.
+     *
+     * KALO is a taxi app: a passenger books from a phone, standing outside, and
+     * a large share of those phones are iOS. Everything else in this suite runs
+     * on Chrome, so Safari's engine — different flexbox rounding, different date
+     * input, different focus behaviour — had no coverage at all.
+     *
+     * Deliberately narrow. Auth and the booking flow are the journey that has to
+     * work on that device; running all 78 tests on a second engine would roughly
+     * double a suite that already takes a quarter of an hour, to re-check screens
+     * whose logic is engine-independent.
+     *
+     * Gated on E2E_WEBKIT because WebKit cannot be downloaded on every network —
+     * including the one this was written on. Without the flag the suite behaves
+     * exactly as before.
+     */
+    ...(process.env.E2E_WEBKIT === '1'
+      ? [
+          {
+            name: 'mobile-safari',
+            use: { ...devices['iPhone 13'] },
+            testMatch: /(auth|customer)\.spec\.ts/,
+          },
+        ]
+      : []),
   ],
 
   /*

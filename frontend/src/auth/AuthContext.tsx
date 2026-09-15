@@ -2,6 +2,7 @@ import { createContext, use, useCallback, useEffect, useMemo, useState } from 'r
 import type { ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { setUnauthorizedHandler, tokenStorage } from '@/lib/api/client'
+import { forgetRide } from '@/features/customer/rideMemory'
 import { authApi } from '@/lib/api/endpoints'
 import type { UserResponse, UserRole } from '@/lib/api/types'
 
@@ -34,6 +35,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     tokenStorage.clear()
+
+    /*
+     * The remembered ride belongs to the session that just ended. Leaving it
+     * behind means the next person to sign in on this device opens Current
+     * ride and sends a request for somebody else's ride — refused by the API,
+     * but it has no business being asked for at all.
+     */
+    forgetRide()
+
     setUser(null)
     queryClient.clear()
   }, [queryClient])
