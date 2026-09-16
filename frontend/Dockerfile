@@ -31,5 +31,10 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
+# 127.0.0.1, not localhost: nginx's `listen 80` binds IPv4 only, while inside
+# the container localhost resolves to ::1 first — so this probe answered
+# "connection refused" against a server that was serving the site perfectly
+# well. Harmless until something waits on the health status, at which point
+# the container never becomes ready.
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-  CMD wget -qO- http://localhost/ >/dev/null || exit 1
+  CMD wget -qO- http://127.0.0.1/ >/dev/null || exit 1
