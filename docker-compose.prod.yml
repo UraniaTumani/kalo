@@ -1,0 +1,98 @@
+# A production-shaped rehearsal, run locally.
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod.example up --build -d --wait
+#   → http://localhost:8082
+#
+# Differs from docker-compose.yml in the ways that matter: the prod profile
+# instead of dev, so no demo accounts are seeded and no throwaway JWT secret is
+# available; every secret arrives from the environment; Swagger stays off;
+# rate limiting stays on.
+#
+# Deliberately isolated from everything else on the machine:
+#
+#   database  kalo_prod_rehearsal, not kalo_db
+#   volume    kalo-prod-rehearsal, its own
+#   ports     5434 and 8082, so a dev stack and the E2E stack can coexist
+#   name      kalo-prod, its own compose project
+#
+# Nothing here can reach a developer's database, and none of it survives
+# `down -v`.
+name: kalo-prod
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - kalo-prod-rehearsal:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # Published only so the rehearsal can be inspected with psql. A real
+    # deployment would not expose the database at all.
+    ports:
+      - "5434:5432"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      # The setting whose absence used to mean a production deploy silently ran
+      # development configuration. Explicit, never defaulted.
+      SPRING_PROFILES_ACTIVE: prod
+
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      # No default exists for this in the prod profile: the application refuses
+      # to start without it, which is the intended behaviour.
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION}
+
+      # Empty: the browser only ever talks to nginx, so there is no
+      # cross-origin request to allow. CorsConfig refuses wildcards outright.
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+
+      GEOCODING_PROVIDER: ${GEOCODING_PROVIDER}
+      GEOCODING_USER_AGENT: ${GEOCODING_USER_AGENT}
+      GEOCODING_CACHE_ENABLED: ${GEOCODING_CACHE_ENABLED}
+
+      # Requests arrive through nginx, so the forwarded address is the real
+      # client and the rate limiter should count it rather than the proxy.
+      APP_RATE_LIMIT_TRUST_FORWARDED_FOR: "true"
+
+      LOG_FORMAT: ${LOG_FORMAT}
+
+      # SWAGGER_ENABLED is deliberately absent. application.properties defaults
+      # it to false, and a rehearsal should prove the default, not override it.
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Not published. The only way in is through nginx, which is the topology a
+    # real deployment has.
+    expose:
+      - "8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Empty on purpose: same-origin through the nginx proxy, so the browser
+        # never learns the backend's address.
+        VITE_API_URL: ""
+    depends_on:
+      - backend
+    ports:
+      - "8082:80"
+
+volumes:
+  kalo-prod-rehearsal:

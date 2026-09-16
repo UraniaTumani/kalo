@@ -36,3 +36,6 @@ build/
 frontend/e2e/.results/
 frontend/e2e/.report/
 frontend/test-results/
+
+# Real production secrets. The .example file is the committed template.
+.env.prod
