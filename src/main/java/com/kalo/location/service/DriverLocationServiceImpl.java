@@ -3,7 +3,6 @@ package com.kalo.location.service;
 import com.kalo.common.exception.InvalidOperationException;
 import com.kalo.common.exception.ResourceNotFoundException;
 import com.kalo.driver.entity.Driver;
-import com.kalo.driver.enums.DriverAvailabilityStatus;
 import com.kalo.driver.enums.DriverStatus;
 import com.kalo.driver.repository.DriverRepository;
 import com.kalo.location.dto.DriverLocationResponse;
@@ -161,13 +160,27 @@ public class DriverLocationServiceImpl
             );
         }
 
-        if (driver.getAvailabilityStatus()
-                == DriverAvailabilityStatus.OFFLINE) {
-
-            throw new InvalidOperationException(
-                    "Offline driver cannot update location"
-            );
-        }
+        /*
+         * An OFFLINE driver may report a position.
+         *
+         * This used to be refused, which broke the only way a partner puts
+         * somebody on the road. Going online needs a fresh position — a driver
+         * with a stale one is not offered to passengers — so the screen asks
+         * for GPS, sends the position, and only then flips availability. With
+         * the old rule that first call came back 400 "Offline driver cannot
+         * update location", the request threw before availability was ever
+         * touched, and the driver stayed offline. An offline fleet takes no
+         * rides at all.
+         *
+         * Reporting a position is a statement about where someone is, not a
+         * claim to be dispatchable, and nothing treats it as one: ride search
+         * filters on ONLINE, on an active vehicle assignment and on the age of
+         * the fix before a driver is ever offered. A position from an offline
+         * driver is simply a position.
+         *
+         * Only DriverStatus is still checked. A deactivated driver has no
+         * business reporting anything.
+         */
     }
 
     private DriverLocationResponse mapToResponse(
