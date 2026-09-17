@@ -39,7 +39,11 @@ export const options = {
 }
 
 export default function () {
-  const user = users[(__VU + __ITER) % users.length]
+  /*
+   * One virtual user is one person: the same account, and — through
+   * clientHeaders — the same address for the life of the run.
+   */
+  const user = users[__VU % users.length]
 
   const response = login(user.phone)
   const outcome = track(response, 'login')
@@ -53,6 +57,18 @@ export default function () {
     check(tokenFrom(response), { 'token returned': (t) => t !== null })
   }
 
-  /* A person signing in does not immediately sign in again. */
-  sleep(Math.random() * 2 + 0.5)
+  /*
+   * A session length, not a tight loop.
+   *
+   * Signing in every second from one address is not something a person does,
+   * and KALO caps login at ten a minute per client precisely to stop it. A
+   * loop that ignores that spends the run collecting 429s and measuring the
+   * limiter — which is what the first attempt did, 70% of responses throttled.
+   *
+   * Twenty to forty seconds is a person finishing a trip and coming back. At
+   * 250 concurrent people that is still a sustained few sign-ins a second,
+   * which is the thing worth measuring: latency at that concurrency, not how
+   * fast a script can be refused.
+   */
+  sleep(Math.random() * 20 + 20)
 }

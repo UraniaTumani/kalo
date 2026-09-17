@@ -18,18 +18,24 @@ const TARGET = Number(__ENV.TARGET || 100)
  * saturates a core, and more virtual users past that only queue. */
 const VUS = Math.min(Number(__ENV.VUS || 20), 50)
 
+/*
+ * shared-iterations, not ramping-vus with a counter.
+ *
+ * "Register a thousand people" is a fixed amount of work shared between
+ * however many virtual users are doing it, which is exactly this executor.
+ * The first version ramped and stopped each virtual user once a counter
+ * reached the target — but module scope in k6 is per virtual user, so ten of
+ * them each counted to a hundred and the run did ten times the work it
+ * claimed. Worse, the early return spun: 10.1 million no-op iterations,
+ * burning the same cores the application was being measured on.
+ */
 export const options = {
   scenarios: {
     registration: {
-      executor: 'ramping-vus',
-      startVUs: 1,
-      stages: [
-        { duration: '20s', target: Math.ceil(VUS / 2) },
-        { duration: '20s', target: VUS },
-        { duration: __ENV.HOLD || '60s', target: VUS },
-        { duration: '10s', target: 0 },
-      ],
-      gracefulRampDown: '10s',
+      executor: 'shared-iterations',
+      vus: VUS,
+      iterations: TARGET,
+      maxDuration: __ENV.MAX_DURATION || '10m',
     },
   },
   thresholds: {
@@ -39,15 +45,9 @@ export const options = {
   summaryTrendStats: ['avg', 'min', 'med', 'p(95)', 'p(99)', 'max'],
 }
 
-let registered = 0
-
 export default function () {
-  if (registered >= TARGET) return
-
   const response = registerCustomer(uniquePhone())
-  const outcome = track(response, 'register')
-
-  if (outcome === 'ok') registered += 1
+  track(response, 'register')
 
   check(response, {
     'registration accepted or refused cleanly': (r) =>

@@ -14,25 +14,51 @@ export const businessRejections = new Counter('kalo_business_rejections')
 export const apiLatency = new Trend('kalo_api_latency', true)
 
 /**
- * A distinct client address per virtual user.
+ * The address a given simulated person is coming from.
  *
- * KALO rate-limits per client IP, and nginx passes the forwarded address
- * through. Without this every virtual user would share one bucket and the run
- * would measure the rate limiter rather than the application — a thousand
- * people in a pilot arrive from a thousand addresses, not from one.
+ * KALO rate-limits per client IP and nginx forwards the address, so the number
+ * of distinct addresses a run presents decides what it measures. Get this wrong
+ * and the run measures the limiter instead of the application.
  *
- * The limiter still applies in full; it simply sees the right number of
- * clients. The baseline run turns it off altogether and says so.
+ * The unit is a *person*, not a virtual user, and the two are not the same
+ * thing in every scenario:
+ *
+ *   registration — one person registers once, then never again. Every
+ *     registration is therefore a different person from a different address.
+ *     Keying on the virtual user instead meant each one burned its five-per-
+ *     five-minutes budget in the first second and spent the rest of the run
+ *     being refused: 288,000 requests, 99.93% of them 429s, measuring nothing.
+ *
+ *   everything else — one person holds a session and does many things. The
+ *     address is stable for the life of that virtual user, which is what a
+ *     phone on a network actually looks like.
+ *
+ * The limiter stays on throughout and applies in full; it simply sees the right
+ * number of clients. The --baseline run disables it and says so.
  */
-export function clientHeaders(extra = {}) {
-  const vu = __VU || 0
-  const a = 10 + ((vu >> 16) & 0xff)
-  const b = (vu >> 8) & 0xff
-  const c = vu & 0xff
+export function addressFor(personIndex) {
+  const a = 10 + ((personIndex >> 24) & 0x0f)
+  const b = (personIndex >> 16) & 0xff
+  const c = (personIndex >> 8) & 0xff
+  const d = 1 + (personIndex & 0x7f)
+  return `${a}.${b}.${c}.${d}`
+}
 
+/** A person who holds a session: stable for the life of this virtual user. */
+export function clientHeaders(extra = {}) {
   return {
     'Content-Type': 'application/json',
-    'X-Forwarded-For': `${a}.${b}.${c}.1`,
+    'X-Forwarded-For': addressFor(__VU || 0),
+    ...extra,
+  }
+}
+
+/** A person who appears once and is never seen again, like a new sign-up. */
+export function newPersonHeaders(extra = {}) {
+  const person = (__VU || 0) * 100000 + (__ITER || 0)
+  return {
+    'Content-Type': 'application/json',
+    'X-Forwarded-For': addressFor(person),
     ...extra,
   }
 }
@@ -86,7 +112,8 @@ export function registerCustomer(phone) {
       phone,
       password: PASSWORD,
     }),
-    { headers: clientHeaders(), tags: { endpoint: 'register' } },
+    /* A sign-up is a person appearing for the first time, from their own address. */
+    { headers: newPersonHeaders(), tags: { endpoint: 'register' } },
   )
 }
 

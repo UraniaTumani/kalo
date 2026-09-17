@@ -2,9 +2,15 @@
 # Samples what the machine and the stack are doing while a load test runs.
 #
 #   bash scripts/load-monitor.sh <output.csv> &
-#   MONITOR=$!
 #   ... run the test ...
-#   kill $MONITOR
+#   touch <output.csv>.stop        # then wait for the process to go
+#
+# It stops on a sentinel file rather than on a signal. Under MSYS a kill aimed
+# at a backgrounded bash script does not reliably reach it mid-sleep, so the
+# first version kept sampling through the runs that followed: one scenario's CSV
+# ended up holding the next scenario's minutes, and two monitors ran at once,
+# each paying for a `docker stats` on the very machine being measured. A file
+# the loop checks needs no signal to arrive.
 #
 # Container CPU and memory come from docker stats, PostgreSQL connections from
 # pg_stat_activity, and JVM heap from the actuator's Prometheus endpoint, which
@@ -18,6 +24,10 @@ BASE="${BASE_URL:-http://localhost:8083}"
 PG="kalo-load-postgres-1"
 BE="kalo-load-backend-1"
 FE="kalo-load-frontend-1"
+
+STOP="$OUT.stop"
+rm -f "$STOP"
+trap 'rm -f "$STOP"' EXIT
 
 echo "ts,backend_cpu_pct,backend_mem_mb,pg_cpu_pct,pg_mem_mb,nginx_cpu_pct,nginx_mem_mb,pg_connections,pg_active,jvm_heap_used_mb,backend_health" > "$OUT"
 
@@ -33,7 +43,7 @@ mb() {
   esac
 }
 
-while true; do
+while [ ! -f "$STOP" ]; do
   TS=$(date +%H:%M:%S)
 
   STATS=$(docker stats --no-stream --format '{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}' "$BE" "$PG" "$FE" 2>/dev/null)

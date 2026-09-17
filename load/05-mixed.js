@@ -86,6 +86,47 @@ export function passenger() {
   const search = searchRides(token)
   track(search, 'search')
 
+  /*
+   * 409 means this account still has a ride running, which is the app telling
+   * the passenger something true: you are already on a trip. A real passenger
+   * then sees that trip, not a search form — so the scenario does what the app
+   * does, reads it back and ends it, and searches again next iteration.
+   *
+   * Without this the run poisons its own account pool. Twenty per cent of
+   * bookings here are deliberately left uncancelled, and because the pool is
+   * only sixty accounts, each one that keeps a ride is out of the game for the
+   * rest of the run while still searching every few seconds. Twelve of the
+   * forty-six accounts in use ended up in that state and produced a 25% 4xx
+   * rate — a measurement of the fixture, not of KALO.
+   */
+  if (search.status === 409) {
+    const current = http.get(`${BASE}/api/v1/rides/current`, {
+      headers: authHeaders(token),
+      tags: { endpoint: 'current' },
+    })
+    track(current, 'current')
+
+    let rideId = null
+    try {
+      rideId = current.json('rideId') || current.json('id')
+    } catch {
+      /* ignore */
+    }
+
+    if (rideId) {
+      track(
+        http.post(`${BASE}/api/v1/rides/${rideId}/cancel`, null, {
+          headers: authHeaders(token),
+          tags: { endpoint: 'cancel' },
+        }),
+        'cancel',
+      )
+    }
+
+    sleep(Math.random() * 3 + 1)
+    return
+  }
+
   /* Roughly a third of searches turn into a booking. */
   if (search.status === 201 && Math.random() < 0.35) {
     let requestId = null
