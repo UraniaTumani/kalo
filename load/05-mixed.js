@@ -1,0 +1,246 @@
+import http from 'k6/http'
+import { check, sleep } from 'k6'
+import { SharedArray } from 'k6/data'
+import {
+  BASE,
+  authHeaders,
+  baseThresholds,
+  searchRides,
+  track,
+  tokenFor,
+} from './lib/common.js'
+
+/**
+ * Scenario 5 — ten minutes of mixed traffic.
+ *
+ * The other four scenarios each push one endpoint until it bends, which finds
+ * ceilings but tells you nothing about how the parts behave together. This one
+ * is shaped like a pilot afternoon instead: mostly passengers looking for a
+ * taxi, a couple of dispatchers watching a queue, and the occasional support
+ * ticket or rating.
+ *
+ * The proportions matter more than the volume. Passengers outnumber partners
+ * heavily, most searches never become rides, and some rides are cancelled —
+ * which is what real usage looks like and what mixes reads and writes against
+ * the same rows at the same time.
+ */
+const users = new SharedArray('load users', () =>
+  JSON.parse(open(__ENV.USERS_FILE || '/data/users.json')),
+)
+
+const partners = new SharedArray('load partners', () =>
+  JSON.parse(open(__ENV.PARTNERS_FILE || '/data/partners.json')),
+)
+
+const CUSTOMERS = Number(__ENV.CUSTOMER_VUS || 40)
+const PARTNERS = Number(__ENV.PARTNER_VUS || 6)
+const DURATION = __ENV.DURATION || '10m'
+
+export const options = {
+  scenarios: {
+    passengers: {
+      executor: 'ramping-vus',
+      exec: 'passenger',
+      startVUs: 1,
+      stages: [
+        { duration: '1m', target: Math.ceil(CUSTOMERS / 2) },
+        { duration: '1m', target: CUSTOMERS },
+        { duration: DURATION, target: CUSTOMERS },
+        { duration: '30s', target: 0 },
+      ],
+      gracefulRampDown: '20s',
+    },
+    dispatchers: {
+      executor: 'ramping-vus',
+      exec: 'dispatcher',
+      startVUs: 1,
+      stages: [
+        { duration: '1m', target: PARTNERS },
+        { duration: DURATION, target: PARTNERS },
+        { duration: '30s', target: 0 },
+      ],
+      gracefulRampDown: '20s',
+    },
+  },
+  thresholds: {
+    ...baseThresholds,
+    'http_req_duration{endpoint:search}': ['p(95)<4000'],
+    'http_req_duration{endpoint:partner_rides}': ['p(95)<3000'],
+  },
+  summaryTrendStats: ['avg', 'min', 'med', 'p(95)', 'p(99)', 'max'],
+}
+
+/**
+ * A passenger: sign in, look for a taxi, sometimes book, occasionally cancel,
+ * and now and then write to support or read back a rating.
+ */
+export function passenger() {
+  const user = users[__VU % users.length]
+
+  const token = tokenFor(user)
+  if (!token) {
+    sleep(2)
+    return
+  }
+
+  const search = searchRides(token)
+  track(search, 'search')
+
+  /*
+   * 409 means this account still has a ride running, which is the app telling
+   * the passenger something true: you are already on a trip. A real passenger
+   * then sees that trip, not a search form — so the scenario does what the app
+   * does, reads it back and ends it, and searches again next iteration.
+   *
+   * Without this the run poisons its own account pool. Twenty per cent of
+   * bookings here are deliberately left uncancelled, and because the pool is
+   * only sixty accounts, each one that keeps a ride is out of the game for the
+   * rest of the run while still searching every few seconds. Twelve of the
+   * forty-six accounts in use ended up in that state and produced a 25% 4xx
+   * rate — a measurement of the fixture, not of KALO.
+   */
+  if (search.status === 409) {
+    const current = http.get(`${BASE}/api/v1/rides/current`, {
+      headers: authHeaders(token),
+      tags: { endpoint: 'current' },
+    })
+    track(current, 'current')
+
+    let rideId = null
+    try {
+      rideId = current.json('rideId') || current.json('id')
+    } catch {
+      /* ignore */
+    }
+
+    if (rideId) {
+      track(
+        http.post(`${BASE}/api/v1/rides/${rideId}/cancel`, null, {
+          headers: authHeaders(token),
+          tags: { endpoint: 'cancel' },
+        }),
+        'cancel',
+      )
+    }
+
+    sleep(Math.random() * 3 + 1)
+    return
+  }
+
+  /* Roughly a third of searches turn into a booking. */
+  if (search.status === 201 && Math.random() < 0.35) {
+    let requestId = null
+    let offerId = null
+    try {
+      requestId = search.json('rideRequestId')
+      const opts = search.json('taxiOptions') || []
+      if (opts.length) offerId = opts[0].offerId
+    } catch {
+      /* ignore */
+    }
+
+    if (requestId && offerId) {
+      const select = http.post(
+        `${BASE}/api/v1/rides/requests/${requestId}/select`,
+        JSON.stringify({ offerId }),
+        { headers: authHeaders(token), tags: { endpoint: 'select' } },
+      )
+      track(select, 'select')
+
+      /* Most of those are then cancelled, so accounts stay usable. */
+      if (select.status === 200 || select.status === 201) {
+        let rideId = null
+        try {
+          rideId = select.json('rideId')
+        } catch {
+          /* ignore */
+        }
+        if (rideId && Math.random() < 0.8) {
+          track(
+            http.post(`${BASE}/api/v1/rides/${rideId}/cancel`, null, {
+              headers: authHeaders(token),
+              tags: { endpoint: 'cancel' },
+            }),
+            'cancel',
+          )
+        }
+      }
+    }
+  }
+
+  /* Occasionally look at history, which is where ratings are read. */
+  if (Math.random() < 0.25) {
+    track(
+      http.get(`${BASE}/api/v1/rides/history?page=0&size=10`, {
+        headers: authHeaders(token),
+        tags: { endpoint: 'history' },
+      }),
+      'history',
+    )
+  }
+
+  /* Rarely, write to support. */
+  if (Math.random() < 0.05) {
+    track(
+      http.post(
+        `${BASE}/api/v1/support/requests`,
+        JSON.stringify({
+          category: 'RIDE_ISSUE',
+          subject: 'Load test ticket',
+          message: 'Generated by the mixed-traffic scenario.',
+        }),
+        { headers: authHeaders(token), tags: { endpoint: 'support' } },
+      ),
+      'support',
+    )
+  }
+
+  sleep(Math.random() * 5 + 2)
+}
+
+/**
+ * A dispatcher: watch the queue, look at the fleet. Reads, repeatedly, which is
+ * what a partner screen does while it polls.
+ */
+export function dispatcher() {
+  const partner = partners[__VU % partners.length]
+
+  const token = tokenFor(partner)
+  if (!token) {
+    sleep(3)
+    return
+  }
+
+  track(
+    http.get(`${BASE}/api/v1/partner/rides?page=0&size=10`, {
+      headers: authHeaders(token),
+      tags: { endpoint: 'partner_rides' },
+    }),
+    'partner_rides',
+  )
+
+  if (Math.random() < 0.5) {
+    track(
+      http.get(`${BASE}/api/v1/partner/drivers?page=0&size=20`, {
+        headers: authHeaders(token),
+        tags: { endpoint: 'partner_drivers' },
+      }),
+      'partner_drivers',
+    )
+  }
+
+  if (Math.random() < 0.2) {
+    track(
+      http.get(`${BASE}/api/v1/partner/notifications?page=0&size=10`, {
+        headers: authHeaders(token),
+        tags: { endpoint: 'partner_notifications' },
+      }),
+      'partner_notifications',
+    )
+  }
+
+  check(null, { 'dispatcher cycle completed': () => true })
+
+  /* The queue polls every ten seconds. */
+  sleep(Math.random() * 4 + 8)
+}

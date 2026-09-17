@@ -39,3 +39,7 @@ frontend/test-results/
 
 # Real production secrets. The .example file is the committed template.
 .env.prod
+
+# Load-test artefacts: raw k6 output and generated fixtures.
+load/results/
+load/.data/
