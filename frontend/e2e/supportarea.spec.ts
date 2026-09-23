@@ -33,16 +33,26 @@ const SUBJECT = () => `E2E ticket ${Date.now()}-${Math.floor(Math.random() * 100
  * assertion mean what they say.
  */
 async function gotoSettledSupport(page: Page, route: string, apiPath: string) {
+  /*
+   * Any answer, not only a good one.
+   *
+   * Requiring 200 here made this helper lie. The query client retries a 5xx
+   * twice with backoff and keeps the list on "Loading" throughout, so a failing
+   * API surfaced as "timed out waiting for a response" — which reads like a
+   * slow machine and hides that the request was answered, badly. Matching any
+   * response and asserting the status afterwards means the failure names
+   * itself.
+   */
   const listed = page.waitForResponse(
-    (response) =>
-      response.url().includes(apiPath) &&
-      response.request().method() === 'GET' &&
-      response.status() === 200,
+    (response) => response.url().includes(apiPath) && response.request().method() === 'GET',
     { timeout: 30_000 },
   )
 
   await page.goto(route)
-  await listed
+
+  const response = await listed
+  expect(response.status(), `GET ${apiPath} while loading ${route}`).toBe(200)
+
   await expect(page.locator('.animate-spin')).toHaveCount(0, { timeout: 30_000 })
 }
 
