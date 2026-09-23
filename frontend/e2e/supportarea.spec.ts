@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import {
   test,
   expect,
@@ -17,6 +18,37 @@ import {
 
 const SUBJECT = () => `E2E ticket ${Date.now()}-${Math.floor(Math.random() * 1000)}`
 
+/**
+ * Opens a support screen and waits for its list to have actually arrived.
+ *
+ * Every assertion in this file is about which tickets are on a page, and each
+ * one used to be made the instant navigation finished. That is a race in both
+ * directions: a ticket that should be there has not rendered yet, and a ticket
+ * that must NOT be there is absent for the most boring possible reason — which
+ * makes the isolation check pass without having looked at anything.
+ *
+ * Three different tests in this file failed this way on a loaded machine, each
+ * reporting something alarming about support when the page simply said
+ * "Loading". Waiting for the response and the spinner makes both kinds of
+ * assertion mean what they say.
+ */
+async function gotoSettledSupport(page: Page, route: string, apiPath: string) {
+  const listed = page.waitForResponse(
+    (response) =>
+      response.url().includes(apiPath) &&
+      response.request().method() === 'GET' &&
+      response.status() === 200,
+    { timeout: 30_000 },
+  )
+
+  await page.goto(route)
+  await listed
+  await expect(page.locator('.animate-spin')).toHaveCount(0, { timeout: 30_000 })
+}
+
+const MINE = '/api/v1/support/requests'
+const QUEUE = '/api/v1/admin/support/requests'
+
 test.describe('Help & Support', () => {
   test('a customer writes in and sees their own request', async ({
     page,
@@ -33,7 +65,7 @@ test.describe('Help & Support', () => {
 
     const subject = SUBJECT()
 
-    await page.goto('/support')
+    await gotoSettledSupport(page, '/support', MINE)
 
     // The FAQ is the first thing offered, before the form.
     await expect(page.getByRole('heading', { name: /common questions/i })).toBeVisible()
@@ -74,30 +106,13 @@ test.describe('Help & Support', () => {
     await seedSession(context, otherTokens)
 
     /*
-     * Wait for the list itself, not for what the list happens to say.
-     *
-     * "The other customer's subject is not on this page" is only worth
-     * asserting once the page has actually been told what is on it. While the
-     * query is in flight the list renders "Loading" and the subject is absent
-     * for the most boring possible reason, so the assertion passes without
-     * having looked — the same false pass that kept the mobile-card test green
-     * for three runs against a page rendering a table.
-     *
-     * The empty-state assertion below happens to catch that today, which is
-     * luck rather than design: loosen it and the leak check goes hollow. This
-     * makes the absence mean what it says.
+     * The wait is the point here, not a formality. "The other customer's
+     * subject is not on this page" is only worth asserting once the page has
+     * been told what is on it — otherwise the leak check passes without having
+     * looked, and the empty-state line below is all that stands between this
+     * test and a hollow one.
      */
-    const listed = page.waitForResponse(
-      (response) =>
-        response.url().includes('/api/v1/support/requests') &&
-        response.request().method() === 'GET' &&
-        response.status() === 200,
-      { timeout: 30_000 },
-    )
-
-    await page.goto('/support')
-    await listed
-    await expect(page.locator('.animate-spin')).toHaveCount(0, { timeout: 30_000 })
+    await gotoSettledSupport(page, '/support', MINE)
 
     await expect(page.getByText(/you have not written to us yet/i)).toBeVisible()
     await expect(page.getByText(subject)).toHaveCount(0)
@@ -126,7 +141,7 @@ test.describe('Help & Support', () => {
     const adminTokens = await apiLogin(page.request, SEEDED.admin.phone, SEEDED.admin.password)
     await seedSession(context, adminTokens)
 
-    await page.goto('/admin/support')
+    await gotoSettledSupport(page, '/admin/support', QUEUE)
 
     const card = page.getByRole('article', { name: subject })
     await expect(card).toBeVisible()
@@ -141,7 +156,7 @@ test.describe('Help & Support', () => {
     // And the customer sees the decision on their own request.
     await seedSession(context, customerTokens)
     const theirs = await context.newPage()
-    await theirs.goto('/support')
+    await gotoSettledSupport(theirs, '/support', MINE)
     await expect(theirs.getByRole('article', { name: subject })).toContainText(/resolved/i)
     await theirs.close()
   })
@@ -166,7 +181,12 @@ test.describe('Help & Support', () => {
     const tokens = await apiLogin(page.request, SEEDED.customer.phone, SEEDED.customer.password)
     await seedSession(context, tokens, 'sq')
 
-    await page.goto('/support')
+    /*
+     * Settled before asserting, because the last assertion here is another
+     * absence: a missing key renders as "support.faqTitle", and a page still
+     * loading has no such text for reasons that have nothing to do with i18n.
+     */
+    await gotoSettledSupport(page, '/support', MINE)
 
     await expect(page.getByRole('heading', { name: /ndihmë & mbështetje/i })).toBeVisible()
     await expect(page.getByRole('button', { name: /dërgo kërkesën/i })).toBeVisible()
