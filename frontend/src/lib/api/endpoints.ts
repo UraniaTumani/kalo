@@ -20,6 +20,8 @@ import type {
   OperationalSettingsResponse,
   Page,
   PartnerDecisionResponse,
+  PasswordResetQueueItem,
+  IssuedResetCode,
   PartnerProfileResponse,
   PartnerRegisterResponse,
   PartnerRideResponse,
@@ -85,6 +87,17 @@ export const authApi = {
    */
   logout: (refreshToken: string) =>
     api.post<void>('/api/v1/auth/logout', { refreshToken }, { skipAuthRedirect: true }),
+
+  /**
+   * Always 202 with an empty body, whatever the number turns out to be.
+   * The client cannot tell a registered number from an unknown one, and must
+   * not try to, because that is the point of the endpoint.
+   */
+  forgotPassword: (body: { phone: string }) =>
+    api.post<void>('/api/v1/auth/password/forgot', body, { skipAuthRedirect: true }),
+
+  resetPassword: (body: { phone: string; code: string; newPassword: string }) =>
+    api.post<void>('/api/v1/auth/password/reset', body, { skipAuthRedirect: true }),
 
   me: () => api.get<UserResponse>('/api/v1/me'),
 
@@ -333,6 +346,22 @@ export const partnerApi = {
 /* ----------------------------------------------------------------- admin */
 
 export const adminApi = {
+  /**
+   * Password recoveries awaiting an identity check.
+   *
+   * Each one is a telephone call for somebody to make: ring the number on the
+   * account, establish who is on the line, and only then issue a code.
+   */
+  pendingPasswordResets: (params?: PageParams) =>
+    api.get<Page<PasswordResetQueueItem>>('/api/v1/admin/password-resets', params),
+
+  /** Returns the code once. It cannot be fetched again. */
+  issuePasswordResetCode: (requestId: number) =>
+    api.post<IssuedResetCode>(`/api/v1/admin/password-resets/${requestId}/issue`),
+
+  rejectPasswordReset: (requestId: number) =>
+    api.post<void>(`/api/v1/admin/password-resets/${requestId}/reject`),
+
   partners: (
     params?: PageParams & { status?: string; companyStatus?: CompanyStatus },
   ) => api.get<Page<AdminPartnerResponse>>('/api/v1/admin/partners', params),

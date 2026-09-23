@@ -9,6 +9,8 @@ import { Spinner } from '@/components/ui/Spinner'
  * suspense flash on the first screen buys nothing.
  */
 import { LoginPage } from '@/features/auth/LoginPage'
+import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
 import { RegisterPage } from '@/features/auth/RegisterPage'
 
 /*
@@ -85,6 +87,11 @@ const AdminRidesPage = lazy(() =>
 const AdminSupportPage = lazy(() =>
   import('@/features/admin/AdminSupportPage').then((m) => ({ default: m.AdminSupportPage })),
 )
+const AdminPasswordResetsPage = lazy(() =>
+  import('@/features/admin/AdminPasswordResetsPage').then((m) => ({
+    default: m.AdminPasswordResetsPage,
+  })),
+)
 const SupportPage = lazy(() =>
   import('@/features/support/SupportPage').then((m) => ({ default: m.SupportPage })),
 )
@@ -121,6 +128,8 @@ export default function App() {
       <Route path="/" element={<GuestLandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* Available to every signed-in role. */}
       <Route element={<ProtectedRoute allow={['CUSTOMER', 'PARTNER', 'ADMIN']} />}>
@@ -167,6 +176,7 @@ export default function App() {
           <Route path="/admin/users" element={<AdminUsersPage />} />
           <Route path="/admin/rides" element={<AdminRidesPage />} />
           <Route path="/admin/support" element={<AdminSupportPage />} />
+          <Route path="/admin/password-resets" element={<AdminPasswordResetsPage />} />
         </Route>
       </Route>
 

@@ -55,7 +55,8 @@
     "verification": "Verifikimi",
     "companies": "Kompanitë",
     "users": "Përdoruesit",
-    "support": "Ndihmë & Mbështetje"
+    "support": "Ndihmë & Mbështetje",
+    "passwordResets": "Rivendosje fjalëkalimi"
   },
   "auth": {
     "signInTitle": "Hyr në llogari",
@@ -83,7 +84,28 @@
     "address": "Adresa",
     "passengerSubtitle": "Rezervoni taksi nga kompanitë e disponueshme pranë jush.",
     "partnerSubtitle": "Regjistroni kompaninë tuaj të taksive dhe dërgojeni për verifikim.",
-    "partnerDraftNotice": "Kompania juaj fillon si draft. Shtoni dokumentet, dërgojini për verifikim dhe një administrator i shqyrton para se të merrni udhëtime."
+    "partnerDraftNotice": "Kompania juaj fillon si draft. Shtoni dokumentet, dërgojini për verifikim dhe një administrator i shqyrton para se të merrni udhëtime.",
+    "forgotLink": "Keni harruar fjalëkalimin?",
+    "forgotTitle": "Keni harruar fjalëkalimin?",
+    "forgotSubtitle": "Shkruani numrin e telefonit të llogarisë suaj dhe do t’ju kontaktojmë.",
+    "forgotPhoneHint": "I njëjti numër me të cilin hyni në llogari",
+    "forgotSubmit": "Vazhdo",
+    "forgotSubmitted": "Kërkesa juaj u regjistrua.",
+    "forgotSubmittedDetail": "Nëse ky numër i përket një llogarie, një administrator do t’ju marrë në telefon për të verifikuar identitetin tuaj dhe do t’ju japë një kod njëpërdorimsh. Kodi vlen për 15 minuta.",
+    "haveCode": "Kam një kod",
+    "backToSignIn": "Kthehu te hyrja",
+    "resetTitle": "Vendos një fjalëkalim të ri",
+    "resetSubtitle": "Shkruani kodin që ju dha administratori në telefon.",
+    "resetCode": "Kodi",
+    "resetCodeHint": "Tetë shkronja e numra, nga telefonata",
+    "newPassword": "Fjalëkalimi i ri",
+    "confirmPassword": "Konfirmo fjalëkalimin",
+    "passwordHint": "Të paktën 8 karaktere",
+    "passwordTooShort": "Fjalëkalimi duhet të ketë të paktën 8 karaktere",
+    "passwordMismatch": "Fjalëkalimet nuk përputhen",
+    "resetSubmit": "Rivendos fjalëkalimin",
+    "resetDoneTitle": "Fjalëkalimi u ndryshua",
+    "resetDoneDetail": "Të gjitha pajisjet e tjera u shkëputën nga llogaria. Hyni me fjalëkalimin e ri."
   },
   "validation": {
     "required": "Kjo fushë është e detyrueshme",
@@ -442,6 +464,27 @@
       "OPEN": "Rihap",
       "IN_PROGRESS": "Fillo punën",
       "RESOLVED": "Shëno si të zgjidhur"
+    },
+    "passwordResets": {
+      "title": "Rivendosje fjalëkalimi",
+      "subtitle": "Kërkesa që presin verifikimin e identitetit.",
+      "howTitle": "Si verifikohet identiteti",
+      "howBody": "KALO nuk dërgon SMS dhe numri i telefonit nuk është i verifikuar, prandaj verifikimin e bëni ju: merrni në telefon numrin e llogarisë, pyesni diçka që vetëm zotëruesi i llogarisë e di, dhe vetëm pastaj lëshoni kodin. Kodi shfaqet vetëm një herë.",
+      "pending": "Në pritje",
+      "emptyTitle": "Asnjë kërkesë në pritje",
+      "emptyBody": "Kërkesat për rivendosje fjalëkalimi shfaqen këtu.",
+      "person": "Personi",
+      "role": "Roli",
+      "requested": "Kërkuar më",
+      "actions": "Veprime",
+      "issue": "Lësho kodin",
+      "reject": "Refuzo",
+      "codeTitle": "Lexojani këtë kod në telefon",
+      "codeBody": "Ky kod shfaqet vetëm tani dhe nuk mund të merret sërish. Nëse humbet, lëshoni një kod të ri.",
+      "codeExpires": "Skadon më {{time}}",
+      "codeDone": "U krye",
+      "rejectTitle": "Refuzo kërkesën?",
+      "rejectBody": "Kërkesa e {{name}} do të mbyllet pa u lëshuar asnjë kod."
     }
   },
   "profile": {

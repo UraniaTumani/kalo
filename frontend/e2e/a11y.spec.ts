@@ -28,7 +28,14 @@ const ROUTES = {
     '/partner/settings',
     '/partner/availability',
   ],
-  admin: ['/admin', '/admin/companies', '/admin/users', '/admin/rides', '/admin/support'],
+  admin: [
+    '/admin',
+    '/admin/companies',
+    '/admin/users',
+    '/admin/rides',
+    '/admin/support',
+    '/admin/password-resets',
+  ],
 } as const
 
 async function scan(page: Page, route: string) {
@@ -90,7 +97,7 @@ test.describe('axe · signed out', () => {
     void app
     void guards
 
-    for (const route of ['/login', '/register', '/']) {
+    for (const route of ['/login', '/register', '/forgot-password', '/reset-password', '/']) {
       await page.goto(route)
       await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 30_000 })
 

@@ -52,3 +52,5 @@ databaseChangeLog:
       file: db/changelog/changes/021-create-support-requests.yaml
   - include:
       file: db/changelog/changes/022-create-company-notifications.yaml
+  - include:
+      file: db/changelog/changes/023-create-password-reset-requests.yaml

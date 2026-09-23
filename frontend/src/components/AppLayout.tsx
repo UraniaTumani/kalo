@@ -8,6 +8,7 @@ import {
   FileText,
   Gauge,
   History,
+  KeyRound,
   LifeBuoy,
   LogOut,
   MapPin,
@@ -56,6 +57,7 @@ const adminNav: NavItem[] = [
   { to: '/admin/users', labelKey: 'nav.users', icon: Users },
   { to: '/admin/rides', labelKey: 'nav.rides', icon: ClipboardList },
   { to: '/admin/support', labelKey: 'nav.support', icon: LifeBuoy },
+  { to: '/admin/password-resets', labelKey: 'nav.passwordResets', icon: KeyRound },
 ]
 
 const navByRole = {

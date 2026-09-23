@@ -76,6 +76,15 @@ export function LoginPage() {
           <Input {...register('password')} type="password" autoComplete="current-password" />
         </Field>
 
+        <div className="-mt-1 text-right">
+          <Link
+            to="/forgot-password"
+            className="text-xs font-medium text-brand-700 hover:underline"
+          >
+            {t('auth.forgotLink')}
+          </Link>
+        </div>
+
         <Button type="submit" loading={isSubmitting} className="w-full">
           {t('common.signIn')}
         </Button>

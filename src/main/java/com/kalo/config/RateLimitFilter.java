@@ -66,6 +66,25 @@ public class RateLimitFilter extends OncePerRequestFilter {
      */
     private static final Limit GEOCODING = new Limit(60, 60);
 
+    /**
+     * Tighter than registration. Opening a recovery costs an administrator a
+     * telephone call, so the abuse worth stopping is not volume against the
+     * server but a queue filled faster than a person can work it.
+     */
+    private static final Limit FORGOT_PASSWORD = new Limit(3, 900);
+
+    /**
+     * The code is eight characters — about forty bits — because somebody has
+     * to read it down a telephone. The service burns a request after five
+     * wrong guesses, which is the real defence; this stops a caller working
+     * through fresh requests quickly enough to make guessing worth trying.
+     */
+    private static final Limit RESET_PASSWORD = new Limit(10, 600);
+
+    /*
+     * Map.of caps at ten pairs and this is nine. A tenth path fits; an
+     * eleventh needs Map.ofEntries.
+     */
     private static final Map<String, Limit> LIMITED_PATHS = Map.of(
             "/api/v1/auth/login", LOGIN,
             "/api/v1/auth/register/customer", REGISTER,
@@ -73,7 +92,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
             "/api/v1/public/taxi-availability", PUBLIC,
             "/api/v1/auth/refresh", REFRESH,
             "/api/v1/geocoding/search", GEOCODING,
-            "/api/v1/geocoding/reverse", GEOCODING
+            "/api/v1/geocoding/reverse", GEOCODING,
+            "/api/v1/auth/password/forgot", FORGOT_PASSWORD,
+            "/api/v1/auth/password/reset", RESET_PASSWORD
     );
 
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
