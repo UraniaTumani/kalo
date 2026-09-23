@@ -73,7 +73,31 @@ test.describe('Help & Support', () => {
     const otherTokens = await apiLogin(page.request, other.phone, other.password)
     await seedSession(context, otherTokens)
 
+    /*
+     * Wait for the list itself, not for what the list happens to say.
+     *
+     * "The other customer's subject is not on this page" is only worth
+     * asserting once the page has actually been told what is on it. While the
+     * query is in flight the list renders "Loading" and the subject is absent
+     * for the most boring possible reason, so the assertion passes without
+     * having looked — the same false pass that kept the mobile-card test green
+     * for three runs against a page rendering a table.
+     *
+     * The empty-state assertion below happens to catch that today, which is
+     * luck rather than design: loosen it and the leak check goes hollow. This
+     * makes the absence mean what it says.
+     */
+    const listed = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/support/requests') &&
+        response.request().method() === 'GET' &&
+        response.status() === 200,
+      { timeout: 30_000 },
+    )
+
     await page.goto('/support')
+    await listed
+    await expect(page.locator('.animate-spin')).toHaveCount(0, { timeout: 30_000 })
 
     await expect(page.getByText(/you have not written to us yet/i)).toBeVisible()
     await expect(page.getByText(subject)).toHaveCount(0)
