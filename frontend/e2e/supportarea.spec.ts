@@ -121,6 +121,8 @@ test.describe('Help & Support', () => {
   test('an admin sees the request and can resolve it', async ({
     page,
     context,
+    browser,
+    baseURL,
     app,
     guards,
   }) => {
@@ -153,12 +155,33 @@ test.describe('Help & Support', () => {
 
     await expect(card).toContainText(/resolved/i)
 
-    // And the customer sees the decision on their own request.
-    await seedSession(context, customerTokens)
-    const theirs = await context.newPage()
-    await gotoSettledSupport(theirs, '/support', MINE)
-    await expect(theirs.getByRole('article', { name: subject })).toContainText(/resolved/i)
-    await theirs.close()
+    /*
+     * And the customer sees the decision on their own request — in a context
+     * of their own, not a second tab wearing the admin's session.
+     *
+     * seedSession works by addInitScript, and init scripts accumulate: seeding
+     * the admin and then the customer on one context leaves both scripts
+     * running on every page it opens afterwards, and the tab's identity comes
+     * down to which one wrote localStorage last. That is a coin toss dressed
+     * as a test. When it lands wrong the page is an admin on a customer-only
+     * route, ProtectedRoute redirects, the support list is never fetched, and
+     * the wait for it times out sixty seconds later — which is how this failed
+     * twenty-two minutes into a suite while passing alone in three seconds.
+     *
+     * A separate context has one session in it and cannot be ambiguous.
+     */
+    /* baseURL is not inherited by a hand-made context, so it is passed on. */
+    const theirContext = await browser.newContext({ baseURL })
+
+    try {
+      await seedSession(theirContext, customerTokens)
+
+      const theirs = await theirContext.newPage()
+      await gotoSettledSupport(theirs, '/support', MINE)
+      await expect(theirs.getByRole('article', { name: subject })).toContainText(/resolved/i)
+    } finally {
+      await theirContext.close()
+    }
   })
 
   test('a customer cannot reach the admin queue', async ({ page, context, app, guards }) => {
