@@ -282,8 +282,22 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         );
     }
 
+    /**
+     * noRollbackFor is load-bearing, not tidiness.
+     *
+     * Every failure below leaves by throwing, and a throw inside a transaction
+     * rolls it back — which silently undid the one write that matters on the
+     * failure path, the attempt counter. The cap read as if it worked and
+     * enforced nothing: five wrong codes cost an attacker nothing, and a
+     * forty-bit code with unlimited guesses is not a secret. Found by
+     * PasswordResetIntegrationTest.wrongCodeBurnsAfterFiveAttempts, which
+     * failed because the real code still worked afterwards.
+     *
+     * The refusals write nothing else, so keeping the transaction is safe: the
+     * only state they produce is the record that a guess was made.
+     */
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = InvalidOperationException.class)
     public void resetPassword(ResetPasswordRequest request) {
 
         String phone = PhoneNumberNormalizer.normalize(request.phone());
