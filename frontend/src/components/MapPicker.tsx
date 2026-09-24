@@ -64,14 +64,30 @@ function FitBounds({ markers }: { markers: MapMarker[] }) {
   useEffect(() => {
     if (markers.length === 0) return
 
+    /*
+     * Not animated, deliberately.
+     *
+     * Leaflet animates both of these by default, and an animation still
+     * running when the map goes away reads a position off an element that has
+     * been removed: "Cannot read properties of undefined (reading
+     * '_leaflet_pos')", uncaught, in the browser. Opening the cancel dialog
+     * over a ride map is enough to trigger it.
+     *
+     * The animation was never worth anything here either. This is the map
+     * framing its own markers as the data arrives, not a person panning — the
+     * markers should simply be in view, and a tween between two states the
+     * user did not ask for is just a chance to be interrupted.
+     */
     if (markers.length === 1) {
-      map.setView([markers[0].position.lat, markers[0].position.lng], 14)
+      map.setView([markers[0].position.lat, markers[0].position.lng], 14, {
+        animate: false,
+      })
       return
     }
 
     map.fitBounds(
       L.latLngBounds(markers.map((marker) => [marker.position.lat, marker.position.lng])),
-      { padding: [40, 40], maxZoom: 15 },
+      { padding: [40, 40], maxZoom: 15, animate: false },
     )
   }, [map, markers])
 
