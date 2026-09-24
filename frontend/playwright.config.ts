@@ -119,7 +119,23 @@ export default defineConfig({
   webServer: process.env.E2E_NO_SERVER
     ? undefined
     : {
-        command: 'npm run dev -- --port 5174 --strictPort',
+        /*
+         * The built app, not the dev server.
+         *
+         * `vite dev` compiles a module the first time it is asked for, and
+         * every route in this app is lazy — so each first visit to a screen
+         * waited on a transform. When one stalled, the dynamic import never
+         * resolved, the app stayed on its Suspense fallback, and the screen
+         * never called the API at all. Six runs failed that way, on a
+         * different test each time, and each looked like a hung request until
+         * sampling showed the backend idle at 0.3% CPU answering health probes
+         * in 8ms the whole time: nothing had asked it for anything.
+         *
+         * Built chunks are static files with nothing left to compile, and they
+         * are what actually ships — which is what this suite is meant to test.
+         * The build costs about ten seconds once, against minutes of stalls.
+         */
+        command: 'npm run build && npm run preview -- --port 5174 --strictPort',
         url: FRONTEND,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

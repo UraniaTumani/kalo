@@ -2,6 +2,7 @@ import {
   test,
   expect,
   SEEDED,
+  gotoSettled,
   apiLogin,
   seedSession,
   expectSignedIn,
@@ -28,7 +29,7 @@ test.describe('Admin', () => {
   test('A15 · the rides list renders', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/admin/rides')
+    await gotoSettled(page, '/admin/rides')
     await expectSignedIn(page)
     await expect(page.getByText(/rides/i).first()).toBeVisible()
   })
@@ -36,7 +37,7 @@ test.describe('Admin', () => {
   test('A9 · users can be filtered by role', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/admin/users')
+    await gotoSettled(page, '/admin/users')
 
     // Scoped to the table: the signed-in admin's own phone is in the sidebar too.
     const table = page.locator('table')
@@ -57,7 +58,7 @@ test.describe('Admin', () => {
   test('A7 · suspending a company asks first and names it', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/admin/companies')
+    await gotoSettled(page, '/admin/companies')
     await expect(page.getByText(/ABC Taxi/).first()).toBeVisible()
 
     await page.getByRole('button', { name: /^suspend$/i }).first().click()
@@ -81,7 +82,7 @@ test.describe('Admin', () => {
 
     const victim = await registerCustomer(page.request)
 
-    await page.goto('/admin/users')
+    await gotoSettled(page, '/admin/users')
 
     const row = page.locator('tr', { hasText: victim.phone })
     await expect(row).toBeVisible()
@@ -120,7 +121,7 @@ test.describe('Admin', () => {
   test('A14 · an admin cannot suspend themselves', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/admin/users')
+    await gotoSettled(page, '/admin/users')
 
     /*
      * Filtered rather than hunted for: every run adds throwaway customers, and

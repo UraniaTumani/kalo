@@ -137,7 +137,6 @@ test.describe('Session recovery', () => {
     await loginThroughUi(page, SEEDED.customer.phone, SEEDED.customer.password)
     await expectSignedIn(page)
 
-    const before = await readStorage(page, STORAGE.token)
     const beforeRefresh = await readStorage(page, STORAGE.refresh)
 
     const refreshCalls: string[] = []
@@ -171,7 +170,25 @@ test.describe('Session recovery', () => {
 
     const replaced = await readStorage(page, STORAGE.token)
     expect(replaced, 'a new access token was stored').toBeTruthy()
-    expect(replaced).not.toBe(before)
+
+    /*
+     * The expired one is gone — not "a different string from before".
+     *
+     * A JWT's iat and exp are counted in whole seconds, so two tokens minted
+     * for the same subject in the same second are byte-identical. Once the
+     * suite ran against the built app this whole test took two seconds, the
+     * sign-in and the refresh landed in the same one, and an assertion that
+     * the token must differ failed against completely correct behaviour. It
+     * had been passing only because the dev server was slow enough to push
+     * them into different seconds.
+     *
+     * Two identical valid tokens is not a bug and never was. What matters is
+     * that the dead credential was replaced by a live one, and that the
+     * refresh token rotated — and that one is 256 bits of randomness, so it
+     * genuinely cannot repeat.
+     */
+    expect(replaced, 'the expired token was replaced').not.toBe('expired.access.token')
+    expect(replaced, 'a real JWT, not a placeholder').toMatch(/^eyJ/)
 
     // Rotation: the refresh token itself is replaced too.
     const rotated = await readStorage(page, STORAGE.refresh)

@@ -1,4 +1,12 @@
-import { test, expect, SEEDED, apiLogin, seedSession, expectSignedIn } from './support/fixtures'
+import {
+  test,
+  expect,
+  SEEDED,
+  apiLogin,
+  gotoSettled,
+  seedSession,
+  expectSignedIn,
+} from './support/fixtures'
 
 /**
  * What axe cannot see.
@@ -23,7 +31,7 @@ test.describe('Keyboard operation', () => {
   test('a confirmation dialog keeps the keyboard inside it', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/admin/companies')
+    await gotoSettled(page, '/admin/companies')
     await expectSignedIn(page)
 
     await page.getByRole('button', { name: /^suspend$/i }).first().click()
@@ -73,7 +81,7 @@ test.describe('Keyboard operation', () => {
   test('closing a dialog returns focus to what opened it', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/admin/companies')
+    await gotoSettled(page, '/admin/companies')
     await expectSignedIn(page)
 
     const trigger = page.getByRole('button', { name: /^suspend$/i }).first()
@@ -89,7 +97,7 @@ test.describe('Keyboard operation', () => {
   test('every interactive control on a page is reachable by Tab', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/admin/users')
+    await gotoSettled(page, '/admin/users')
     await expectSignedIn(page)
     await expect(page.locator('.animate-spin')).toHaveCount(0, { timeout: 30_000 })
 
@@ -144,7 +152,7 @@ test.describe('Ride memory', () => {
       }
     })
 
-    await page.goto('/ride/current')
+    await gotoSettled(page, '/ride/current')
     await expectSignedIn(page)
 
     /* The empty state, not somebody's ride from two days ago. */

@@ -3,6 +3,7 @@ import {
   expect,
   SEEDED,
   TIRANA,
+  gotoSettled,
   apiLogin,
   seedSession,
   registerCustomer,
@@ -115,7 +116,7 @@ test.describe('Rating a ride', () => {
     const { customerTokens } = await completedRide(page.request)
     await seedSession(context, customerTokens)
 
-    await page.goto('/ride/history')
+    await gotoSettled(page, '/ride/history')
     await expectSignedIn(page)
 
     const rate = page.getByRole('button', { name: /^rate$/i }).first()
