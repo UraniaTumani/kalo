@@ -1,6 +1,9 @@
 package com.kalo.admin.service;
 
 import com.kalo.admin.dto.AdminUserResponse;
+import com.kalo.admin.dto.CreateAdminRequest;
+import com.kalo.common.exception.ConflictException;
+import com.kalo.common.util.PhoneNumberNormalizer;
 import com.kalo.common.exception.InvalidOperationException;
 import com.kalo.common.exception.ResourceNotFoundException;
 import com.kalo.user.entity.User;
@@ -13,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +28,7 @@ public class AdminUserServiceImpl
 
     private final UserRepository userRepository;
     private final RefreshTokenService refreshTokenService;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional(readOnly = true)
@@ -149,6 +154,74 @@ public class AdminUserServiceImpl
                 .getContext()
                 .getAuthentication()
                 .getName();
+    }
+
+    /**
+     * Creates another administrator.
+     *
+     * A fresh account rather than a promotion. Turning an existing customer
+     * into an administrator would leave their rides, ratings and any company
+     * relationship hanging off an account that can now approve companies and
+     * suspend people — two roles sharing one history, which is awkward to
+     * reason about and worse to audit. Somebody who needs both gets two
+     * accounts.
+     */
+    @Override
+    @Transactional
+    public AdminUserResponse createAdmin(
+            CreateAdminRequest request
+    ) {
+
+        String phone = PhoneNumberNormalizer.normalize(request.phone());
+
+        String email = request.email() == null
+                ? null
+                : request.email().trim().toLowerCase();
+
+        if (userRepository.existsByPhone(phone)) {
+            throw new ConflictException(
+                    "Phone number is already registered"
+            );
+        }
+
+        if (email != null
+                && !email.isBlank()
+                && userRepository.existsByEmail(email)) {
+
+            throw new ConflictException(
+                    "Email is already registered"
+            );
+        }
+
+        User admin = new User();
+
+        admin.setFirstName(request.firstName().trim());
+        admin.setLastName(request.lastName().trim());
+        admin.setPhone(phone);
+        admin.setEmail(
+                email == null || email.isBlank()
+                        ? null
+                        : email
+        );
+        admin.setPasswordHash(passwordEncoder.encode(request.password()));
+        admin.setRole(UserRole.ADMIN);
+        admin.setStatus(UserStatus.ACTIVE);
+        admin.setPhoneVerified(false);
+
+        User saved = userRepository.save(admin);
+
+        /*
+         * Who created whom, and never what the password was. An administrator
+         * appearing is the single most consequential thing that happens in
+         * this application, so the trail says who is answerable for it.
+         */
+        log.warn(
+                "Administrator created: userId={} byAdmin={}",
+                saved.getId(),
+                currentUserPhone()
+        );
+
+        return mapToResponse(saved);
     }
 
     private AdminUserResponse mapToResponse(
