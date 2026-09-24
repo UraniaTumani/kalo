@@ -81,20 +81,33 @@ public class RateLimitFilter extends OncePerRequestFilter {
      */
     private static final Limit RESET_PASSWORD = new Limit(10, 600);
 
-    /*
-     * Map.of caps at ten pairs and this is nine. A tenth path fits; an
-     * eleventh needs Map.ofEntries.
+    /**
+     * Signed in, and still limited.
+     *
+     * The only rule here that is not about anonymous callers. Changing a
+     * password requires the current one, which makes this the one authenticated
+     * endpoint that will tell somebody whether a guess was right — and the
+     * caller may be holding a token lifted from a shared machine rather than a
+     * password they know. Generous enough to mistype a few times, tight enough
+     * that guessing is not a strategy.
      */
-    private static final Map<String, Limit> LIMITED_PATHS = Map.of(
-            "/api/v1/auth/login", LOGIN,
-            "/api/v1/auth/register/customer", REGISTER,
-            "/api/v1/auth/register/partner", REGISTER,
-            "/api/v1/public/taxi-availability", PUBLIC,
-            "/api/v1/auth/refresh", REFRESH,
-            "/api/v1/geocoding/search", GEOCODING,
-            "/api/v1/geocoding/reverse", GEOCODING,
-            "/api/v1/auth/password/forgot", FORGOT_PASSWORD,
-            "/api/v1/auth/password/reset", RESET_PASSWORD
+    private static final Limit CHANGE_PASSWORD = new Limit(5, 300);
+
+    /*
+     * Map.ofEntries rather than Map.of, which caps at ten pairs — this was
+     * sitting on nine, so the next person to add a path would have hit it.
+     */
+    private static final Map<String, Limit> LIMITED_PATHS = Map.ofEntries(
+            Map.entry("/api/v1/auth/login", LOGIN),
+            Map.entry("/api/v1/auth/register/customer", REGISTER),
+            Map.entry("/api/v1/auth/register/partner", REGISTER),
+            Map.entry("/api/v1/public/taxi-availability", PUBLIC),
+            Map.entry("/api/v1/auth/refresh", REFRESH),
+            Map.entry("/api/v1/geocoding/search", GEOCODING),
+            Map.entry("/api/v1/geocoding/reverse", GEOCODING),
+            Map.entry("/api/v1/auth/password/forgot", FORGOT_PASSWORD),
+            Map.entry("/api/v1/auth/password/reset", RESET_PASSWORD),
+            Map.entry("/api/v1/me/password", CHANGE_PASSWORD)
     );
 
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();

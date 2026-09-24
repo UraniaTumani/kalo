@@ -101,6 +101,14 @@ export const authApi = {
 
   me: () => api.get<UserResponse>('/api/v1/me'),
 
+  /**
+   * Changing a password drops every session, including this one, so the
+   * response carries a fresh pair. The caller must store both: anything
+   * still holding the old tokens is now signed out, which is the point.
+   */
+  changePassword: (body: { currentPassword: string; newPassword: string }) =>
+    api.post<LoginResponse>('/api/v1/me/password', body),
+
   updateMe: (body: { firstName: string; lastName: string; email?: string | null }) =>
     api.put<UserResponse>('/api/v1/me', body),
 }

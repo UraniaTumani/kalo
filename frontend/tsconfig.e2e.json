@@ -1,0 +1,32 @@
+{
+  /*
+   * The browser suite was never typechecked.
+   *
+   * tsconfig.app.json includes only `src`, so nothing looked at `e2e` at all —
+   * a missing import or a misspelled helper in a spec was caught by running
+   * the suite, and only if that line happened to execute. One was added and
+   * passed a clean `tsc --noEmit` while being plainly broken.
+   *
+   * Separate from the app because the two have different worlds: specs run in
+   * Node against Playwright, not in a browser against React.
+   */
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.e2e.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "esnext",
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["e2e"]
+}

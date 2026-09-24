@@ -500,7 +500,18 @@
     "userId": "ID e përdoruesit",
     "phoneReadOnly": "Telefoni është emri juaj i përdoruesit dhe nuk mund të ndryshohet këtu.",
     "verificationNotice": "Verifikimi i telefonit ende nuk është pjesë e MVP-së, prandaj mbetet i paverifikuar.",
-    "saveChanges": "Ruaj ndryshimet"
+    "saveChanges": "Ruaj ndryshimet",
+    "password": "Fjalëkalimi",
+    "passwordHint": "Ndryshojeni kur të doni.",
+    "currentPassword": "Fjalëkalimi aktual",
+    "newPassword": "Fjalëkalimi i ri",
+    "confirmPassword": "Konfirmo fjalëkalimin e ri",
+    "passwordRule": "Të paktën 8 karaktere",
+    "passwordTooShort": "Fjalëkalimi duhet të ketë të paktën 8 karaktere",
+    "passwordMismatch": "Fjalëkalimet nuk përputhen",
+    "changePassword": "Ndrysho fjalëkalimin",
+    "passwordChanged": "Fjalëkalimi u ndryshua.",
+    "passwordSignsOutOthers": "Të gjitha pajisjet e tjera do të shkëputen nga llogaria."
   },
   "guest": {
     "browsing": "Po shikoni si vizitor",
