@@ -331,7 +331,16 @@ export async function gotoSettled(page: Page, route: string) {
       )
     : null
 
-  await page.goto(route)
+  /*
+   * domcontentloaded, not load.
+   *
+   * `load` waits for every subresource — fonts, lazy chunks, map tiles — none
+   * of which is the thing a test is about to assert on, and any of which can
+   * hang. One partner run spent its whole three-minute budget inside goto
+   * waiting for load on /support. What follows is a better readiness signal
+   * anyway: the screen's own request, answered, and the spinners gone.
+   */
+  await page.goto(route, { waitUntil: 'domcontentloaded' })
 
   if (entry && listed) {
     const response = await listed

@@ -115,7 +115,7 @@ function suite(
       await seedSession(context, tokens)
 
       for (const route of routes) {
-        await page.goto(route)
+        await gotoSettled(page, route)
         await ready(page)
         await expectNoHorizontalOverflow(page, route)
       }
@@ -135,7 +135,7 @@ function suite(
       await seedSession(context, tokens)
 
       for (const route of routes) {
-        await page.goto(route)
+        await gotoSettled(page, route)
         await ready(page)
         await expectNoHorizontalOverflow(page, route)
       }
@@ -270,7 +270,7 @@ test.describe('Phone layout behaviour', () => {
       '/admin/rides',
       '/admin/password-resets',
     ]) {
-      await page.goto(route)
+      await gotoSettled(page, route)
       await ready(page)
 
       await expect(page.locator('table'), `${route} should render cards on a phone`).toHaveCount(0)
