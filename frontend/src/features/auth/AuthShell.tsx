@@ -1,3 +1,4 @@
+import { Logo } from '@/components/Logo'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
@@ -19,11 +20,8 @@ export function AuthShell({
         <div className="mb-4 flex justify-end">
           <LanguageSwitcher />
         </div>
-        <Link to="/" className="mb-6 flex items-center justify-center gap-2">
-          <span className="grid size-9 place-items-center rounded-xl bg-brand-600 text-base font-bold text-white">
-            K
-          </span>
-          <span className="text-lg font-semibold text-ink-900">KALO</span>
+        <Link to="/" className="mb-6 flex items-center justify-center" aria-label="MR TAXI">
+          <Logo className="h-9" />
         </Link>
 
         <div className="rounded-xl border border-ink-200/70 bg-white p-6 shadow-sm shadow-ink-900/5">

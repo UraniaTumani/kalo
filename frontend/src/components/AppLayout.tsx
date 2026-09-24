@@ -1,3 +1,4 @@
+import { Logo } from '@/components/Logo'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -94,16 +95,10 @@ export function AppLayout() {
       */}
       <aside className="sticky top-0 z-30 shrink-0 border-b border-ink-200/70 bg-white/95 backdrop-blur lg:static lg:flex lg:w-60 lg:flex-col lg:border-b-0 lg:border-r lg:bg-white">
         <div className="flex items-center gap-2.5 px-5 py-4">
-          <span
-            aria-hidden
-            className="grid size-9 place-items-center rounded-xl bg-brand-400 text-sm font-black text-ink-950"
-          >
-            K
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-bold tracking-tight text-ink-900">KALO</p>
-            <p className="truncate text-[11px] font-medium text-ink-500">{t(`roles.${role}`)}</p>
-          </div>
+          <Logo className="h-6" />
+          <p className="min-w-0 truncate text-[11px] font-medium text-ink-500">
+            {t(`roles.${role}`)}
+          </p>
         </div>
 
         <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:mt-1 lg:flex-col lg:overflow-visible lg:pb-0">

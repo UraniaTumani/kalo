@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "KALO",
+    "appName": "MR TAXI",
     "save": "Save",
     "cancel": "Cancel",
     "close": "Close",
@@ -329,7 +329,7 @@
     "acceptingBookings": "Accepting bookings",
     "acceptingBookingsHint": "Turn off to disappear from passenger search",
     "paymentMethods": "Payment methods",
-    "paymentMethodsHint": "At least one is required. Passengers pay the driver directly; KALO does not process payments.",
+    "paymentMethodsHint": "At least one is required. Passengers pay the driver directly; MR TAXI does not process payments.",
     "requiredBeforeSubmit": "Required before you can submit for verification",
     "licenceExpiryHint": "This is the company's taxi licence, separate from the expiry on the uploaded document.",
     "registrationExpiry": "Registration expiry",
@@ -469,7 +469,7 @@
       "title": "Password resets",
       "subtitle": "Requests waiting for an identity check.",
       "howTitle": "How identity is verified",
-      "howBody": "KALO does not send SMS and the phone number is not verified, so you are the verification: ring the number on the account, ask something only the account holder would know, and only then issue the code. The code is shown once.",
+      "howBody": "MR TAXI does not send SMS and the phone number is not verified, so you are the verification: ring the number on the account, ask something only the account holder would know, and only then issue the code. The code is shown once.",
       "pending": "Pending",
       "emptyTitle": "No pending requests",
       "emptyBody": "Password reset requests appear here.",
@@ -516,7 +516,7 @@
   "guest": {
     "browsing": "Browsing as a guest",
     "headline": "See which taxi companies are near you",
-    "intro": "KALO is a marketplace, not a taxi operator. You pick the <strong>company</strong>, they assign one of their drivers, and you pay the driver directly — the final price is the real taximeter amount.",
+    "intro": "MR TAXI is a marketplace, not a taxi operator. You pick the <strong>company</strong>, they assign one of their drivers, and you pay the driver directly — the final price is the real taximeter amount.",
     "pickLocation": "Pick a location",
     "pickLocationHint": "Click anywhere on the map to check that spot.",
     "availableNow": "Available now",
@@ -527,7 +527,7 @@
     "resultsHint": "Results show each company's nearest available driver.",
     "createToBook": "Create an account to book",
     "step1": "Search",
-    "step1Body": "Tell KALO where you are and where you are going.",
+    "step1Body": "Tell MR TAXI where you are and where you are going.",
     "step2": "Choose a company",
     "step2Body": "You see one offer per company, with its rating and distance.",
     "step3": "They assign a driver",
@@ -672,7 +672,7 @@
     "sent": "Your request has been sent. You can follow it below.",
     "responseNote": "We reply during business hours. Never send passwords or card numbers here.",
     "myRequestsTitle": "Your requests",
-    "myRequestsSubtitle": "Only you and KALO can see these.",
+    "myRequestsSubtitle": "Only you and MR TAXI can see these.",
     "noRequests": "You have not written to us yet",
     "noRequestsHint": "Anything you send will appear here with its status.",
     "loadFailedHint": "Your requests could not be fetched. Try again in a moment.",
@@ -687,7 +687,7 @@
     "faq": {
       "howBooking": {
         "q": "How does booking a taxi work?",
-        "a": "You enter where you are and where you are going, and KALO asks the taxi companies nearby. Each one that can take you sends an offer with its name, rating and estimated price. You choose the company, and the company assigns one of its own drivers."
+        "a": "You enter where you are and where you are going, and MR TAXI asks the taxi companies nearby. Each one that can take you sends an offer with its name, rating and estimated price. You choose the company, and the company assigns one of its own drivers."
       },
       "finalPrice": {
         "q": "Why is the final price different from the estimate?",
@@ -695,7 +695,7 @@
       },
       "payment": {
         "q": "How do I pay?",
-        "a": "You pay the driver directly, in cash or by card where the company accepts it. KALO does not take your payment and never asks for card details."
+        "a": "You pay the driver directly, in cash or by card where the company accepts it. MR TAXI does not take your payment and never asks for card details."
       },
       "cancelRide": {
         "q": "Can I cancel a ride?",
