@@ -245,6 +245,17 @@ test.describe('Phone layout behaviour', () => {
     void app
     void guards
 
+    /*
+     * Four routes, each waited on until its rows have settled, against a
+     * default budget sized for one. gotoSettledList spends up to thirty
+     * seconds apiece on the shell, the response and the spinner, so on a busy
+     * machine the loop can pass sixty before it has finished looking — and the
+     * run then reports a timeout rather than anything about tables or cards.
+     * That is what happened in an eighteen-minute suite sharing eight cores
+     * with Postgres and the backend; alone the same test takes five seconds.
+     */
+    test.slow()
+
     const tokens = await apiLogin(page.request, SEEDED.partner.phone, SEEDED.partner.password)
     await seedSession(context, tokens)
 
@@ -275,10 +286,18 @@ test.describe('Phone layout behaviour', () => {
     void app
     void guards
 
+    /* Same shape as the partner loop above, and the same reason. */
+    test.slow()
+
     const tokens = await apiLogin(page.request, SEEDED.admin.phone, SEEDED.admin.password)
     await seedSession(context, tokens)
 
-    for (const route of ['/admin/users', '/admin/companies', '/admin/rides']) {
+    for (const route of [
+      '/admin/users',
+      '/admin/companies',
+      '/admin/rides',
+      '/admin/password-resets',
+    ]) {
       await page.goto(route)
       await ready(page)
 

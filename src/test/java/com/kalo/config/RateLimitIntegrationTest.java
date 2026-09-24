@@ -140,6 +140,38 @@ class RateLimitIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("opening a password recovery is throttled tightly")
+    void forgotPasswordIsLimited() throws Exception {
+
+        String body = """
+                {"phone":"+355690000009"}
+                """;
+
+        /*
+         * Three in a quarter of an hour, tighter than registration: each one
+         * costs an administrator a telephone call, so the abuse worth stopping
+         * is a queue filled faster than a person can work it. The number is
+         * unregistered on purpose — the limiter must bite before the caller
+         * learns anything either way.
+         */
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            mockMvc.perform(
+                            post("/api/v1/auth/password/forgot")
+                                    .contentType(APPLICATION_JSON)
+                                    .content(body)
+                    )
+                    .andExpect(status().isAccepted());
+        }
+
+        mockMvc.perform(
+                        post("/api/v1/auth/password/forgot")
+                                .contentType(APPLICATION_JSON)
+                                .content(body)
+                )
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
     @DisplayName("authenticated endpoints are not throttled")
     void authenticatedEndpointsAreNotLimited() throws Exception {
 

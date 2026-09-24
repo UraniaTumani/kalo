@@ -55,7 +55,8 @@
     "verification": "Verification",
     "companies": "Companies",
     "users": "Users",
-    "support": "Help & Support"
+    "support": "Help & Support",
+    "passwordResets": "Password resets"
   },
   "auth": {
     "signInTitle": "Sign in",
@@ -83,7 +84,28 @@
     "address": "Address",
     "passengerSubtitle": "Book taxis from the companies available near you.",
     "partnerSubtitle": "Register your taxi company and submit it for verification.",
-    "partnerDraftNotice": "Your company starts as a draft. Add documents, submit for verification, and an administrator reviews it before you can take rides."
+    "partnerDraftNotice": "Your company starts as a draft. Add documents, submit for verification, and an administrator reviews it before you can take rides.",
+    "forgotLink": "Forgot password?",
+    "forgotTitle": "Forgot your password?",
+    "forgotSubtitle": "Enter the phone number on your account and we will get in touch.",
+    "forgotPhoneHint": "The same number you sign in with",
+    "forgotSubmit": "Continue",
+    "forgotSubmitted": "Your request has been logged.",
+    "forgotSubmittedDetail": "If this number belongs to an account, an administrator will call you to confirm your identity and give you a one-time code. The code is valid for 15 minutes.",
+    "haveCode": "I have a code",
+    "backToSignIn": "Back to sign in",
+    "resetTitle": "Set a new password",
+    "resetSubtitle": "Enter the code the administrator gave you on the phone.",
+    "resetCode": "Code",
+    "resetCodeHint": "Eight letters and numbers, from the call",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "passwordHint": "At least 8 characters",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordMismatch": "Passwords do not match",
+    "resetSubmit": "Reset password",
+    "resetDoneTitle": "Password changed",
+    "resetDoneDetail": "Every other device has been signed out of this account. Sign in with your new password."
   },
   "validation": {
     "required": "This field is required",
@@ -442,6 +464,27 @@
       "OPEN": "Reopen",
       "IN_PROGRESS": "Start working",
       "RESOLVED": "Mark resolved"
+    },
+    "passwordResets": {
+      "title": "Password resets",
+      "subtitle": "Requests waiting for an identity check.",
+      "howTitle": "How identity is verified",
+      "howBody": "KALO does not send SMS and the phone number is not verified, so you are the verification: ring the number on the account, ask something only the account holder would know, and only then issue the code. The code is shown once.",
+      "pending": "Pending",
+      "emptyTitle": "No pending requests",
+      "emptyBody": "Password reset requests appear here.",
+      "person": "Person",
+      "role": "Role",
+      "requested": "Requested",
+      "actions": "Actions",
+      "issue": "Issue code",
+      "reject": "Refuse",
+      "codeTitle": "Read this code down the phone",
+      "codeBody": "This code is shown only now and cannot be retrieved again. If it is lost, issue a new one.",
+      "codeExpires": "Expires {{time}}",
+      "codeDone": "Done",
+      "rejectTitle": "Refuse this request?",
+      "rejectBody": "{{name}}’s request will be closed without a code being issued."
     }
   },
   "profile": {

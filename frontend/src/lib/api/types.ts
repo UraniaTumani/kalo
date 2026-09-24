@@ -459,3 +459,34 @@ export interface ErrorResponse {
   path: string
   timestamp: string
 }
+
+/* ------------------------------------------------- password recovery */
+
+/**
+ * A recovery waiting for somebody to verify who is asking.
+ *
+ * Carries the phone in full because ringing it is the verification, and the
+ * name and role so the caller can be asked something only the account holder
+ * would know.
+ */
+export interface PasswordResetQueueItem {
+  id: number
+  firstName: string
+  lastName: string
+  phone: string
+  role: UserRole
+  userStatus: UserStatus
+  requestedAt: string
+}
+
+/**
+ * The code, returned once to the administrator who is about to read it out.
+ *
+ * Only a bcrypt hash is kept, so this never comes back a second time: an
+ * administrator who loses it issues a new one.
+ */
+export interface IssuedResetCode {
+  requestId: number
+  code: string
+  expiresAt: string
+}
