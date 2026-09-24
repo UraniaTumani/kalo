@@ -265,3 +265,80 @@ export async function clearStorage(page: Page, key: string) {
 export async function expireAccessToken(page: Page) {
   await page.evaluate((k) => localStorage.setItem(k, 'expired.access.token'), STORAGE.token)
 }
+
+/* ------------------------------------------------------- settled navigation */
+
+/**
+ * The list each screen fetches when it opens.
+ *
+ * A route that is not here either fetches nothing on arrival or is reached
+ * expecting a redirect, and {@link gotoSettled} falls back to waiting for the
+ * shell and for every spinner to clear.
+ */
+const ROUTE_LIST: Record<string, { path: string; answered?: number[] }> = {
+  /*
+   * 404 is one of this endpoint's two real answers: a customer with no ride in
+   * progress has not hit an error, they simply have no ride. Several tests
+   * open this screen precisely to prove nothing is there.
+   */
+  '/ride/current': { path: '/api/v1/rides/current', answered: [200, 404] },
+  '/ride/history': { path: '/api/v1/rides/history' },
+  '/support': { path: '/api/v1/support/requests' },
+  '/profile': { path: '/api/v1/me' },
+  '/partner/rides': { path: '/api/v1/partner/rides' },
+  '/partner/drivers': { path: '/api/v1/partner/drivers' },
+  '/partner/vehicles': { path: '/api/v1/partner/vehicles' },
+  '/partner/assignments': { path: '/api/v1/partner/driver-vehicle-assignments' },
+  '/partner/documents': { path: '/api/v1/partner/documents' },
+  '/partner/settings': { path: '/api/v1/partner/me' },
+  '/partner/availability': { path: '/api/v1/partner/availability-settings/service-area' },
+  '/partner': { path: '/api/v1/partner/me' },
+  '/admin': { path: '/api/v1/admin/partners' },
+  '/admin/companies': { path: '/api/v1/admin/partners' },
+  '/admin/users': { path: '/api/v1/admin/users' },
+  '/admin/rides': { path: '/api/v1/admin/rides' },
+  '/admin/support': { path: '/api/v1/admin/support/requests' },
+  '/admin/password-resets': { path: '/api/v1/admin/password-resets' },
+}
+
+/**
+ * Opens a screen and waits until it has the data it is about to be judged on.
+ *
+ * Nearly every test in this suite used to navigate and assert in the next
+ * breath, which is a race in both directions. Something that should be on the
+ * page has not rendered yet — that is the noisy half, and it failed one test
+ * per full run for six runs, in three different files, always whichever one
+ * happened to be running while the machine was busiest.
+ *
+ * The quiet half is worse. "This customer's ticket is not here", "no
+ * untranslated support.* key", "no table on a phone" are all true of a page
+ * showing a spinner, so those assertions passed without having looked at
+ * anything. Two of them were hollow for exactly that reason, and the leak check
+ * in supportarea.spec.ts was saved only by an unrelated assertion above it.
+ *
+ * Waiting for the screen's own request — and asserting it answered, rather
+ * than only that it answered well — makes both halves mean what they say. A
+ * failing API now names itself instead of surfacing as a timeout.
+ */
+export async function gotoSettled(page: Page, route: string) {
+  const entry = ROUTE_LIST[route]
+
+  const listed = entry
+    ? page.waitForResponse(
+        (response) =>
+          response.url().includes(entry.path) && response.request().method() === 'GET',
+        { timeout: RENDER_TIMEOUT },
+      )
+    : null
+
+  await page.goto(route)
+
+  if (entry && listed) {
+    const response = await listed
+    const answered = entry.answered ?? [200]
+
+    expect(answered, `GET ${entry.path} while opening ${route}`).toContain(response.status())
+  }
+
+  await expect(page.locator('.animate-spin')).toHaveCount(0, { timeout: RENDER_TIMEOUT })
+}

@@ -2,6 +2,7 @@ import {
   test,
   expect,
   SEEDED,
+  gotoSettled,
   apiLogin,
   seedSession,
   expectSignedIn,
@@ -28,7 +29,7 @@ test.describe('Partner screens with no previous coverage', () => {
   test('the documents page renders the company paperwork', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/partner/documents')
+    await gotoSettled(page, '/partner/documents')
     await expectSignedIn(page)
 
     await expect(page.getByRole('heading', { name: /documents/i }).first()).toBeVisible()
@@ -37,7 +38,7 @@ test.describe('Partner screens with no previous coverage', () => {
   test('the settings page loads the company profile into the form', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/partner/settings')
+    await gotoSettled(page, '/partner/settings')
     await expectSignedIn(page)
 
     /*
@@ -53,7 +54,7 @@ test.describe('Partner screens with no previous coverage', () => {
   test('the ride queue renders and separates waiting requests', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/partner/rides')
+    await gotoSettled(page, '/partner/rides')
     await expectSignedIn(page)
 
     await expect(page.getByRole('combobox').first()).toBeVisible({ timeout: 30_000 })
@@ -66,7 +67,7 @@ test.describe('Partner screens with no previous coverage', () => {
   test('a partner reaches Help & Support from their own navigation', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/partner')
+    await gotoSettled(page, '/partner')
     await expectSignedIn(page)
 
     await page.getByRole('link', { name: /help & support/i }).first().click()
@@ -92,7 +93,7 @@ test.describe('Admin screens with no previous coverage', () => {
   }) => {
     void guards
 
-    await page.goto('/admin')
+    await gotoSettled(page, '/admin')
     await expectSignedIn(page)
 
     await expect(page.getByRole('heading', { name: /partner verification/i })).toBeVisible()
@@ -129,7 +130,7 @@ test.describe('Admin screens with no previous coverage', () => {
   }) => {
     void guards
 
-    await page.goto('/admin/users')
+    await gotoSettled(page, '/admin/users')
     await expectSignedIn(page)
 
     await expect(page.locator('table')).toBeVisible({ timeout: 30_000 })
@@ -155,7 +156,7 @@ test.describe('Admin screens with no previous coverage', () => {
   test('the rides list filters by status', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/admin/rides')
+    await gotoSettled(page, '/admin/rides')
     await expectSignedIn(page)
 
     const filter = page.getByRole('combobox').first()
@@ -170,7 +171,7 @@ test.describe('Admin screens with no previous coverage', () => {
   test('the support queue filters by status', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/admin/support')
+    await gotoSettled(page, '/admin/support')
     await expectSignedIn(page)
 
     const filter = page.getByRole('combobox').first()
@@ -198,7 +199,7 @@ test.describe('Customer rating', () => {
     const tokens = await apiLogin(page.request, SEEDED.customer.phone, SEEDED.customer.password)
     await seedSession(context, tokens)
 
-    await page.goto('/ride/history')
+    await gotoSettled(page, '/ride/history')
     await expectSignedIn(page)
 
     const rate = page.getByRole('button', { name: /^rate$/i }).first()

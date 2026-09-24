@@ -2,6 +2,8 @@ import {
   test,
   expect,
 
+  gotoSettled,
+
   apiLogin,
   seedSession,
   expectSignedIn,
@@ -79,7 +81,7 @@ test.describe('Booking', () => {
   test('C12 · history lists past rides a page at a time', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/ride/history')
+    await gotoSettled(page, '/ride/history')
     await expectSignedIn(page)
 
     // Renders without a blank screen whether or not this customer has ridden.

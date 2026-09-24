@@ -1,4 +1,12 @@
-import { test, expect, SEEDED, apiLogin, seedSession, expectSignedIn } from './support/fixtures'
+import {
+  test,
+  expect,
+  SEEDED,
+  apiLogin,
+  gotoSettled,
+  seedSession,
+  expectSignedIn,
+} from './support/fixtures'
 
 /**
  * Putting a driver on the road, through the button a partner actually presses.
@@ -37,7 +45,7 @@ test.describe('Putting a driver online', () => {
   }) => {
     void guards
 
-    await page.goto('/partner/drivers')
+    await gotoSettled(page, '/partner/drivers')
     await expectSignedIn(page)
     await expect(page.locator('.animate-spin')).toHaveCount(0, { timeout: 30_000 })
 
@@ -96,7 +104,7 @@ test.describe('Putting a driver online', () => {
     void app
     void guards
 
-    await page.goto('/partner/drivers')
+    await gotoSettled(page, '/partner/drivers')
     await expectSignedIn(page)
     await expect(page.locator('.animate-spin')).toHaveCount(0, { timeout: 30_000 })
 

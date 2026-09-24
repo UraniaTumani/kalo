@@ -1,4 +1,12 @@
-import { test, expect, SEEDED, apiLogin, seedSession, expectSignedIn } from './support/fixtures'
+import {
+  test,
+  expect,
+  SEEDED,
+  apiLogin,
+  gotoSettled,
+  seedSession,
+  expectSignedIn,
+} from './support/fixtures'
 
 /**
  * Pre-flight: P2, P3, P6, P8, P11, P12, P13, P19.
@@ -19,7 +27,7 @@ test.describe('Partner', () => {
   test('P2 · the dashboard counts the fleet rather than a page of it', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/partner')
+    await gotoSettled(page, '/partner')
     await expectSignedIn(page)
 
     /*
@@ -35,7 +43,7 @@ test.describe('Partner', () => {
   test('P3 · the drivers list renders the seeded fleet', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/partner/drivers')
+    await gotoSettled(page, '/partner/drivers')
 
     await expect(page.getByText('Ilir Balla')).toBeVisible()
     await expect(page.getByText('Gent Prifti')).toBeVisible()
@@ -45,14 +53,14 @@ test.describe('Partner', () => {
   test('P6 · the vehicles list renders', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/partner/vehicles')
+    await gotoSettled(page, '/partner/vehicles')
     await expect(page.getByText(/AA\d+TR/).first()).toBeVisible()
   })
 
   test('P8 · the assignments list renders', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/partner/assignments')
+    await gotoSettled(page, '/partner/assignments')
     await expectSignedIn(page)
 
     // Seeded drivers hold seeded vehicles, so there is something to show.
@@ -65,7 +73,7 @@ test.describe('Partner', () => {
   }) => {
     void guards
 
-    await page.goto('/partner/drivers')
+    await gotoSettled(page, '/partner/drivers')
 
     await page.getByRole('button', { name: /deactivate/i }).first().click()
 
@@ -127,7 +135,7 @@ test.describe('Operating hours', () => {
   }) => {
     void guards
 
-    await page.goto('/partner/availability')
+    await gotoSettled(page, '/partner/availability')
     await expectSignedIn(page)
 
     /*
@@ -175,7 +183,7 @@ test.describe('Operating hours', () => {
   test('a partner can save a shift that runs past midnight', async ({ page, guards }) => {
     void guards
 
-    await page.goto('/partner/availability')
+    await gotoSettled(page, '/partner/availability')
     await expectSignedIn(page)
 
     await expect(page.getByRole('checkbox').first()).toBeVisible({ timeout: 30_000 })

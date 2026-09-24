@@ -1,4 +1,4 @@
-import { test, expect, SEEDED, apiLogin, seedSession } from './support/fixtures'
+import { test, expect, SEEDED, apiLogin, gotoSettled, seedSession } from './support/fixtures'
 import type { Page } from '@playwright/test'
 
 /**
@@ -91,34 +91,6 @@ async function ready(page: Page) {
   })
 }
 
-/**
- * Waits for a list screen to have actually finished loading its rows.
- *
- * `ready` only proves the shell is up, which is enough to measure the page but
- * not enough to assert that something is *absent*. Asserting "there is no
- * table here" while the query is still in flight passes for the wrong reason —
- * and did: the mobile-card test was green for three runs against a page that
- * renders a table, because the table had not arrived yet.
- *
- * Waiting for the spinner to go and for real content to appear makes the
- * absence mean what it says.
- */
-async function gotoSettledList(page: Page, route: string, apiPath: string) {
-  const loaded = page.waitForResponse(
-    (response) => response.url().includes(apiPath) && response.status() === 200,
-    { timeout: 30_000 },
-  )
-
-  await page.goto(route)
-  await ready(page)
-
-  /* The data is in the browser... */
-  await loaded
-
-  /* ...and React has finished putting it on the screen. */
-  await expect(page.locator('.animate-spin')).toHaveCount(0, { timeout: 30_000 })
-}
-
 function suite(
   role: 'customer' | 'partner' | 'admin',
   routes: string[],
@@ -198,7 +170,7 @@ test.describe('The weekly schedule editor fits its column', () => {
       const tokens = await apiLogin(page.request, SEEDED.partner.phone, SEEDED.partner.password)
       await seedSession(context, tokens)
 
-      await page.goto('/partner/availability')
+      await gotoSettled(page, '/partner/availability')
       await ready(page)
 
       await expect(page.getByRole('checkbox').first()).toBeVisible({ timeout: 30_000 })
@@ -260,14 +232,14 @@ test.describe('Phone layout behaviour', () => {
     await seedSession(context, tokens)
 
     const lists = [
-      ['/partner/drivers', '/api/v1/partner/drivers'],
-      ['/partner/vehicles', '/api/v1/partner/vehicles'],
-      ['/partner/assignments', '/api/v1/partner/driver-vehicle-assignments'],
-      ['/partner/rides', '/api/v1/partner/rides'],
+      '/partner/drivers',
+      '/partner/vehicles',
+      '/partner/assignments',
+      '/partner/rides',
     ] as const
 
-    for (const [route, api] of lists) {
-      await gotoSettledList(page, route, api)
+    for (const route of lists) {
+      await gotoSettled(page, route)
 
       /*
        * Only meaningful once the rows are on the screen. This assertion used
@@ -321,7 +293,7 @@ test.describe('Phone layout behaviour', () => {
     const tokens = await apiLogin(page.request, SEEDED.admin.phone, SEEDED.admin.password)
     await seedSession(context, tokens)
 
-    await page.goto('/admin/companies')
+    await gotoSettled(page, '/admin/companies')
     await ready(page)
 
     await page.getByRole('button', { name: /^suspend$/i }).first().click()
@@ -364,7 +336,7 @@ test.describe('Phone layout behaviour', () => {
     const tokens = await apiLogin(page.request, SEEDED.partner.phone, SEEDED.partner.password)
     await seedSession(context, tokens)
 
-    await page.goto('/partner')
+    await gotoSettled(page, '/partner')
     await ready(page)
 
     for (const label of [/^rides$/i, /^drivers$/i, /^vehicles$/i, /help & support/i]) {

@@ -1,8 +1,8 @@
-import type { Page } from '@playwright/test'
 import {
   test,
   expect,
   SEEDED,
+  gotoSettled,
   apiLogin,
   seedSession,
   registerCustomer,
@@ -17,47 +17,6 @@ import {
  */
 
 const SUBJECT = () => `E2E ticket ${Date.now()}-${Math.floor(Math.random() * 1000)}`
-
-/**
- * Opens a support screen and waits for its list to have actually arrived.
- *
- * Every assertion in this file is about which tickets are on a page, and each
- * one used to be made the instant navigation finished. That is a race in both
- * directions: a ticket that should be there has not rendered yet, and a ticket
- * that must NOT be there is absent for the most boring possible reason — which
- * makes the isolation check pass without having looked at anything.
- *
- * Three different tests in this file failed this way on a loaded machine, each
- * reporting something alarming about support when the page simply said
- * "Loading". Waiting for the response and the spinner makes both kinds of
- * assertion mean what they say.
- */
-async function gotoSettledSupport(page: Page, route: string, apiPath: string) {
-  /*
-   * Any answer, not only a good one.
-   *
-   * Requiring 200 here made this helper lie. The query client retries a 5xx
-   * twice with backoff and keeps the list on "Loading" throughout, so a failing
-   * API surfaced as "timed out waiting for a response" — which reads like a
-   * slow machine and hides that the request was answered, badly. Matching any
-   * response and asserting the status afterwards means the failure names
-   * itself.
-   */
-  const listed = page.waitForResponse(
-    (response) => response.url().includes(apiPath) && response.request().method() === 'GET',
-    { timeout: 30_000 },
-  )
-
-  await page.goto(route)
-
-  const response = await listed
-  expect(response.status(), `GET ${apiPath} while loading ${route}`).toBe(200)
-
-  await expect(page.locator('.animate-spin')).toHaveCount(0, { timeout: 30_000 })
-}
-
-const MINE = '/api/v1/support/requests'
-const QUEUE = '/api/v1/admin/support/requests'
 
 test.describe('Help & Support', () => {
   test('a customer writes in and sees their own request', async ({
@@ -75,7 +34,7 @@ test.describe('Help & Support', () => {
 
     const subject = SUBJECT()
 
-    await gotoSettledSupport(page, '/support', MINE)
+    await gotoSettled(page, '/support')
 
     // The FAQ is the first thing offered, before the form.
     await expect(page.getByRole('heading', { name: /common questions/i })).toBeVisible()
@@ -122,7 +81,7 @@ test.describe('Help & Support', () => {
      * looked, and the empty-state line below is all that stands between this
      * test and a hollow one.
      */
-    await gotoSettledSupport(page, '/support', MINE)
+    await gotoSettled(page, '/support')
 
     await expect(page.getByText(/you have not written to us yet/i)).toBeVisible()
     await expect(page.getByText(subject)).toHaveCount(0)
@@ -153,7 +112,7 @@ test.describe('Help & Support', () => {
     const adminTokens = await apiLogin(page.request, SEEDED.admin.phone, SEEDED.admin.password)
     await seedSession(context, adminTokens)
 
-    await gotoSettledSupport(page, '/admin/support', QUEUE)
+    await gotoSettled(page, '/admin/support')
 
     const card = page.getByRole('article', { name: subject })
     await expect(card).toBeVisible()
@@ -187,7 +146,7 @@ test.describe('Help & Support', () => {
       await seedSession(theirContext, customerTokens)
 
       const theirs = await theirContext.newPage()
-      await gotoSettledSupport(theirs, '/support', MINE)
+      await gotoSettled(theirs, '/support')
       await expect(theirs.getByRole('article', { name: subject })).toContainText(/resolved/i)
     } finally {
       await theirContext.close()
@@ -201,6 +160,11 @@ test.describe('Help & Support', () => {
     const tokens = await apiLogin(page.request, SEEDED.customer.phone, SEEDED.customer.password)
     await seedSession(context, tokens)
 
+    /*
+     * Plain goto on purpose. This customer never reaches the queue, so the
+     * queue's request is never made and gotoSettled would wait out its whole
+     * budget for a response that cannot arrive.
+     */
     await page.goto('/admin/support')
 
     // ProtectedRoute sends them back to their own surface rather than showing it.
@@ -219,7 +183,7 @@ test.describe('Help & Support', () => {
      * absence: a missing key renders as "support.faqTitle", and a page still
      * loading has no such text for reasons that have nothing to do with i18n.
      */
-    await gotoSettledSupport(page, '/support', MINE)
+    await gotoSettled(page, '/support')
 
     await expect(page.getByRole('heading', { name: /ndihmë & mbështetje/i })).toBeVisible()
     await expect(page.getByRole('button', { name: /dërgo kërkesën/i })).toBeVisible()
