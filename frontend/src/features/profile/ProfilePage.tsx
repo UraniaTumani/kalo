@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { authApi } from '@/lib/api/endpoints'
+import { tokenStorage } from '@/lib/api/client'
 import { PageHeader } from '@/components/AppLayout'
 import { StatusBadge } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
@@ -115,6 +116,8 @@ export function ProfilePage() {
           </CardBody>
         </Card>
 
+        <PasswordCard />
+
         <Card>
           <CardHeader title={t('profile.account')} />
           <CardBody>
@@ -146,6 +149,116 @@ export function ProfilePage() {
         </Card>
       </div>
     </>
+  )
+}
+
+const passwordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'validation.required'),
+    newPassword: z.string().min(8, 'profile.passwordTooShort'),
+    confirmPassword: z.string().min(1, 'validation.required'),
+  })
+  .refine((values) => values.newPassword === values.confirmPassword, {
+    path: ['confirmPassword'],
+    message: 'profile.passwordMismatch',
+  })
+
+type PasswordValues = z.infer<typeof passwordSchema>
+
+/**
+ * Changing your own password.
+ *
+ * The current one is asked for because the server requires it, and the server
+ * requires it because a token is a bearer credential — somebody who picked up
+ * a session on a shared machine must not be able to lock the owner out of
+ * their own account.
+ *
+ * The change signs out every other device, so the response carries a new pair
+ * of tokens and they are stored here. Without that swap the person who just
+ * changed their password would be the one signed out, seconds later, which is
+ * a confusing way to be told it worked.
+ */
+function PasswordCard() {
+  const { t } = useTranslation()
+  const [changed, setChanged] = useState(false)
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<PasswordValues>({ resolver: zodResolver(passwordSchema) })
+
+  const mutation = useMutation({
+    mutationFn: (values: PasswordValues) =>
+      authApi.changePassword({
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+      }),
+    onSuccess: (session) => {
+      /* This session is among the ones just revoked; take its replacement. */
+      tokenStorage.set(session.accessToken, session.refreshToken)
+      setChanged(true)
+      reset({ currentPassword: '', newPassword: '', confirmPassword: '' })
+    },
+  })
+
+  return (
+    <Card>
+      <CardHeader title={t('profile.password')} description={t('profile.passwordHint')} />
+      <CardBody>
+        <form
+          className="space-y-3"
+          onSubmit={handleSubmit((values) => {
+            setChanged(false)
+            mutation.mutate(values)
+          })}
+          noValidate
+        >
+          {mutation.error && <ErrorMessage error={mutation.error} />}
+          {changed && <Alert tone="success">{t('profile.passwordChanged')}</Alert>}
+
+          <Field
+            label={t('profile.currentPassword')}
+            error={errors.currentPassword ? t(errors.currentPassword.message!) : undefined}
+            required
+          >
+            <Input
+              {...register('currentPassword')}
+              type="password"
+              autoComplete="current-password"
+            />
+          </Field>
+
+          <Field
+            label={t('profile.newPassword')}
+            hint={t('profile.passwordRule')}
+            error={errors.newPassword ? t(errors.newPassword.message!) : undefined}
+            required
+          >
+            <Input {...register('newPassword')} type="password" autoComplete="new-password" />
+          </Field>
+
+          <Field
+            label={t('profile.confirmPassword')}
+            error={errors.confirmPassword ? t(errors.confirmPassword.message!) : undefined}
+            required
+          >
+            <Input
+              {...register('confirmPassword')}
+              type="password"
+              autoComplete="new-password"
+            />
+          </Field>
+
+          <Button type="submit" loading={mutation.isPending}>
+            {t('profile.changePassword')}
+          </Button>
+
+          <p className="text-xs text-ink-500">{t('profile.passwordSignsOutOthers')}</p>
+        </form>
+      </CardBody>
+    </Card>
   )
 }
 

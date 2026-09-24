@@ -500,7 +500,18 @@
     "userId": "User ID",
     "phoneReadOnly": "Your phone is your username and cannot be changed here.",
     "verificationNotice": "Phone verification is not part of the MVP yet, so this stays unverified.",
-    "saveChanges": "Save changes"
+    "saveChanges": "Save changes",
+    "password": "Password",
+    "passwordHint": "Change it whenever you like.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "passwordRule": "At least 8 characters",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordMismatch": "Passwords do not match",
+    "changePassword": "Change password",
+    "passwordChanged": "Your password has been changed.",
+    "passwordSignsOutOthers": "Every other device will be signed out of this account."
   },
   "guest": {
     "browsing": "Browsing as a guest",

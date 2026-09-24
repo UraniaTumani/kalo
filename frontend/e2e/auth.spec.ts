@@ -11,6 +11,7 @@ import {
   clearStorage,
   expireAccessToken,
   registerCustomer,
+  gotoSettled,
 } from './support/fixtures'
 
 /**
@@ -286,5 +287,82 @@ test.describe('Session recovery', () => {
     await page.goto('/ride')
 
     await expect(page).toHaveURL(/\/login/)
+  })
+})
+
+/**
+ * Changing a password from the profile screen.
+ *
+ * The interesting part is not the form, it is what happens to the session. The
+ * change revokes every one, the caller's included, so the response carries a
+ * replacement pair — and if the page fails to store them, the person who just
+ * changed their password is the one signed out moments later.
+ */
+test.describe('Changing a password', () => {
+  test('the new password works and the session survives', async ({
+    page,
+    context,
+    app,
+    guards,
+  }) => {
+    void app
+    void guards
+
+    const account = await registerCustomer(page.request)
+    const tokens = await apiLogin(page.request, account.phone, account.password)
+    await seedSession(context, tokens)
+
+    const next = 'ChangedInBrowser1!'
+
+    await gotoSettled(page, '/profile')
+
+    await page.getByLabel(/current password/i).fill(account.password)
+    await page.getByLabel(/^new password/i).fill(next)
+    await page.getByLabel(/confirm new password/i).fill(next)
+    await page.getByRole('button', { name: /change password/i }).click()
+
+    await expect(page.getByText(/your password has been changed/i)).toBeVisible()
+
+    /*
+     * The session was replaced rather than merely surviving in memory: the
+     * stored token is not the one seeded, and a reload still lands signed in.
+     */
+    const stored = await readStorage(page, STORAGE.token)
+    expect(stored, 'a token is still stored').toBeTruthy()
+    expect(stored).not.toBe(tokens.accessToken)
+
+    await page.reload()
+    await expectSignedIn(page)
+
+    /* And the new password is the one that signs in from now on. */
+    const after = await apiLogin(page.request, account.phone, next)
+    expect(after.accessToken).toBeTruthy()
+  })
+
+  test('the wrong current password is refused and changes nothing', async ({
+    page,
+    context,
+    app,
+    guards,
+  }) => {
+    void app
+    void guards
+
+    const account = await registerCustomer(page.request)
+    const tokens = await apiLogin(page.request, account.phone, account.password)
+    await seedSession(context, tokens)
+
+    await gotoSettled(page, '/profile')
+
+    await page.getByLabel(/current password/i).fill('NotMyPassword1!')
+    await page.getByLabel(/^new password/i).fill('ShouldNotApply1!')
+    await page.getByLabel(/confirm new password/i).fill('ShouldNotApply1!')
+    await page.getByRole('button', { name: /change password/i }).click()
+
+    await expect(page.getByText(/your password has been changed/i)).toHaveCount(0)
+
+    /* The original still signs in, which is the assertion that matters. */
+    const still = await apiLogin(page.request, account.phone, account.password)
+    expect(still.accessToken).toBeTruthy()
   })
 })
