@@ -1,0 +1,47 @@
+package com.kalo.admin.dto;
+
+import com.kalo.common.validation.ValidationPatterns;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
+/**
+ * A new administrator, created by an existing one.
+ *
+ * Takes a password because there is nowhere else for it to come from: KALO
+ * cannot send a message, so an invitation link or a mailed temporary password
+ * are both fiction. The creating administrator sets one and passes it on, the
+ * same way the recovery flow reads a code down the telephone.
+ */
+public record CreateAdminRequest(
+
+        @NotBlank(message = "First name is required")
+        @Size(max = 100, message = "First name must not exceed 100 characters")
+        String firstName,
+
+        @NotBlank(message = "Last name is required")
+        @Size(max = 100, message = "Last name must not exceed 100 characters")
+        String lastName,
+
+        @NotBlank(message = "Phone is required")
+        @Size(max = 30, message = "Phone must not exceed 30 characters")
+        @Pattern(
+                regexp = ValidationPatterns.PHONE,
+                message = ValidationPatterns.PHONE_MESSAGE
+        )
+        String phone,
+
+        @Email(message = "Email is not valid")
+        @Size(max = 255, message = "Email must not exceed 255 characters")
+        String email,
+
+        @NotBlank(message = "Password is required")
+        @Size(
+                min = 8,
+                max = 100,
+                message = "Password must contain between 8 and 100 characters"
+        )
+        String password
+) {
+}

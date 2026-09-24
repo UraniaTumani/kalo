@@ -19,6 +19,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByPhone(String phone);
 
+    /** Whether anybody holds a role at all — used to decide if bootstrap is due. */
+    boolean existsByRole(UserRole role);
+
     boolean existsByEmail(String email);
 
     /**
