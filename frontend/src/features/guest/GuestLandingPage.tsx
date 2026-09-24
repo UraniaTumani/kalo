@@ -1,3 +1,4 @@
+import { Logo } from '@/components/Logo'
 import { Trans, useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
@@ -67,12 +68,7 @@ export function GuestLandingPage() {
     <div className="min-h-screen bg-ink-50">
       <header className="border-b border-ink-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-2">
-            <span className="grid size-8 place-items-center rounded-lg bg-brand-600 text-sm font-bold text-white">
-              K
-            </span>
-            <span className="text-sm font-semibold text-ink-900">KALO</span>
-          </div>
+          <Logo className="h-6" />
           <div className="flex gap-2">
             <Link to="/login">
               <Button variant="secondary" size="sm">

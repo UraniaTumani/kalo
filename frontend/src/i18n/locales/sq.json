@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "KALO",
+    "appName": "MR TAXI",
     "save": "Ruaj",
     "cancel": "Anulo",
     "close": "Mbyll",
@@ -329,7 +329,7 @@
     "acceptingBookings": "Po pranon rezervime",
     "acceptingBookingsHint": "Çaktivizojeni për të mos u shfaqur në kërkimin e udhëtarëve",
     "paymentMethods": "Mënyrat e pagesës",
-    "paymentMethodsHint": "Të paktën një është e detyrueshme. Udhëtarët paguajnë shoferin drejtpërdrejt; KALO nuk përpunon pagesa.",
+    "paymentMethodsHint": "Të paktën një është e detyrueshme. Udhëtarët paguajnë shoferin drejtpërdrejt; MR TAXI nuk përpunon pagesa.",
     "requiredBeforeSubmit": "E detyrueshme para se të dërgoni për verifikim",
     "licenceExpiryHint": "Kjo është licenca e taksisë së kompanisë, e ndryshme nga skadimi i dokumentit të ngarkuar.",
     "registrationExpiry": "Skadimi i regjistrimit",
@@ -469,7 +469,7 @@
       "title": "Rivendosje fjalëkalimi",
       "subtitle": "Kërkesa që presin verifikimin e identitetit.",
       "howTitle": "Si verifikohet identiteti",
-      "howBody": "KALO nuk dërgon SMS dhe numri i telefonit nuk është i verifikuar, prandaj verifikimin e bëni ju: merrni në telefon numrin e llogarisë, pyesni diçka që vetëm zotëruesi i llogarisë e di, dhe vetëm pastaj lëshoni kodin. Kodi shfaqet vetëm një herë.",
+      "howBody": "MR TAXI nuk dërgon SMS dhe numri i telefonit nuk është i verifikuar, prandaj verifikimin e bëni ju: merrni në telefon numrin e llogarisë, pyesni diçka që vetëm zotëruesi i llogarisë e di, dhe vetëm pastaj lëshoni kodin. Kodi shfaqet vetëm një herë.",
       "pending": "Në pritje",
       "emptyTitle": "Asnjë kërkesë në pritje",
       "emptyBody": "Kërkesat për rivendosje fjalëkalimi shfaqen këtu.",
@@ -516,7 +516,7 @@
   "guest": {
     "browsing": "Po shikoni si vizitor",
     "headline": "Shihni cilat kompani taksish janë pranë jush",
-    "intro": "KALO është një treg, jo një operator taksish. Ju zgjidhni <strong>kompaninë</strong>, ajo cakton një nga shoferët e vet dhe ju paguani shoferin drejtpërdrejt — çmimi përfundimtar është shuma reale e taksimetrit.",
+    "intro": "MR TAXI është një treg, jo një operator taksish. Ju zgjidhni <strong>kompaninë</strong>, ajo cakton një nga shoferët e vet dhe ju paguani shoferin drejtpërdrejt — çmimi përfundimtar është shuma reale e taksimetrit.",
     "pickLocation": "Zgjidhni një vendndodhje",
     "pickLocationHint": "Klikoni kudo në hartë për të kontrolluar atë pikë.",
     "availableNow": "Të disponueshme tani",
@@ -527,7 +527,7 @@
     "resultsHint": "Rezultatet tregojnë shoferin më të afërt të secilës kompani.",
     "createToBook": "Krijoni një llogari për të rezervuar",
     "step1": "Kërkoni",
-    "step1Body": "Tregoni KALO-s ku ndodheni dhe ku dëshironi të shkoni.",
+    "step1Body": "Tregoni MR TAXI-t ku ndodheni dhe ku dëshironi të shkoni.",
     "step2": "Zgjidhni një kompani",
     "step2Body": "Shihni një ofertë për çdo kompani, me vlerësimin dhe distancën e saj.",
     "step3": "Ajo cakton një shofer",
@@ -672,7 +672,7 @@
     "sent": "Kërkesa juaj u dërgua. Mund ta ndiqni më poshtë.",
     "responseNote": "Përgjigjemi brenda orarit të punës. Mos dërgoni kurrë fjalëkalime ose numra karte këtu.",
     "myRequestsTitle": "Kërkesat tuaja",
-    "myRequestsSubtitle": "Vetëm ju dhe KALO i shihni këto.",
+    "myRequestsSubtitle": "Vetëm ju dhe MR TAXI i shihni këto.",
     "noRequests": "Nuk na keni shkruar ende",
     "noRequestsHint": "Çdo gjë që dërgoni do të shfaqet këtu me statusin e saj.",
     "loadFailedHint": "Kërkesat tuaja nuk u morën dot. Provoni sërish pas pak.",
@@ -687,7 +687,7 @@
     "faq": {
       "howBooking": {
         "q": "Si funksionon rezervimi i një taksie?",
-        "a": "Ju vendosni ku ndodheni dhe ku doni të shkoni, dhe KALO pyet kompanitë e taksive aty pranë. Secila që mund t’ju marrë dërgon një ofertë me emrin, vlerësimin dhe çmimin e parashikuar. Ju zgjidhni kompaninë, dhe kompania cakton një nga shoferët e saj."
+        "a": "Ju vendosni ku ndodheni dhe ku doni të shkoni, dhe MR TAXI pyet kompanitë e taksive aty pranë. Secila që mund t’ju marrë dërgon një ofertë me emrin, vlerësimin dhe çmimin e parashikuar. Ju zgjidhni kompaninë, dhe kompania cakton një nga shoferët e saj."
       },
       "finalPrice": {
         "q": "Pse çmimi përfundimtar ndryshon nga parashikimi?",
@@ -695,7 +695,7 @@
       },
       "payment": {
         "q": "Si paguaj?",
-        "a": "Paguani shoferin drejtpërdrejt, në para në dorë ose me kartë aty ku kompania e pranon. KALO nuk e merr pagesën tuaj dhe nuk kërkon kurrë të dhëna karte."
+        "a": "Paguani shoferin drejtpërdrejt, në para në dorë ose me kartë aty ku kompania e pranon. MR TAXI nuk e merr pagesën tuaj dhe nuk kërkon kurrë të dhëna karte."
       },
       "cancelRide": {
         "q": "A mund ta anuloj një udhëtim?",
