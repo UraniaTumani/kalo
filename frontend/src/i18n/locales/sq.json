@@ -105,7 +105,8 @@
     "passwordMismatch": "Fjalëkalimet nuk përputhen",
     "resetSubmit": "Rivendos fjalëkalimin",
     "resetDoneTitle": "Fjalëkalimi u ndryshua",
-    "resetDoneDetail": "Të gjitha pajisjet e tjera u shkëputën nga llogaria. Hyni me fjalëkalimin e ri."
+    "resetDoneDetail": "Të gjitha pajisjet e tjera u shkëputën nga llogaria. Hyni me fjalëkalimin e ri.",
+    "forgotFailed": "Kërkesa nuk u dërgua dot për momentin. Provoni sërish pas pak."
   },
   "validation": {
     "required": "Kjo fushë është e detyrueshme",

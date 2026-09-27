@@ -31,6 +31,43 @@ class PasswordResetIntegrationTest extends AbstractIntegrationTest {
 
     private static final String NEW_PASSWORD = "BrandNewPass456!";
 
+    /* --------------------------------------------------------- the path */
+
+    @Test
+    @DisplayName("the endpoint is mapped where the frontend calls it")
+    void theEndpointIsWhereTheClientExpectsIt() throws Exception {
+
+        /*
+         * Pinned as a contract, because it was reported broken and was not.
+         * The frontend posts to this exact path; a backend that does not have
+         * this route answers 404, and the page then shows "Resource not
+         * found" under a phone field, where it reads as a verdict on the
+         * number. This test fails if the path ever moves, rather than leaving
+         * it to be discovered from a screenshot.
+         */
+        mockMvc.perform(
+                        post("/api/v1/auth/password/forgot")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {"phone":"+355690000002"}
+                                        """)
+                )
+                .andExpect(status().isAccepted());
+    }
+
+    @Test
+    @DisplayName("it answers no other verb, so a wrong method is not a 404")
+    void onlyPostIsMapped() throws Exception {
+
+        /*
+         * 405 rather than 404 is the tell that separates "the route exists
+         * and you used it wrongly" from "this build has no such route" --
+         * which is the difference between a client bug and a stale deploy.
+         */
+        mockMvc.perform(get("/api/v1/auth/password/forgot"))
+                .andExpect(status().isMethodNotAllowed());
+    }
+
     /* ------------------------------------------------------- requesting */
 
     @Test

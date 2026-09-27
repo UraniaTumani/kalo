@@ -184,7 +184,22 @@ async function performRequest<T>(path: string, options: RequestOptions = {}): Pr
     )
   }
 
-  return (await response.json()) as T
+  /*
+   * Parsed only when there is something to parse.
+   *
+   * This used to call response.json() on every success, which throws on a
+   * body that is empty — and an accepted-but-empty response is a perfectly
+   * ordinary thing for this API to send. The 204 above was handled; 202 was
+   * not, so POST /auth/password/forgot answered 202 with no body, the parse
+   * threw, and the page reported a failure for a request the server had
+   * accepted. The endpoint was never the problem.
+   *
+   * Reading the text first covers every empty-bodied status rather than the
+   * two anybody has hit so far.
+   */
+  const text = await response.text()
+
+  return (text ? JSON.parse(text) : undefined) as T
 }
 
 /**
