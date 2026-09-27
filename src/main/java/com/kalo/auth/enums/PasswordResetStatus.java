@@ -3,30 +3,30 @@ package com.kalo.auth.enums;
 /**
  * Where a password recovery has got to.
  *
- * The order matters: a request is only ever useful in ISSUED, and every other
- * state is terminal. Nothing moves backwards.
+ * Three states, all terminal except the first, and nothing moves backwards.
+ *
+ * There used to be four. PENDING and ISSUED existed because a code was minted
+ * only after an administrator had telephoned the account holder, so a request
+ * spent time in the system granting nothing at all. An OTP has no such gap: the
+ * code exists the moment the request does, so the waiting state has nothing
+ * left to describe. Migration 024 closes the rows that were still in it.
  */
 public enum PasswordResetStatus {
 
     /**
-     * Someone asked. Nobody has been identified yet and no code exists, so
-     * this state grants nothing at all.
+     * A code exists and could still be redeemed, subject to its expiry and its
+     * remaining attempts. The only state that grants anything.
      */
-    PENDING,
-
-    /**
-     * An administrator rang the number on the account, satisfied themselves it
-     * was the right person, and minted a code. Usable until it expires.
-     */
-    ISSUED,
+    ACTIVE,
 
     /** The code was redeemed and the password changed. */
     USED,
 
     /**
-     * Refused, or burnt. Covers three different endings that all mean the same
-     * thing to the holder: an administrator declined it, too many wrong codes
-     * were tried, or the account was suspended when the request arrived.
+     * Refused, or burnt, or superseded. Four different endings that all mean
+     * the same thing to whoever holds the code: too many wrong guesses, the
+     * account was suspended, a newer request replaced this one, or an
+     * administrator closed it.
      */
     REJECTED
 }

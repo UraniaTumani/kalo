@@ -33,6 +33,14 @@ public class AuthController {
      * tens of milliseconds -- so the floor is what a caller measures rather
      * than the queries. High enough to bury the difference, low enough that
      * a person asking for help does not notice it.
+     *
+     * The text message is not part of that work, and it matters that it is not.
+     * A provider's HTTP call takes a few hundred milliseconds for a number that
+     * exists and nothing at all for one that does not, so sending inline would
+     * overrun this floor for registered numbers only -- making the endpoint a
+     * better oracle than it was before the floor existed. The send therefore
+     * happens on another thread after the transaction commits, in
+     * PasswordResetSmsDispatcher, and this method returns without waiting.
      */
     private static final Duration FORGOT_PASSWORD_FLOOR = Duration.ofMillis(250);
 
@@ -65,13 +73,20 @@ public class AuthController {
 
 
     /**
-     * Opens a password recovery.
+     * Opens a password recovery, and texts a one-time code to the number on the
+     * account.
      *
-     * Always 202, always the same empty body, whether or not the number
-     * belongs to an account — and whether or not that account is suspended or
-     * has asked too often lately. Every one of those distinctions is a fact
-     * about somebody else's account, and an endpoint anyone may call without
-     * signing in must not be a way of learning them.
+     * Always 202, always the same empty body, whether or not the number belongs
+     * to an account — and whether or not that account is suspended, asked less
+     * than a minute ago, has asked five times today, or arrived after the
+     * deployment's daily message budget ran out. Every one of those distinctions
+     * is a fact about somebody else's account, and an endpoint anyone may call
+     * without signing in must not be a way of learning them.
+     *
+     * This is also the resend endpoint. Asking again supersedes the previous
+     * code rather than adding a second live one, which is why no separate
+     * resend route exists: another route would be another thing to rate limit,
+     * for a request identical to this one.
      */
     @PostMapping("/password/forgot")
     public ResponseEntity<Void> forgotPassword(
@@ -104,7 +119,15 @@ public class AuthController {
         return ResponseEntity.accepted().build();
     }
 
-    /** Redeems a code an administrator read out, and sets the new password. */
+    /**
+     * Redeems a one-time code and sets the new password, in one call.
+     *
+     * One call rather than verify-then-set, because a separate verification
+     * step would need its own short-lived single-use token between the two —
+     * the same machinery twice, and a second secret that can leak. The page
+     * still shows the code and the password as two steps; it submits them
+     * together.
+     */
     @PostMapping("/password/reset")
     public ResponseEntity<Void> resetPassword(
             @Valid @RequestBody ResetPasswordRequest request

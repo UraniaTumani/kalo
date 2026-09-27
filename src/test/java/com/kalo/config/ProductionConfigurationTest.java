@@ -201,6 +201,66 @@ class ProductionConfigurationTest {
     }
 
     @Test
+    @DisplayName("a live recovery code is never written to a production log")
+    void smsBodyLoggingDefaultsToOff() throws IOException {
+
+        Properties p = production();
+
+        /*
+         * The message body carries a one-time code in plain text, and a code in a
+         * log file is a code in every aggregator, terminal scrollback and pasted
+         * support ticket it reaches afterwards. The placeholder default is the
+         * part that matters: a deployment that sets nothing logs nothing.
+         *
+         * SmsConfig also refuses to honour the flag outside the dev and test
+         * profiles, so this is the outer of two guards rather than the only one —
+         * but it is the one a reviewer reads, and the one that would be quietly
+         * flipped by somebody debugging.
+         */
+        assertThat(p.getProperty("app.sms.log-message"))
+                .as("the SMS body must not be logged unless a developer opts in")
+                .isEqualTo("${SMS_LOG_MESSAGE:false}");
+    }
+
+    @Test
+    @DisplayName("the SMS budget has a ceiling whatever the environment says")
+    void smsHasADailyCeiling() throws IOException {
+
+        Properties p = production();
+
+        /*
+         * An unauthenticated endpoint that sends SMS is an unauthenticated
+         * endpoint that spends money, and SMS pumping — farming traffic to
+         * expensive ranges through whatever form will send it — is a real
+         * business. A missing default here would mean no ceiling at all, so the
+         * value must be a placeholder *with* a fallback: the opposite of the rule
+         * for JWT_SECRET, and for the opposite reason.
+         */
+        String limit = p.getProperty("app.sms.daily-limit");
+
+        assertThat(limit).isEqualTo("${SMS_DAILY_LIMIT:500}");
+        assertThat(limit).contains(":");
+    }
+
+    @Test
+    @DisplayName("the shipped provider is the one that admits it sends nothing")
+    void smsProviderDefaultsToTheFake() throws IOException {
+
+        /*
+         * There is no real provider yet, and this asserts the honest default
+         * rather than a hopeful one. `log` sends nothing and warns on every send
+         * outside development, so a deployment cannot quietly tell people to
+         * check a phone that will never ring — recovery there goes through the
+         * admin fallback until somebody configures a provider.
+         *
+         * When one is added this assertion should change deliberately, which is
+         * the point of pinning it.
+         */
+        assertThat(production().getProperty("app.sms.provider"))
+                .isEqualTo("${SMS_PROVIDER:log}");
+    }
+
+    @Test
     @DisplayName("no retired brand name is left in the shipped configuration")
     void noRetiredBrandInConfiguration() throws IOException {
 

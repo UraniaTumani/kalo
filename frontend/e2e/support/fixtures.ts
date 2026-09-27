@@ -298,7 +298,7 @@ const ROUTE_LIST: Record<string, { path: string; answered?: number[] }> = {
   '/admin/users': { path: '/api/v1/admin/users' },
   '/admin/rides': { path: '/api/v1/admin/rides' },
   '/admin/support': { path: '/api/v1/admin/support/requests' },
-  '/admin/password-resets': { path: '/api/v1/admin/password-resets' },
+  '/admin/password-resets': { path: '/api/v1/admin/password-resets/fallback-log' },
 }
 
 /**

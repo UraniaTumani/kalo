@@ -27,7 +27,8 @@
     "saved": "Saved.",
     "page": "Page {{current}} of {{total}}",
     "totalItems": "{{count}} total",
-    "showingRange": "Showing {{from}}–{{to}} of {{total}}"
+    "showingRange": "Showing {{from}}–{{to}} of {{total}}",
+    "continue": "Continue"
   },
   "language": {
     "label": "Language",
@@ -56,7 +57,7 @@
     "companies": "Companies",
     "users": "Users",
     "support": "Help & Support",
-    "passwordResets": "Password resets"
+    "passwordResets": "Manual recovery"
   },
   "auth": {
     "signInTitle": "Sign in",
@@ -87,17 +88,14 @@
     "partnerDraftNotice": "Your company starts as a draft. Add documents, submit for verification, and an administrator reviews it before you can take rides.",
     "forgotLink": "Forgot password?",
     "forgotTitle": "Forgot your password?",
-    "forgotSubtitle": "Enter the phone number on your account and we will get in touch.",
+    "forgotSubtitle": "Enter the phone number on your account and we will text you a code.",
     "forgotPhoneHint": "The same number you sign in with",
-    "forgotSubmit": "Continue",
-    "forgotSubmitted": "Your request has been logged.",
-    "forgotSubmittedDetail": "If this number belongs to an account, an administrator will call you to confirm your identity and give you a one-time code. The code is valid for 15 minutes.",
-    "haveCode": "I have a code",
+    "forgotSubmit": "Send code",
     "backToSignIn": "Back to sign in",
     "resetTitle": "Set a new password",
-    "resetSubtitle": "Enter the code the administrator gave you on the phone.",
+    "resetSubtitle": "Enter the 6-digit code we sent you.",
     "resetCode": "Code",
-    "resetCodeHint": "Eight letters and numbers, from the call",
+    "resetCodeHint": "Six digits, valid for 5 minutes",
     "newPassword": "New password",
     "confirmPassword": "Confirm password",
     "passwordHint": "At least 8 characters",
@@ -106,7 +104,12 @@
     "resetSubmit": "Reset password",
     "resetDoneTitle": "Password changed",
     "resetDoneDetail": "Every other device has been signed out of this account. Sign in with your new password.",
-    "forgotFailed": "We could not submit your request just now. Please try again shortly."
+    "forgotFailed": "We could not submit your request just now. Please try again shortly.",
+    "forgotNoPhone": "No longer using this number? Contact support — an administrator can verify you another way.",
+    "resetResend": "Send a new code",
+    "resetResendIn": "You can ask for a new code in {{seconds}}s",
+    "resetResent": "If this number belongs to an account, a new code is on its way.",
+    "resetBackToCode": "Back to the code"
   },
   "validation": {
     "required": "This field is required",
@@ -467,25 +470,30 @@
       "RESOLVED": "Mark resolved"
     },
     "passwordResets": {
-      "title": "Password resets",
-      "subtitle": "Requests waiting for an identity check.",
-      "howTitle": "How identity is verified",
-      "howBody": "MR TAXI does not send SMS and the phone number is not verified, so you are the verification: ring the number on the account, ask something only the account holder would know, and only then issue the code. The code is shown once.",
-      "pending": "Pending",
-      "emptyTitle": "No pending requests",
-      "emptyBody": "Password reset requests appear here.",
+      "title": "Manual account recovery",
+      "subtitle": "For people who have lost the phone number on their account.",
+      "howTitle": "This is not the normal way to recover an account",
+      "howBody": "MR TAXI texts a one-time code to the number on the account, and almost everybody recovers without you. Use this only when that number no longer reaches the person — a lost SIM, a changed number. Verify who you are dealing with by some other means first, write down what you checked, and expect it to be read back to you later.",
+      "emptyTitle": "No codes have been issued by hand",
+      "emptyBody": "Manual recovery is the exception. When it is used, it appears here.",
       "person": "Person",
-      "role": "Role",
-      "requested": "Requested",
-      "actions": "Actions",
+      "requested": "Issued",
       "issue": "Issue code",
-      "reject": "Refuse",
       "codeTitle": "Read this code down the phone",
-      "codeBody": "This code is shown only now and cannot be retrieved again. If it is lost, issue a new one.",
+      "codeBody": "Shown only now and never retrievable again. It is valid for 15 minutes and can be used once.",
       "codeExpires": "Expires {{time}}",
       "codeDone": "Done",
-      "rejectTitle": "Refuse this request?",
-      "rejectBody": "{{name}}’s request will be closed without a code being issued."
+      "issueTitle": "Issue a code by hand",
+      "phoneHint": "The number registered on the account",
+      "noteLabel": "How you verified this person",
+      "noteHint": "At least 20 characters. This is stored permanently and is the record of your decision.",
+      "notePlaceholder": "e.g. called the company office line and confirmed the last three rides and the registration date",
+      "noteTooShort": "Describe what you checked, in at least {{min}} characters",
+      "logTitle": "Codes issued by hand",
+      "logSubtitle": "Every use of this page, newest first.",
+      "issuedByColumn": "Issued by",
+      "issuedBy": "Issued by {{name}} · {{time}}",
+      "outcome": "Outcome"
     }
   },
   "profile": {

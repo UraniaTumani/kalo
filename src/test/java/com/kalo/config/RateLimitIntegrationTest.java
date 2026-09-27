@@ -149,10 +149,15 @@ class RateLimitIntegrationTest extends AbstractIntegrationTest {
 
         /*
          * Three in a quarter of an hour, tighter than registration: each one
-         * costs an administrator a telephone call, so the abuse worth stopping
-         * is a queue filled faster than a person can work it. The number is
-         * unregistered on purpose — the limiter must bite before the caller
-         * learns anything either way.
+         * that gets through sends a text message, so the abuse worth stopping is
+         * an anonymous caller spending a real budget and ringing a real phone.
+         * Three covers an initial request and two resends.
+         *
+         * The number is unregistered on purpose — the limiter must bite before
+         * the caller learns anything either way. This is the outer of three
+         * bounds; the per-account cooldown and daily cap live in the service,
+         * because an IP limit does nothing against requests spread across many
+         * addresses, and are covered by PasswordResetIntegrationTest.
          */
         for (int attempt = 1; attempt <= 3; attempt++) {
             mockMvc.perform(

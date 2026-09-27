@@ -67,17 +67,26 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final Limit GEOCODING = new Limit(60, 60);
 
     /**
-     * Tighter than registration. Opening a recovery costs an administrator a
-     * telephone call, so the abuse worth stopping is not volume against the
-     * server but a queue filled faster than a person can work it.
+     * Tighter than registration, and the only limit here that is about money.
+     *
+     * Every request that gets through sends a text message, so this endpoint
+     * spends from a real budget and rings a real phone on behalf of an
+     * anonymous caller. Three in fifteen minutes covers an initial request and
+     * two resends, which is more patience than anybody needs.
+     *
+     * It is the outer of three bounds, not the only one: the service also holds
+     * a sixty-second cooldown and a five-a-day cap per account, because an IP
+     * limit does nothing against somebody spreading requests for one victim
+     * across many addresses.
      */
     private static final Limit FORGOT_PASSWORD = new Limit(3, 900);
 
     /**
-     * The code is eight characters — about forty bits — because somebody has
-     * to read it down a telephone. The service burns a request after five
-     * wrong guesses, which is the real defence; this stops a caller working
-     * through fresh requests quickly enough to make guessing worth trying.
+     * The code is six digits — about twenty bits — because it arrives in a text
+     * message and gets typed on a phone. The service burns it after five wrong
+     * guesses, which is the real defence; this stops a caller cycling through
+     * fresh codes quickly enough to make guessing worth trying, which is what
+     * the arithmetic of a twenty-bit secret depends on.
      */
     private static final Limit RESET_PASSWORD = new Limit(10, 600);
 

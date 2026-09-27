@@ -1,8 +1,9 @@
 package com.kalo.auth.service;
 
+import com.kalo.auth.dto.AdminFallbackResetRequest;
+import com.kalo.auth.dto.FallbackResetAuditItem;
 import com.kalo.auth.dto.ForgotPasswordRequest;
 import com.kalo.auth.dto.IssuedResetCodeResponse;
-import com.kalo.auth.dto.PasswordResetQueueItem;
 import com.kalo.auth.dto.ResetPasswordRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,33 +11,37 @@ import org.springframework.data.domain.Pageable;
 public interface PasswordResetService {
 
     /**
-     * Records that somebody wants to recover an account.
+     * Mints a code for an account and has it texted to the number on file.
      *
-     * Returns nothing, and must behave identically whether the phone belongs
-     * to an account or to nobody: the response is the only thing a caller can
+     * Returns nothing, and must behave identically whether the phone belongs to
+     * an account or to nobody: the response is the only thing a caller can
      * observe, so anything conditional in it turns this endpoint into a way of
-     * asking whether a given number is registered.
+     * asking whether a given number is registered. Suspended accounts, a
+     * cooldown not yet elapsed, a daily cap and an exhausted SMS budget all
+     * leave by the same silent path for the same reason.
      */
     void requestReset(ForgotPasswordRequest request);
 
-    /** The pending queue, for an administrator to work through. */
-    Page<PasswordResetQueueItem> pendingRequests(Pageable pageable);
-
     /**
-     * Mints a code for a request whose owner has been identified.
+     * Sets a new password against a code, in one call.
      *
-     * The returned code is not stored and cannot be fetched again.
-     */
-    IssuedResetCodeResponse issueCode(Long requestId);
-
-    /** Refuses a request outright, for a call that did not check out. */
-    void rejectRequest(Long requestId);
-
-    /**
-     * Sets a new password against a code.
-     *
-     * Every failure — unknown number, no live request, wrong code, expired
-     * code, too many attempts — is one indistinguishable refusal.
+     * Every failure — unknown number, no live code, wrong code, expired code,
+     * too many attempts, suspended account — is one indistinguishable refusal.
      */
     void resetPassword(ResetPasswordRequest request);
+
+    /**
+     * Issues a code by hand, for an account whose number no longer reaches
+     * anybody.
+     *
+     * The narrow exception to self-service recovery, and the only path that
+     * returns a code in a response. Records who allowed it and on what grounds;
+     * unlike the endpoints above it does not hide whether the account exists,
+     * because the caller is already an authenticated administrator who can see
+     * the user list anyway.
+     */
+    IssuedResetCodeResponse issueFallbackCode(AdminFallbackResetRequest request);
+
+    /** Every code an administrator has ever issued by hand, newest first. */
+    Page<FallbackResetAuditItem> fallbackAudit(Pageable pageable);
 }

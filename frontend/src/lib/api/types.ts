@@ -463,27 +463,32 @@ export interface ErrorResponse {
 /* ------------------------------------------------- password recovery */
 
 /**
- * A recovery waiting for somebody to verify who is asking.
+ * One code an administrator issued by hand, as the audit trail shows it.
  *
- * Carries the phone in full because ringing it is the verification, and the
- * name and role so the caller can be asked something only the account holder
- * would know.
+ * The fallback exists because SMS recovery has one failure it cannot design
+ * away: a number that no longer reaches anybody. The risk is not that the path
+ * exists but that it becomes routine, so every use records who allowed it and on
+ * what grounds, and the trail is readable in the UI rather than only in a log
+ * file.
+ *
+ * No code and no hash — the record is about the decision, not the secret.
  */
-export interface PasswordResetQueueItem {
+export interface FallbackResetAuditItem {
   id: number
-  firstName: string
-  lastName: string
-  phone: string
-  role: UserRole
-  userStatus: UserStatus
-  requestedAt: string
+  personName: string
+  personPhone: string
+  issuedByName: string | null
+  verificationNote: string
+  issuedAt: string
+  status: string
 }
 
 /**
  * The code, returned once to the administrator who is about to read it out.
  *
- * Only a bcrypt hash is kept, so this never comes back a second time: an
- * administrator who loses it issues a new one.
+ * Only ever produced by the fallback: an SMS code is never in a response
+ * anywhere. Only a bcrypt hash is kept, so this never comes back a second time —
+ * an administrator who loses it issues a new one.
  */
 export interface IssuedResetCode {
   requestId: number
