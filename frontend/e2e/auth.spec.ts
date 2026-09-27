@@ -382,6 +382,30 @@ test.describe('Changing a password', () => {
 test.describe('Forgot password', () => {
   const CONFIRMATION = /your request has been logged/i
 
+  /**
+   * The response body, when the browser will still part with it.
+   *
+   * An assertion's message argument is evaluated on every run, not only when
+   * the assertion fails, so reading the body inline runs it against a response
+   * the page may already have moved on from. WebKit refuses at that point —
+   * "response body is not available for a response that was navigated away
+   * from" — and the read throws before the status is ever compared. Chromium
+   * keeps the body retrievable, so a diagnostic added to make failures legible
+   * passed locally and failed only on Mobile Safari.
+   *
+   * The body is worth having when a status is unexpected, so it is still
+   * fetched; it just stops being able to fail the test on its own.
+   */
+  async function bodyForDiagnosis(
+    response: import('@playwright/test').Response,
+  ): Promise<string> {
+    try {
+      return await response.text()
+    } catch {
+      return '<response body no longer retrievable>'
+    }
+  }
+
   /** Every call the page makes to the recovery endpoint, as the browser sees it. */
   function watchForgotCalls(page: import('@playwright/test').Page) {
     const calls: { url: string; method: string; status: number }[] = []
@@ -418,7 +442,7 @@ test.describe('Forgot password', () => {
 
     /* Status first: a failure here names what went wrong rather than only
      * reporting that a sentence never appeared. */
-    expect(response.status(), await response.text()).toBe(202)
+    expect(response.status(), await bodyForDiagnosis(response)).toBe(202)
 
     await expect(page.getByText(CONFIRMATION)).toBeVisible()
 
@@ -448,7 +472,7 @@ test.describe('Forgot password', () => {
     await page.getByRole('button', { name: /^continue$/i }).click()
     const response = await answered
 
-    expect(response.status(), await response.text()).toBe(202)
+    expect(response.status(), await bodyForDiagnosis(response)).toBe(202)
 
     await expect(page.getByText(CONFIRMATION)).toBeVisible()
 
