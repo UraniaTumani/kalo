@@ -7,7 +7,10 @@ import com.kalo.auth.dto.ResetPasswordRequest;
 import com.kalo.auth.dto.UserResponse;
 import com.kalo.auth.service.AuthService;
 import com.kalo.auth.service.PasswordResetService;
+import com.kalo.common.util.ConstantTime;
 import jakarta.validation.Valid;
+
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +25,16 @@ import com.kalo.auth.dto.PartnerRegisterResponse;
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
+
+    /**
+     * How long the recovery request always takes.
+     *
+     * Comfortably above the real work -- a handful of simple statements,
+     * tens of milliseconds -- so the floor is what a caller measures rather
+     * than the queries. High enough to bury the difference, low enough that
+     * a person asking for help does not notice it.
+     */
+    private static final Duration FORGOT_PASSWORD_FLOOR = Duration.ofMillis(250);
 
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
@@ -65,7 +78,28 @@ public class AuthController {
             @Valid @RequestBody ForgotPasswordRequest request
     ) {
 
-        passwordResetService.requestReset(request);
+        /*
+         * Held to a fixed duration, because the body is only half of what a
+         * caller can see. An unknown number costs one SELECT; a registered one
+         * costs a lookup, a count, an update and an insert. Identical answers
+         * arriving at reliably different times still say which numbers are
+         * registered, given enough samples.
+         *
+         * In the finally block so a refusal takes as long as an acceptance: a
+         * validation failure returning sooner would be the same leak wearing a
+         * different coat.
+         *
+         * Here rather than in the service because the guarantee is about the
+         * HTTP response, and because the service method is transactional —
+         * waiting inside it would hold a pooled connection for the whole floor.
+         */
+        long startedAt = System.nanoTime();
+
+        try {
+            passwordResetService.requestReset(request);
+        } finally {
+            ConstantTime.holdUntil(startedAt, FORGOT_PASSWORD_FLOOR);
+        }
 
         return ResponseEntity.accepted().build();
     }
