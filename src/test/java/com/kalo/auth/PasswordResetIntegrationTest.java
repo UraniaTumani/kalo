@@ -31,6 +31,9 @@ class PasswordResetIntegrationTest extends AbstractIntegrationTest {
 
     private static final String NEW_PASSWORD = "BrandNewPass456!";
 
+    /** Mirrors FORGOT_PASSWORD_FLOOR in AuthController. */
+    private static final long FLOOR_MILLIS = 250;
+
     /* --------------------------------------------------------- the path */
 
     @Test
@@ -114,6 +117,51 @@ class PasswordResetIntegrationTest extends AbstractIntegrationTest {
                 )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(0));
+    }
+
+    /* ----------------------------------------------------------- timing */
+
+    @Test
+    @DisplayName("a registered number and an unknown one take the same time")
+    void theAnswerIsNotFasterForAnUnknownNumber() throws Exception {
+
+        /*
+         * The body was always identical; the clock was not. An unknown number
+         * costs one SELECT and a registered one costs a lookup, a count, an
+         * update and an insert, which is a small difference but a consistent
+         * one -- and consistent is all it takes, given enough samples.
+         *
+         * Asserted as a floor rather than as a comparison between the two.
+         * Comparing them would be a race against whatever else the machine is
+         * doing; a floor is guaranteed by the wait itself, and if both paths
+         * sit on the same floor neither can be the faster one.
+         */
+        User customer = fixtures.customer();
+
+        long registered = timeOf(() -> forgot(customer.getPhone()));
+        long unknown = timeOf(() -> forgot("+355690000123"));
+
+        assertThat(registered)
+                .as("a registered number must not be answered faster than the floor")
+                .isGreaterThanOrEqualTo(FLOOR_MILLIS);
+
+        assertThat(unknown)
+                .as("an unknown number must not be answered faster than the floor")
+                .isGreaterThanOrEqualTo(FLOOR_MILLIS);
+    }
+
+    @Test
+    @DisplayName("a suspended account is not answered faster either")
+    void aSuspendedAccountIsNotFaster() throws Exception {
+
+        /*
+         * Its path writes a row and returns early, so without the floor it
+         * would sit between the other two and mark suspended accounts out.
+         */
+        User suspended = fixtures.user(UserRole.CUSTOMER, UserStatus.SUSPENDED);
+
+        assertThat(timeOf(() -> forgot(suspended.getPhone())))
+                .isGreaterThanOrEqualTo(FLOOR_MILLIS);
     }
 
     /* -------------------------------------------------------- suspended */
@@ -403,6 +451,18 @@ class PasswordResetIntegrationTest extends AbstractIntegrationTest {
     }
 
     /* ---------------------------------------------------------- helpers */
+
+    /** Wall-clock milliseconds a call took. */
+    private long timeOf(ThrowingRunnable action) throws Exception {
+        long started = System.nanoTime();
+        action.run();
+        return (System.nanoTime() - started) / 1_000_000;
+    }
+
+    @FunctionalInterface
+    private interface ThrowingRunnable {
+        void run() throws Exception;
+    }
 
     /** Opens a recovery and returns the response body, for comparing. */
     private String forgot(String phone) throws Exception {
