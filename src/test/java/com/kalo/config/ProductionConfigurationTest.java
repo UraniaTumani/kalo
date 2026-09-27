@@ -173,4 +173,48 @@ class ProductionConfigurationTest {
                     .startsWith("${");
         }
     }
+
+    @Test
+    @DisplayName("the bootstrapped administrator is named after the current product")
+    void bootstrapNameIsTheCurrentBrand() throws IOException {
+
+        /*
+         * This default is visible. The bootstrapped administrator's name shows
+         * in the sidebar, so it is branding rather than an internal label —
+         * and it went on saying KALO after the rebrand because nothing looked
+         * at it. Anybody bootstrapping without setting the variable got an
+         * administrator called "KALO Administrator".
+         *
+         * Here rather than in AdminCreationIntegrationTest for the reason this
+         * whole file exists: the test properties shadow the production ones,
+         * so an integration test asking Spring for this value is told whatever
+         * the test file says, which proves nothing about what ships.
+         */
+        Properties p = production();
+
+        assertThat(p.getProperty("app.admin.bootstrap.first-name"))
+                .as("the default administrator name must not carry a retired brand")
+                .isEqualTo("${ADMIN_BOOTSTRAP_FIRST_NAME:MR TAXI}");
+
+        assertThat(p.getProperty("app.admin.bootstrap.last-name"))
+                .isEqualTo("${ADMIN_BOOTSTRAP_LAST_NAME:Administrator}");
+    }
+
+    @Test
+    @DisplayName("no retired brand name is left in the shipped configuration")
+    void noRetiredBrandInConfiguration() throws IOException {
+
+        /*
+         * Broader than the default above, and cheap: the configuration file is
+         * small and any visible string in it should carry the current name.
+         * Database names, the JDBC URL and the like are internal and are
+         * allowed to keep saying kalo — the check is for the capitalised brand
+         * as it would be shown to somebody.
+         */
+        String raw = Files.readString(FILE);
+
+        assertThat(raw)
+                .as("application.properties still contains the retired brand name")
+                .doesNotContain("KALO");
+    }
 }

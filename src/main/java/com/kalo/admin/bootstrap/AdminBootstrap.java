@@ -51,7 +51,7 @@ public class AdminBootstrap {
     @Value("${app.admin.bootstrap.password:}")
     private String password;
 
-    @Value("${app.admin.bootstrap.first-name:KALO}")
+    @Value("${app.admin.bootstrap.first-name:MR TAXI}")
     private String firstName;
 
     @Value("${app.admin.bootstrap.last-name:Administrator}")

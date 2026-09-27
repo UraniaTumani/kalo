@@ -360,7 +360,7 @@ class AdminCreationIntegrationTest extends AbstractIntegrationTest {
     private void configure(String phone, String password) {
         ReflectionTestUtils.setField(adminBootstrap, "phone", phone);
         ReflectionTestUtils.setField(adminBootstrap, "password", password);
-        ReflectionTestUtils.setField(adminBootstrap, "firstName", "KALO");
+        ReflectionTestUtils.setField(adminBootstrap, "firstName", "MR TAXI");
         ReflectionTestUtils.setField(adminBootstrap, "lastName", "Administrator");
     }
 }
