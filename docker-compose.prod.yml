@@ -71,6 +71,19 @@ services:
 
       LOG_FORMAT: ${LOG_FORMAT}
 
+      # The first administrator, if one is wanted.
+      #
+      # Empty by default, which is the same as not configured: AdminBootstrap
+      # does nothing without both a phone and a password, and nothing at all
+      # once an administrator exists. Forwarded here because the backend can
+      # only read what the compose file hands it — set in the environment
+      # alone, these never reach the container and the bootstrap silently does
+      # not happen.
+      ADMIN_BOOTSTRAP_PHONE: ${ADMIN_BOOTSTRAP_PHONE:-}
+      ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-}
+      ADMIN_BOOTSTRAP_FIRST_NAME: ${ADMIN_BOOTSTRAP_FIRST_NAME:-}
+      ADMIN_BOOTSTRAP_LAST_NAME: ${ADMIN_BOOTSTRAP_LAST_NAME:-}
+
       # SWAGGER_ENABLED is deliberately absent. application.properties defaults
       # it to false, and a rehearsal should prove the default, not override it.
     depends_on:
