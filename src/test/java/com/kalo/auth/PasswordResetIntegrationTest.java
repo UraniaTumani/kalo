@@ -727,6 +727,44 @@ class PasswordResetIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("the channel column defaults to the ordinary one, not the privileged one")
+    void theChannelDefaultIsTheOrdinaryChannel() {
+
+        /*
+         * Half of a bug this suite could not have caught, so it is worth saying
+         * what the other half was. Migration 024 originally backfilled every
+         * pre-existing row as ADMIN_FALLBACK, reasoning that the old design only
+         * ever minted codes by hand. True of the rows that got a code, false of
+         * most of them — a request joined the queue with no code at all, and
+         * most were closed before anybody issued anything. The effect was three
+         * rows in the audit trail where nobody had vouched for anything, issuer
+         * and note both null, which is noise in the one listing that has to stay
+         * readable. It showed up only against a database that had real rows in
+         * it; every test here starts from an empty table, so nothing in this
+         * file could have failed.
+         *
+         * The backfill is fixed and still not testable here. The column default
+         * is, and it is the same mistake in miniature: a row inserted by hand
+         * must not default into the channel that claims an administrator
+         * approved it.
+         */
+        String columnDefault = jdbcTemplate.queryForObject(
+                """
+                SELECT column_default
+                FROM information_schema.columns
+                WHERE table_name = 'password_reset_requests'
+                  AND column_name = 'channel'
+                """,
+                String.class
+        );
+
+        assertThat(columnDefault)
+                .as("a hand-inserted row must not fabricate an audit entry")
+                .contains("SMS")
+                .doesNotContain("ADMIN_FALLBACK");
+    }
+
+    @Test
     @DisplayName("an ordinary SMS recovery does not appear in the fallback trail")
     void theTrailShowsOnlyFallbacks() throws Exception {
 
