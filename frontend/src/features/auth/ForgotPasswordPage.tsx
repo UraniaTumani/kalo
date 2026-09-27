@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { authApi } from '@/lib/api/endpoints'
+import { ApiError } from '@/lib/api/client'
 import { Alert, Button, Field, Input } from '@/components/ui'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { AuthShell } from './AuthShell'
@@ -32,6 +33,8 @@ export function ForgotPasswordPage() {
   const { t } = useTranslation()
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<unknown>(null)
+  /* The server failed in a way that is not the caller's doing. */
+  const [failed, setFailed] = useState(false)
 
   const {
     register,
@@ -41,16 +44,36 @@ export function ForgotPasswordPage() {
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null)
+    setFailed(false)
 
     try {
       await authApi.forgotPassword({ phone: values.phone.trim() })
       setSubmitted(true)
     } catch (caught) {
       /*
-       * Only a malformed number or a rate limit reaches here; the server
-       * accepts everything else regardless of whether the account exists.
+       * Only two answers from this endpoint are worth repeating to the person
+       * in front of it: the number was malformed, or they have asked too
+       * often. Both are about what they just did and neither says anything
+       * about whose account it is.
+       *
+       * Anything else is the server having a problem, and its own words are
+       * the wrong thing to show. A backend one deploy behind this frontend
+       * answers 404 here, and "Resource not found" then appears under a form
+       * asking for a phone number — which reads as a verdict on the number.
+       * It is not; it is a verdict on the deployment.
+       *
+       * Not swallowed into the success message either. Claiming the request
+       * was logged when it was not would leave somebody waiting for a call
+       * that is never coming.
        */
-      setError(caught)
+      const status = caught instanceof ApiError ? caught.status : 0
+
+      if (status === 400 || status === 429) {
+        setError(caught)
+      } else {
+        setError(null)
+        setFailed(true)
+      }
     }
   })
 
@@ -82,6 +105,7 @@ export function ForgotPasswordPage() {
       ) : (
         <form onSubmit={onSubmit} className="space-y-4" noValidate>
           {error ? <ErrorMessage error={error} /> : null}
+          {failed ? <Alert tone="danger">{t('auth.forgotFailed')}</Alert> : null}
 
           <Field
             label={t('auth.phone')}

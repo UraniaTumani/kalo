@@ -366,3 +366,160 @@ test.describe('Changing a password', () => {
     expect(still.accessToken).toBeTruthy()
   })
 })
+
+/**
+ * Forgot password, from the screen a person actually uses.
+ *
+ * This exists because of a real report: the page answered "Resource not found"
+ * on a valid number. The endpoint was never wrong — a backend one deploy
+ * behind this frontend has no such route, answers 404, and the page repeated
+ * the server's words under a form asking for a phone number, where they read
+ * as a verdict on the number rather than on the deployment.
+ *
+ * So two things are pinned here: the request goes where it is supposed to go,
+ * and a known number and an unknown one end at the same sentence.
+ */
+test.describe('Forgot password', () => {
+  const CONFIRMATION = /your request has been logged/i
+
+  /**
+   * The response body, when the browser will still part with it.
+   *
+   * An assertion's message argument is evaluated on every run, not only when
+   * the assertion fails, so reading the body inline runs it against a response
+   * the page may already have moved on from. WebKit refuses at that point —
+   * "response body is not available for a response that was navigated away
+   * from" — and the read throws before the status is ever compared. Chromium
+   * keeps the body retrievable, so a diagnostic added to make failures legible
+   * passed locally and failed only on Mobile Safari.
+   *
+   * The body is worth having when a status is unexpected, so it is still
+   * fetched; it just stops being able to fail the test on its own.
+   */
+  async function bodyForDiagnosis(
+    response: import('@playwright/test').Response,
+  ): Promise<string> {
+    try {
+      return await response.text()
+    } catch {
+      return '<response body no longer retrievable>'
+    }
+  }
+
+  /** Every call the page makes to the recovery endpoint, as the browser sees it. */
+  function watchForgotCalls(page: import('@playwright/test').Page) {
+    const calls: { url: string; method: string; status: number }[] = []
+
+    page.on('response', (response) => {
+      if (!response.url().includes('/auth/password/forgot')) return
+      calls.push({
+        url: response.url(),
+        method: response.request().method(),
+        status: response.status(),
+      })
+    })
+
+    return calls
+  }
+
+  test('a registered number reaches the right endpoint and gets the confirmation', async ({
+    page,
+    app,
+    guards,
+  }) => {
+    void app
+    void guards
+
+    const calls = watchForgotCalls(page)
+
+    await page.goto('/forgot-password')
+
+    await page.getByLabel(/^phone/i).fill(SEEDED.customer.phone)
+
+    const answered = page.waitForResponse((r) => r.url().includes('/auth/password/forgot'))
+    await page.getByRole('button', { name: /^continue$/i }).click()
+    const response = await answered
+
+    /* Status first: a failure here names what went wrong rather than only
+     * reporting that a sentence never appeared. */
+    expect(response.status(), await bodyForDiagnosis(response)).toBe(202)
+
+    await expect(page.getByText(CONFIRMATION)).toBeVisible()
+
+    /*
+     * The mapping, asserted from the browser rather than from the source: a
+     * POST to /api/v1/auth/password/forgot, accepted. A 404 here is the
+     * reported bug, and it would be a stale backend rather than a wrong path.
+     */
+    expect(calls, 'the page called the recovery endpoint').toHaveLength(1)
+    expect(calls[0].url).toContain('/api/v1/auth/password/forgot')
+    expect(calls[0].method).toBe('POST')
+    expect(calls[0].status, 'accepted, not 404 or 500').toBe(202)
+  })
+
+  test('an unknown number ends at exactly the same sentence', async ({ page, app, guards }) => {
+    void app
+    void guards
+
+    const calls = watchForgotCalls(page)
+
+    await page.goto('/forgot-password')
+
+    /* Correctly formed, belongs to nobody. */
+    await page.getByLabel(/^phone/i).fill('+355699999999')
+
+    const answered = page.waitForResponse((r) => r.url().includes('/auth/password/forgot'))
+    await page.getByRole('button', { name: /^continue$/i }).click()
+    const response = await answered
+
+    expect(response.status(), await bodyForDiagnosis(response)).toBe(202)
+
+    await expect(page.getByText(CONFIRMATION)).toBeVisible()
+
+    expect(calls[0].status, 'accepted, exactly as for a real account').toBe(202)
+
+    /*
+     * The point of the whole design. Nothing on this screen may hint that the
+     * number is unknown — not a different message, not a different tone, not
+     * an error alert alongside the confirmation.
+     */
+    await expect(page.getByRole('alert')).toHaveCount(0)
+  })
+
+  test('a server failure does not repeat the server to the user', async ({
+    page,
+    app,
+    guards,
+  }) => {
+    void app
+    void guards
+
+    /*
+     * The reported bug, forced: the exact 404 body a backend without this
+     * route returns. What the person must not see is "Resource not found"
+     * under a phone field, and what they must not be told is that a request
+     * was logged when none was.
+     */
+    await page.route('**/api/v1/auth/password/forgot', (route) =>
+      route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          status: 404,
+          error: 'Not Found',
+          message: 'Resource not found',
+          path: '/api/v1/auth/password/forgot',
+        }),
+      }),
+    )
+
+    await page.goto('/forgot-password')
+
+    await page.getByLabel(/^phone/i).fill(SEEDED.customer.phone)
+    await page.getByRole('button', { name: /^continue$/i }).click()
+
+    await expect(page.getByText(/could not submit your request/i)).toBeVisible()
+    await expect(page.getByText(/resource not found/i)).toHaveCount(0)
+    await expect(page.getByText(CONFIRMATION)).toHaveCount(0)
+  })
+})

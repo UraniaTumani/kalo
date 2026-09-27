@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
@@ -263,6 +264,32 @@ public class GlobalExceptionHandler {
         return build(
                 HttpStatus.NOT_FOUND,
                 "Resource not found",
+                request
+        );
+    }
+
+    /**
+     * The route exists; the verb does not.
+     *
+     * Without this, the catch-all below claims the server broke — a client
+     * calling GET where POST was meant got a 500, which is both wrong and
+     * expensive: it is indistinguishable in monitoring from a real fault, and
+     * it tells the caller nothing about what to do differently.
+     *
+     * The distinction earns its place on the recovery endpoints in particular.
+     * A missing route answers 404 and a wrong verb answers 405, so the two
+     * failures a client hits — "this build does not have that route" and "you
+     * called it wrongly" — stop looking alike.
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException exception,
+            HttpServletRequest request
+    ) {
+
+        return build(
+                HttpStatus.METHOD_NOT_ALLOWED,
+                "That method is not supported on this path",
                 request
         );
     }

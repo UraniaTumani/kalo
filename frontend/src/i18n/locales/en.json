@@ -105,7 +105,8 @@
     "passwordMismatch": "Passwords do not match",
     "resetSubmit": "Reset password",
     "resetDoneTitle": "Password changed",
-    "resetDoneDetail": "Every other device has been signed out of this account. Sign in with your new password."
+    "resetDoneDetail": "Every other device has been signed out of this account. Sign in with your new password.",
+    "forgotFailed": "We could not submit your request just now. Please try again shortly."
   },
   "validation": {
     "required": "This field is required",
