@@ -57,12 +57,20 @@ public class PasswordResetSmsDispatcher {
             smsSender.send(event.phone(), TEMPLATE.formatted(event.rawCode()));
 
             /*
+             * "Handed to" rather than "sent", because that is all this class
+             * knows. SmsSender returns nothing and is forbidden from throwing to
+             * signal an undelivered message, so a line here claiming delivery
+             * would be a guess — and with no provider configured it would be a
+             * wrong one, printed directly under FakeSmsSender's warning that
+             * nothing left the building. Whether a message actually went is the
+             * sender's to report, and every implementation does.
+             *
              * userId and expiry, never the code and never the number in full —
              * the log is the one place a code could survive long enough to be
              * useful to somebody reading it later.
              */
             log.info(
-                    "Recovery code dispatched: userId={} expiresAt={}",
+                    "Recovery code handed to the SMS sender: userId={} expiresAt={}",
                     event.userId(),
                     event.expiresAt()
             );
@@ -79,7 +87,7 @@ public class PasswordResetSmsDispatcher {
              * the admin fallback exists for the case where nothing arrives.
              */
             log.error(
-                    "Recovery code could not be dispatched: userId={}",
+                    "The SMS sender failed on a recovery code: userId={}",
                     event.userId(),
                     failed
             );
