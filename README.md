@@ -108,9 +108,12 @@ Liquibase creates every table on first startup. Do not create tables by hand.
 | `GEOCODING_PROVIDER` | no | `nominatim` | Which geocoder answers address lookup. `static` is a fixed set of Tirana landmarks, used by the browser tests. |
 | `GEOCODING_USER_AGENT` | no | `KALO/1.0 …` | Sent to Nominatim, whose policy requires an application name and a contact. Put a real address here before launch. |
 | `GEOCODING_CACHE_ENABLED` | no | `true` | Leave on. An address field fires on every pause in typing. |
-| `SMS_PROVIDER` | no | `log` | Which provider sends recovery codes. `log` sends nothing — see below. An unrecognised value fails at startup rather than falling back. |
+| `SMS_PROVIDER` | no | `log` | Which provider sends recovery codes: `log` (sends nothing, see below) or `infobip`. An unrecognised value fails at startup rather than falling back. |
 | `SMS_DAILY_LIMIT` | no | `500` | The most recovery messages sent in any rolling 24 hours, across the whole deployment. A spend ceiling, not a performance one. |
 | `SMS_LOG_MESSAGE` | no | `false` | Writes the message body, **including the live code**, to the log. Honoured only under the `dev`/`test` profiles; ignored anywhere else. |
+| `INFOBIP_BASE_URL` | if `SMS_PROVIDER=infobip` | *(empty)* | Per-account host, `https://xxxxx.api.infobip.com`. No default is possible. |
+| `INFOBIP_API_KEY` | if `SMS_PROVIDER=infobip` | *(empty)* | Sent as `Authorization: App <key>`. A live credential — environment only. |
+| `INFOBIP_SENDER` | if `SMS_PROVIDER=infobip` | *(empty)* | Registered sender ID or number. Must be registered with the operator first. |
 | `VITE_API_URL` | frontend build, split-origin only | *(empty)* | Baked into the bundle at build time. Empty means same-origin. |
 
 ### Password recovery and SMS
@@ -130,25 +133,47 @@ code safe, and the deployment-wide `SMS_DAILY_LIMIT` is there because an
 unauthenticated endpoint that sends SMS is an unauthenticated endpoint that
 spends money — SMS pumping is a real business.
 
-**There is no SMS provider yet.** `SMS_PROVIDER=log` is the only implementation
-and it sends nothing: it records messages so tests can read them, writes the body
-to the log under the `dev` profile, and logs a `WARN` on every send anywhere else
-rather than quietly letting a deployment tell people to check a phone that will
-never ring. Until a provider is configured, recovery on a real deployment goes
-through the admin fallback below.
+Two providers exist. `SmsConfig` picks one from `SMS_PROVIDER`, the same shape as
+`GeocodingConfig`, and an unrecognised value fails at startup rather than falling
+back — a typo must not be the reason codes stop arriving.
 
-Adding one is one class, the same shape as the geocoder:
+**`log` (the default) sends nothing**, and does not pretend otherwise: it records
+messages so tests can read them, writes the body to the log under the `dev`
+profile only, and logs a `WARN` on every send anywhere else rather than quietly
+letting a deployment tell people to check a phone that will never ring. On such a
+deployment, recovery goes through the admin fallback below.
 
-1. Implement `SmsSender` (one method, `send(phone, message)`) against Infobip,
-   Twilio or a local aggregator, reading credentials from the environment.
-2. Add a branch in `SmsConfig`.
-3. Set `SMS_PROVIDER` to its name.
+**`infobip` is a real integration** — `POST {base}/sms/3/messages`, chosen for
+Albania because Infobip is headquartered in Croatia and generally has the better
++355 routes. It needs three settings, all of which fail at startup if missing when
+the provider is selected:
 
-Nothing else changes. Note that a provider call **must** stay on the executor
-`SmsConfig` supplies: it is asynchronous for a security reason, not a throughput
-one, because a send on the request thread would overrun the constant-time floor
-for registered numbers only and reopen the enumeration channel that floor exists
-to close.
+| | |
+|---|---|
+| `INFOBIP_BASE_URL` | **Per-account**, not a shared endpoint — `https://xxxxx.api.infobip.com`, shown on the API dashboard. There is deliberately no default: a guessed one sends every message to a host that rejects your key. |
+| `INFOBIP_API_KEY` | Developer Tools → API keys. Sent as `Authorization: App <key>` — Infobip's own scheme, **not** `Bearer`, and the mistake is silent. |
+| `INFOBIP_SENDER` | The registered sender ID or number. |
+
+**Budget the paperwork, not the code.** Albania, like most of the region, requires
+an alphanumeric sender ID to be *registered with the operator* before traffic using
+it is accepted, and that is usually the long pole — days, against an afternoon for
+the integration. An unregistered ID produces messages the operator rejects.
+
+On price: rates move and vary by route, so **get a quote rather than trusting a
+figure from anywhere else**. At pilot scale — a few hundred users forgetting a
+password occasionally — the bill is negligible either way; it only matters in the
+thousands, which is what `SMS_DAILY_LIMIT` is sized against.
+
+Adding a third provider is one class and one branch: implement `SmsSender` (one
+method, `send(phone, message)`), add a branch in `SmsConfig`, set `SMS_PROVIDER`.
+Nothing outside `com.kalo.sms` learns which company carries the message.
+
+Two rules any implementation must keep. It **must not throw** — the send runs on a
+background thread after the response has gone out, so a failure is a log line and
+nothing else. And it **must stay on the executor `SmsConfig` supplies**: that is
+asynchronous for a security reason rather than a throughput one, because a send on
+the request thread would overrun the constant-time floor for registered numbers
+only and reopen the enumeration channel that floor exists to close.
 
 ### Manual recovery, for a lost number
 
@@ -518,10 +543,14 @@ Known and intentional for this milestone:
   the reset, which is stronger than anything the platform could check before and
   weaker than a number verified at signup. Recovery is as strong as the account
   holder's control of the number they gave us.
-- **No SMS provider is configured.** The seam exists (`SmsSender`, `SmsConfig`)
-  and the default implementation deliberately sends nothing, warning on every
-  attempt. Until a provider is bought, self-service recovery does not work on a
-  real deployment and the admin fallback is the only path.
+- **No SMS account is configured**, though the integration now exists. The
+  Infobip implementation is written and tested against a stubbed provider, but
+  nothing has been exercised against the live API — there is no account, no key
+  and no registered sender ID. The default provider still sends nothing and warns
+  on every attempt, so until `SMS_PROVIDER=infobip` is set with real credentials,
+  self-service recovery does not work on a real deployment and the admin fallback
+  is the only path. Expect sender-ID registration with the operator to take longer
+  than the configuration.
 - **The public availability endpoint is unauthenticated and unthrottled.** It
   is read-only and cheap, but it has no rate limiting; put one in front of it
   before exposing the API to the internet.

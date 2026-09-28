@@ -77,6 +77,13 @@ services:
       # SMS_LOG_MESSAGE is deliberately absent. It writes the live code to the
       # log, and SmsConfig refuses to honour it outside dev and test anyway.
 
+      # Infobip, read only when SMS_PROVIDER=infobip and validated at startup.
+      # Empty defaults so the rehearsal still runs without an account; the
+      # backend refuses to start if the provider is selected without them.
+      INFOBIP_BASE_URL: ${INFOBIP_BASE_URL:-}
+      INFOBIP_API_KEY: ${INFOBIP_API_KEY:-}
+      INFOBIP_SENDER: ${INFOBIP_SENDER:-}
+
       # Requests arrive through nginx, so the forwarded address is the real
       # client and the rate limiter should count it rather than the proxy.
       APP_RATE_LIMIT_TRUST_FORWARDED_FOR: "true"
