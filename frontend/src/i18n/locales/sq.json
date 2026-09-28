@@ -27,7 +27,8 @@
     "saved": "U ruajt.",
     "page": "Faqja {{current}} nga {{total}}",
     "totalItems": "{{count}} gjithsej",
-    "showingRange": "Duke shfaqur {{from}}–{{to}} nga {{total}}"
+    "showingRange": "Duke shfaqur {{from}}–{{to}} nga {{total}}",
+    "continue": "Vazhdo"
   },
   "language": {
     "label": "Gjuha",
@@ -56,7 +57,7 @@
     "companies": "Kompanitë",
     "users": "Përdoruesit",
     "support": "Ndihmë & Mbështetje",
-    "passwordResets": "Rivendosje fjalëkalimi"
+    "passwordResets": "Rikuperim manual"
   },
   "auth": {
     "signInTitle": "Hyr në llogari",
@@ -87,17 +88,14 @@
     "partnerDraftNotice": "Kompania juaj fillon si draft. Shtoni dokumentet, dërgojini për verifikim dhe një administrator i shqyrton para se të merrni udhëtime.",
     "forgotLink": "Keni harruar fjalëkalimin?",
     "forgotTitle": "Keni harruar fjalëkalimin?",
-    "forgotSubtitle": "Shkruani numrin e telefonit të llogarisë suaj dhe do t’ju kontaktojmë.",
+    "forgotSubtitle": "Shkruani numrin e telefonit të llogarisë suaj dhe do t’ju dërgojmë një kod.",
     "forgotPhoneHint": "I njëjti numër me të cilin hyni në llogari",
-    "forgotSubmit": "Vazhdo",
-    "forgotSubmitted": "Kërkesa juaj u regjistrua.",
-    "forgotSubmittedDetail": "Nëse ky numër i përket një llogarie, një administrator do t’ju marrë në telefon për të verifikuar identitetin tuaj dhe do t’ju japë një kod njëpërdorimsh. Kodi vlen për 15 minuta.",
-    "haveCode": "Kam një kod",
+    "forgotSubmit": "Dërgo kodin",
     "backToSignIn": "Kthehu te hyrja",
     "resetTitle": "Vendos një fjalëkalim të ri",
-    "resetSubtitle": "Shkruani kodin që ju dha administratori në telefon.",
+    "resetSubtitle": "Shkruani kodin 6-shifror që ju dërguam.",
     "resetCode": "Kodi",
-    "resetCodeHint": "Tetë shkronja e numra, nga telefonata",
+    "resetCodeHint": "Gjashtë shifra, i vlefshëm për 5 minuta",
     "newPassword": "Fjalëkalimi i ri",
     "confirmPassword": "Konfirmo fjalëkalimin",
     "passwordHint": "Të paktën 8 karaktere",
@@ -106,7 +104,12 @@
     "resetSubmit": "Rivendos fjalëkalimin",
     "resetDoneTitle": "Fjalëkalimi u ndryshua",
     "resetDoneDetail": "Të gjitha pajisjet e tjera u shkëputën nga llogaria. Hyni me fjalëkalimin e ri.",
-    "forgotFailed": "Kërkesa nuk u dërgua dot për momentin. Provoni sërish pas pak."
+    "forgotFailed": "Kërkesa nuk u dërgua dot për momentin. Provoni sërish pas pak.",
+    "forgotNoPhone": "Nuk e përdorni më këtë numër? Kontaktoni mbështetjen — një administrator mund t’ju verifikojë në një mënyrë tjetër.",
+    "resetResend": "Dërgo kod të ri",
+    "resetResendIn": "Mund të kërkoni një kod të ri pas {{seconds}}s",
+    "resetResent": "Nëse ky numër i përket një llogarie, një kod i ri është në rrugë.",
+    "resetBackToCode": "Kthehu te kodi"
   },
   "validation": {
     "required": "Kjo fushë është e detyrueshme",
@@ -467,25 +470,30 @@
       "RESOLVED": "Shëno si të zgjidhur"
     },
     "passwordResets": {
-      "title": "Rivendosje fjalëkalimi",
-      "subtitle": "Kërkesa që presin verifikimin e identitetit.",
-      "howTitle": "Si verifikohet identiteti",
-      "howBody": "MR TAXI nuk dërgon SMS dhe numri i telefonit nuk është i verifikuar, prandaj verifikimin e bëni ju: merrni në telefon numrin e llogarisë, pyesni diçka që vetëm zotëruesi i llogarisë e di, dhe vetëm pastaj lëshoni kodin. Kodi shfaqet vetëm një herë.",
-      "pending": "Në pritje",
-      "emptyTitle": "Asnjë kërkesë në pritje",
-      "emptyBody": "Kërkesat për rivendosje fjalëkalimi shfaqen këtu.",
+      "title": "Rikuperim manual i llogarisë",
+      "subtitle": "Për personat që kanë humbur numrin e telefonit të llogarisë.",
+      "howTitle": "Kjo nuk është mënyra normale për të rikuperuar një llogari",
+      "howBody": "MR TAXI dërgon me SMS një kod një-përdorimësh në numrin e llogarisë, dhe pothuajse të gjithë rikuperojnë pa ju. Përdorni këtë vetëm kur ai numër nuk e arrin më personin — një SIM e humbur, një numër i ndryshuar. Verifikoni më parë me kë po flisni në një mënyrë tjetër, shkruani çfarë kontrolluat, dhe pritni që t’ju lexohet sërish më vonë.",
+      "emptyTitle": "Asnjë kod nuk është lëshuar me dorë",
+      "emptyBody": "Rikuperimi manual është përjashtim. Kur përdoret, shfaqet këtu.",
       "person": "Personi",
-      "role": "Roli",
-      "requested": "Kërkuar më",
-      "actions": "Veprime",
+      "requested": "Lëshuar më",
       "issue": "Lësho kodin",
-      "reject": "Refuzo",
       "codeTitle": "Lexojani këtë kod në telefon",
-      "codeBody": "Ky kod shfaqet vetëm tani dhe nuk mund të merret sërish. Nëse humbet, lëshoni një kod të ri.",
+      "codeBody": "Shfaqet vetëm tani dhe nuk merret më sërish. Është i vlefshëm për 15 minuta dhe përdoret një herë.",
       "codeExpires": "Skadon më {{time}}",
       "codeDone": "U krye",
-      "rejectTitle": "Refuzo kërkesën?",
-      "rejectBody": "Kërkesa e {{name}} do të mbyllet pa u lëshuar asnjë kod."
+      "issueTitle": "Lësho një kod me dorë",
+      "phoneHint": "Numri i regjistruar në llogari",
+      "noteLabel": "Si e verifikuat këtë person",
+      "noteHint": "Të paktën 20 karaktere. Ruhet përgjithmonë dhe është dokumenti i vendimit tuaj.",
+      "notePlaceholder": "p.sh. telefonova në numrin e zyrës së kompanisë dhe konfirmova tre udhëtimet e fundit dhe datën e regjistrimit",
+      "noteTooShort": "Përshkruani çfarë kontrolluat, në të paktën {{min}} karaktere",
+      "logTitle": "Kodet e lëshuara me dorë",
+      "logSubtitle": "Çdo përdorim i kësaj faqeje, më i riu i pari.",
+      "issuedByColumn": "Lëshuar nga",
+      "issuedBy": "Lëshuar nga {{name}} · {{time}}",
+      "outcome": "Rezultati"
     }
   },
   "profile": {

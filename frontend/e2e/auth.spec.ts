@@ -367,27 +367,35 @@ test.describe('Changing a password', () => {
   })
 })
 
-/**
- * Forgot password, from the screen a person actually uses.
- *
- * This exists because of a real report: the page answered "Resource not found"
- * on a valid number. The endpoint was never wrong — a backend one deploy
- * behind this frontend has no such route, answers 404, and the page repeated
- * the server's words under a form asking for a phone number, where they read
- * as a verdict on the number rather than on the deployment.
- *
- * So two things are pinned here: the request goes where it is supposed to go,
- * and a known number and an unknown one end at the same sentence.
- */
-test.describe('Forgot password', () => {
-  const CONFIRMATION = /your request has been logged/i
 
+/**
+ * Password recovery, from the screens a person actually uses.
+ *
+ * This block exists because of a real report: the page answered "Resource not
+ * found" on a valid number. The endpoint was never wrong — a backend one deploy
+ * behind this frontend has no such route, answers 404, and the page repeated the
+ * server's words under a form asking for a phone number, where they read as a
+ * verdict on the number rather than on the deployment. That is still pinned
+ * below.
+ *
+ * What the flow does has changed: a one-time code is texted to the number on the
+ * account rather than read out by an administrator, so there is no confirmation
+ * screen to wait on any more and the person goes straight to the code field.
+ *
+ * The code itself is deliberately unreachable from here. Nothing in the SMS path
+ * returns it and nothing logs it where a browser could look, which is the point —
+ * so the redemption is exercised against a stubbed 204 and the real code is
+ * proved by PasswordResetIntegrationTest, which can read the message. What these
+ * tests own is the journey: two visible steps, one request, and a refusal that
+ * says the same thing however it failed.
+ */
+test.describe('Password recovery', () => {
   /**
    * The response body, when the browser will still part with it.
    *
-   * An assertion's message argument is evaluated on every run, not only when
-   * the assertion fails, so reading the body inline runs it against a response
-   * the page may already have moved on from. WebKit refuses at that point —
+   * An assertion's message argument is evaluated on every run, not only when the
+   * assertion fails, so reading the body inline runs it against a response the
+   * page may already have moved on from. WebKit refuses at that point —
    * "response body is not available for a response that was navigated away
    * from" — and the read throws before the status is ever compared. Chromium
    * keeps the body retrievable, so a diagnostic added to make failures legible
@@ -422,7 +430,18 @@ test.describe('Forgot password', () => {
     return calls
   }
 
-  test('a registered number reaches the right endpoint and gets the confirmation', async ({
+  /** Asks for a code and waits for the answer, from the first screen. */
+  async function requestCode(page: import('@playwright/test').Page, phone: string) {
+    await page.goto('/forgot-password')
+    await page.getByLabel(/^phone/i).fill(phone)
+
+    const answered = page.waitForResponse((r) => r.url().includes('/auth/password/forgot'))
+    await page.getByRole('button', { name: /send code/i }).click()
+
+    return answered
+  }
+
+  test('a registered number reaches the right endpoint and lands on the code step', async ({
     page,
     app,
     guards,
@@ -432,24 +451,19 @@ test.describe('Forgot password', () => {
 
     const calls = watchForgotCalls(page)
 
-    await page.goto('/forgot-password')
-
-    await page.getByLabel(/^phone/i).fill(SEEDED.customer.phone)
-
-    const answered = page.waitForResponse((r) => r.url().includes('/auth/password/forgot'))
-    await page.getByRole('button', { name: /^continue$/i }).click()
-    const response = await answered
+    const response = await requestCode(page, SEEDED.customer.phone)
 
     /* Status first: a failure here names what went wrong rather than only
-     * reporting that a sentence never appeared. */
+     * reporting that a field never appeared. */
     expect(response.status(), await bodyForDiagnosis(response)).toBe(202)
 
-    await expect(page.getByText(CONFIRMATION)).toBeVisible()
+    await expect(page).toHaveURL(/\/reset-password/)
+    await expect(page.getByLabel(/^code/i)).toBeVisible()
 
     /*
-     * The mapping, asserted from the browser rather than from the source: a
-     * POST to /api/v1/auth/password/forgot, accepted. A 404 here is the
-     * reported bug, and it would be a stale backend rather than a wrong path.
+     * The mapping, asserted from the browser rather than from the source: a POST
+     * to /api/v1/auth/password/forgot, accepted. A 404 here is the reported bug,
+     * and it would be a stale backend rather than a wrong path.
      */
     expect(calls, 'the page called the recovery endpoint').toHaveLength(1)
     expect(calls[0].url).toContain('/api/v1/auth/password/forgot')
@@ -457,33 +471,223 @@ test.describe('Forgot password', () => {
     expect(calls[0].status, 'accepted, not 404 or 500').toBe(202)
   })
 
-  test('an unknown number ends at exactly the same sentence', async ({ page, app, guards }) => {
+  test('an unknown number ends at exactly the same place', async ({ page, app, guards }) => {
     void app
     void guards
 
     const calls = watchForgotCalls(page)
 
-    await page.goto('/forgot-password')
-
     /* Correctly formed, belongs to nobody. */
-    await page.getByLabel(/^phone/i).fill('+355699999999')
-
-    const answered = page.waitForResponse((r) => r.url().includes('/auth/password/forgot'))
-    await page.getByRole('button', { name: /^continue$/i }).click()
-    const response = await answered
+    const response = await requestCode(page, '+355699999999')
 
     expect(response.status(), await bodyForDiagnosis(response)).toBe(202)
-
-    await expect(page.getByText(CONFIRMATION)).toBeVisible()
 
     expect(calls[0].status, 'accepted, exactly as for a real account').toBe(202)
 
     /*
      * The point of the whole design. Nothing on this screen may hint that the
-     * number is unknown — not a different message, not a different tone, not
-     * an error alert alongside the confirmation.
+     * number is unknown — not a different message, not a different tone, not an
+     * error alert, and not being kept on the previous page.
      */
+    await expect(page).toHaveURL(/\/reset-password/)
+    await expect(page.getByLabel(/^code/i)).toBeVisible()
     await expect(page.getByRole('alert')).toHaveCount(0)
+  })
+
+  test('the phone number is not put in the URL', async ({ page, app, guards }) => {
+    void app
+    void guards
+
+    await requestCode(page, SEEDED.customer.phone)
+    await expect(page).toHaveURL(/\/reset-password/)
+
+    /*
+     * Carried in router state instead. A phone number in a query string ends up
+     * in browser history, in any analytics this page ever gains, and in a link
+     * somebody pastes into a chat.
+     */
+    expect(page.url()).not.toContain(SEEDED.customer.phone)
+    expect(page.url()).not.toContain('355')
+  })
+
+  test('the code field is set up for a texted code', async ({ page, app, guards }) => {
+    void app
+    void guards
+
+    await requestCode(page, SEEDED.customer.phone)
+
+    const code = page.getByLabel(/^code/i)
+
+    /*
+     * These two attributes are most of the usability of an SMS code on a phone:
+     * the numeric keypad instead of a full keyboard, and one-time-code so iOS and
+     * Android offer the digits straight from the message. Asserted because they
+     * are invisible — nothing about the rendered page looks wrong when they are
+     * missing, and the difference for the person is two taps against reading a
+     * number off a notification and typing it.
+     */
+    await expect(code).toHaveAttribute('inputmode', 'numeric')
+    await expect(code).toHaveAttribute('autocomplete', 'one-time-code')
+  })
+
+  test('the whole journey: code, then password, then signed out everywhere', async ({
+    page,
+    app,
+    guards,
+  }) => {
+    void app
+    void guards
+
+    let submitted: Record<string, unknown> | null = null
+
+    /*
+     * Stubbed, because the real code exists only in a text message this browser
+     * cannot read. What is being tested is the shape of the request the two-step
+     * form produces — one call carrying both the code and the password, which is
+     * the decision that let this flow avoid a second secret.
+     */
+    await page.route('**/api/v1/auth/password/reset', async (route) => {
+      submitted = JSON.parse(route.request().postData() ?? '{}')
+      await route.fulfill({ status: 204 })
+    })
+
+    await requestCode(page, SEEDED.customer.phone)
+
+    /* Step one: the code, alone. The password fields are not on screen yet. */
+    await expect(page.getByLabel(/new password/i)).toBeHidden()
+
+    await page.getByLabel(/^code/i).fill('428913')
+    await page.getByRole('button', { name: /^continue$/i }).click()
+
+    /* Step two: the password, and the code field has gone. */
+    await expect(page.getByLabel(/new password/i)).toBeVisible()
+    await expect(page.getByLabel(/^code/i)).toBeHidden()
+
+    await page.getByLabel(/new password/i).fill('BrandNewPass456!')
+    await page.getByLabel(/confirm password/i).fill('BrandNewPass456!')
+    await page.getByRole('button', { name: /reset password/i }).click()
+
+    await expect(page.getByText(/password changed/i)).toBeVisible()
+
+    /* One request, both values. */
+    expect(submitted).toMatchObject({
+      phone: SEEDED.customer.phone,
+      code: '428913',
+      newPassword: 'BrandNewPass456!',
+    })
+  })
+
+  test('a mistyped confirmation is caught before anything is sent', async ({
+    page,
+    app,
+    guards,
+  }) => {
+    void app
+    void guards
+
+    let called = false
+    await page.route('**/api/v1/auth/password/reset', async (route) => {
+      called = true
+      await route.fulfill({ status: 204 })
+    })
+
+    await requestCode(page, SEEDED.customer.phone)
+
+    await page.getByLabel(/^code/i).fill('428913')
+    await page.getByRole('button', { name: /^continue$/i }).click()
+
+    await page.getByLabel(/new password/i).fill('BrandNewPass456!')
+    await page.getByLabel(/confirm password/i).fill('BrandNewPass457!')
+    await page.getByRole('button', { name: /reset password/i }).click()
+
+    await expect(page.getByText(/do not match/i)).toBeVisible()
+
+    /*
+     * Not sent. A mismatch spent against the server would burn one of the five
+     * attempts the code survives, which for a six-digit code is a fifth of the
+     * person's margin gone to a typo.
+     */
+    expect(called, 'a mismatched confirmation must not reach the server').toBe(false)
+  })
+
+  test('a refused code comes back generic, and returns to the code step', async ({
+    page,
+    app,
+    guards,
+  }) => {
+    void app
+    void guards
+
+    await page.route('**/api/v1/auth/password/reset', (route) =>
+      route.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          status: 400,
+          error: 'Bad Request',
+          message: 'This code is not valid or has expired',
+          path: '/api/v1/auth/password/reset',
+        }),
+      }),
+    )
+
+    await requestCode(page, SEEDED.customer.phone)
+
+    await page.getByLabel(/^code/i).fill('000000')
+    await page.getByRole('button', { name: /^continue$/i }).click()
+
+    await page.getByLabel(/new password/i).fill('BrandNewPass456!')
+    await page.getByLabel(/confirm password/i).fill('BrandNewPass456!')
+    await page.getByRole('button', { name: /reset password/i }).click()
+
+    await expect(page.getByText(/not valid or has expired/i)).toBeVisible()
+
+    /*
+     * Back to the code. The refusal is indistinguishable by design — a wrong
+     * code, an expired one and a number belonging to nobody all say this — but a
+     * wrong code is overwhelmingly the likeliest cause, and leaving somebody on
+     * the password step with a generic error gives them nothing to change.
+     */
+    await expect(page.getByLabel(/^code/i)).toBeVisible()
+
+    /* And nothing on screen narrows down which of those it was. */
+    await expect(page.getByText(/expired/i)).toHaveCount(1)
+    await expect(page.getByText(/no account|not registered|suspended/i)).toHaveCount(0)
+  })
+
+  test('resending waits out a cooldown', async ({ page, app, guards }) => {
+    void app
+    void guards
+
+    await requestCode(page, SEEDED.customer.phone)
+
+    /*
+     * A code has just gone out, so the button is a countdown rather than a link.
+     * The server holds the same sixty seconds, and a countdown that finished
+     * first would hand somebody a button that silently does nothing — which is
+     * worse than one that is visibly not ready yet.
+     */
+    await expect(page.getByText(/new code in \d+s/i)).toBeVisible()
+    await expect(page.getByRole('button', { name: /send a new code/i })).toHaveCount(0)
+  })
+
+  test('arriving at the code page directly can ask for a code straight away', async ({
+    page,
+    app,
+    guards,
+  }) => {
+    void app
+    void guards
+
+    /*
+     * No send has been spent, so there is nothing to count down from. Somebody
+     * who reads the message on another device and opens this page cold must not
+     * be made to wait a minute before they can ask for anything.
+     */
+    await page.goto('/reset-password')
+
+    await expect(page.getByRole('button', { name: /send a new code/i })).toBeVisible()
+    await expect(page.getByText(/new code in \d+s/i)).toHaveCount(0)
   })
 
   test('a server failure does not repeat the server to the user', async ({
@@ -495,10 +699,10 @@ test.describe('Forgot password', () => {
     void guards
 
     /*
-     * The reported bug, forced: the exact 404 body a backend without this
-     * route returns. What the person must not see is "Resource not found"
-     * under a phone field, and what they must not be told is that a request
-     * was logged when none was.
+     * The reported bug, forced: the exact 404 body a backend without this route
+     * returns. What the person must not see is "Resource not found" under a
+     * phone field, and what they must not be told is that a code is on its way
+     * when none is.
      */
     await page.route('**/api/v1/auth/password/forgot', (route) =>
       route.fulfill({
@@ -516,10 +720,27 @@ test.describe('Forgot password', () => {
     await page.goto('/forgot-password')
 
     await page.getByLabel(/^phone/i).fill(SEEDED.customer.phone)
-    await page.getByRole('button', { name: /^continue$/i }).click()
+    await page.getByRole('button', { name: /send code/i }).click()
 
     await expect(page.getByText(/could not submit your request/i)).toBeVisible()
     await expect(page.getByText(/resource not found/i)).toHaveCount(0)
-    await expect(page.getByText(CONFIRMATION)).toHaveCount(0)
+
+    /* And not moved on to a code that was never sent. */
+    await expect(page).toHaveURL(/\/forgot-password/)
+  })
+
+  test('the normal flow no longer promises a telephone call', async ({ page, app, guards }) => {
+    void app
+    void guards
+
+    await page.goto('/forgot-password')
+
+    /*
+     * The old copy told everybody an administrator would ring them, which was
+     * true then and is now a promise nobody is going to keep. Pinned as an
+     * absence because a stale string here sends people to wait by the phone.
+     */
+    await expect(page.getByText(/administrator will call you/i)).toHaveCount(0)
+    await expect(page.getByText(/i have a code/i)).toHaveCount(0)
   })
 })

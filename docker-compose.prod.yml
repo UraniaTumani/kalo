@@ -65,6 +65,18 @@ services:
       GEOCODING_USER_AGENT: ${GEOCODING_USER_AGENT}
       GEOCODING_CACHE_ENABLED: ${GEOCODING_CACHE_ENABLED}
 
+      # Password recovery texts a six-digit code to the number on the account.
+      #
+      # `log` is the only implementation and it sends nothing, warning loudly on
+      # every attempt outside development. That is the honest default while no
+      # provider exists: a rehearsal should show what a real deployment would do,
+      # which is fall back to the admin-issued code. See .env.prod.example.
+      SMS_PROVIDER: ${SMS_PROVIDER:-log}
+      SMS_DAILY_LIMIT: ${SMS_DAILY_LIMIT:-500}
+
+      # SMS_LOG_MESSAGE is deliberately absent. It writes the live code to the
+      # log, and SmsConfig refuses to honour it outside dev and test anyway.
+
       # Requests arrive through nginx, so the forwarded address is the real
       # client and the rate limiter should count it rather than the proxy.
       APP_RATE_LIMIT_TRUST_FORWARDED_FOR: "true"

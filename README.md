@@ -108,7 +108,63 @@ Liquibase creates every table on first startup. Do not create tables by hand.
 | `GEOCODING_PROVIDER` | no | `nominatim` | Which geocoder answers address lookup. `static` is a fixed set of Tirana landmarks, used by the browser tests. |
 | `GEOCODING_USER_AGENT` | no | `KALO/1.0 …` | Sent to Nominatim, whose policy requires an application name and a contact. Put a real address here before launch. |
 | `GEOCODING_CACHE_ENABLED` | no | `true` | Leave on. An address field fires on every pause in typing. |
+| `SMS_PROVIDER` | no | `log` | Which provider sends recovery codes. `log` sends nothing — see below. An unrecognised value fails at startup rather than falling back. |
+| `SMS_DAILY_LIMIT` | no | `500` | The most recovery messages sent in any rolling 24 hours, across the whole deployment. A spend ceiling, not a performance one. |
+| `SMS_LOG_MESSAGE` | no | `false` | Writes the message body, **including the live code**, to the log. Honoured only under the `dev`/`test` profiles; ignored anywhere else. |
 | `VITE_API_URL` | frontend build, split-origin only | *(empty)* | Baked into the bundle at build time. Empty means same-origin. |
+
+### Password recovery and SMS
+
+`POST /api/v1/auth/password/forgot` texts a six-digit code to the number on the
+account; `POST /api/v1/auth/password/reset` takes the phone, the code and the new
+password in one call and revokes every refresh token on the account. Both answer
+identically for a registered number and an unknown one — the same status, the
+same empty body, and the same 250ms — because the endpoint is reachable without
+signing in and must not become a way of asking who has an account.
+
+The code lives five minutes, survives five wrong guesses, is single-use, and is
+stored only as a bcrypt hash. Six digits is twenty bits, so **those bounds are
+the security, not a courtesy**: the attempt cap, the expiry, the 60-second
+per-account cooldown and the five-a-day per-account limit are what make a short
+code safe, and the deployment-wide `SMS_DAILY_LIMIT` is there because an
+unauthenticated endpoint that sends SMS is an unauthenticated endpoint that
+spends money — SMS pumping is a real business.
+
+**There is no SMS provider yet.** `SMS_PROVIDER=log` is the only implementation
+and it sends nothing: it records messages so tests can read them, writes the body
+to the log under the `dev` profile, and logs a `WARN` on every send anywhere else
+rather than quietly letting a deployment tell people to check a phone that will
+never ring. Until a provider is configured, recovery on a real deployment goes
+through the admin fallback below.
+
+Adding one is one class, the same shape as the geocoder:
+
+1. Implement `SmsSender` (one method, `send(phone, message)`) against Infobip,
+   Twilio or a local aggregator, reading credentials from the environment.
+2. Add a branch in `SmsConfig`.
+3. Set `SMS_PROVIDER` to its name.
+
+Nothing else changes. Note that a provider call **must** stay on the executor
+`SmsConfig` supplies: it is asynchronous for a security reason, not a throughput
+one, because a send on the request thread would overrun the constant-time floor
+for registered numbers only and reopen the enumeration channel that floor exists
+to close.
+
+### Manual recovery, for a lost number
+
+SMS recovery has one failure it cannot design away: a number that no longer
+reaches anybody. `POST /api/v1/admin/password-resets/fallback` is the narrow
+exception — administrators only, an eight-character code read down a telephone,
+and a mandatory written note of at least 20 characters describing how the person
+was identified. Every use is recorded with who allowed it, when and on what
+grounds, readable at `GET /api/v1/admin/password-resets/fallback-log`, and logged
+at `WARN`.
+
+It skips the message and nothing else: the code it issues is redeemed through the
+same `/password/reset` endpoint, with the same attempt cap, the same single use
+and the same bcrypt-only storage. There is deliberately **no queue** — a queue
+invites working through it, and this path should have to be reached for on
+purpose.
 
 ### Geocoding
 
@@ -457,7 +513,15 @@ Known and intentional for this milestone:
 - **No file storage.** Documents are stored as URLs; uploading is out of scope.
 - **No phone verification.** `phoneVerified` exists but nothing sets it, and
   because the phone number is the login identifier, `PUT /api/v1/me` does not
-  allow changing it.
+  allow changing it. Worth being precise about what this costs now that recovery
+  sends a code there: an SMS OTP proves possession of that SIM at the moment of
+  the reset, which is stronger than anything the platform could check before and
+  weaker than a number verified at signup. Recovery is as strong as the account
+  holder's control of the number they gave us.
+- **No SMS provider is configured.** The seam exists (`SmsSender`, `SmsConfig`)
+  and the default implementation deliberately sends nothing, warning on every
+  attempt. Until a provider is bought, self-service recovery does not work on a
+  real deployment and the admin fallback is the only path.
 - **The public availability endpoint is unauthenticated and unthrottled.** It
   is read-only and cheap, but it has no rate limiting; put one in front of it
   before exposing the API to the internet.
@@ -473,4 +537,7 @@ Known and intentional for this milestone:
 Routed distance/ETA via a routing provider, PostGIS for geospatial queries once
 the driver population grows, Redis for hot search state, WebSockets for live
 ride updates, online payments and payouts, driver mobile app with its own
-authentication, file upload for documents, SMS phone verification.
+authentication, file upload for documents, and phone verification at signup —
+which becomes cheap once an SMS provider is behind `SmsSender`, since it is the
+same code, the same table and the same five-minute window as recovery already
+uses.
