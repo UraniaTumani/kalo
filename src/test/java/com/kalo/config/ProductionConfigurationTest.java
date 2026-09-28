@@ -243,6 +243,38 @@ class ProductionConfigurationTest {
     }
 
     @Test
+    @DisplayName("no Infobip credential is hardcoded, and none has a usable default")
+    void infobipCredentialsComeFromTheEnvironment() throws IOException {
+
+        Properties p = production();
+
+        /*
+         * Empty placeholders rather than absent properties, and the difference
+         * matters. SmsConfig validates these only when app.sms.provider=infobip,
+         * so an empty default is what lets the shipped configuration stay valid
+         * for a deployment that has no provider — while a *non-empty* default
+         * would be either a fabricated endpoint or, worse, a committed key.
+         *
+         * The base URL is in here with the credentials on purpose: Infobip
+         * issues one host per account, so a default would be a guess that sends
+         * a real deployment's messages somewhere that rejects its key.
+         */
+        for (String key : new String[]{
+                "app.sms.infobip.base-url",
+                "app.sms.infobip.api-key",
+                "app.sms.infobip.sender",
+        }) {
+            String value = p.getProperty(key);
+
+            assertThat(value)
+                    .as("%s must come from the environment", key)
+                    .isNotNull()
+                    .startsWith("${")
+                    .endsWith(":}");
+        }
+    }
+
+    @Test
     @DisplayName("the shipped provider is the one that admits it sends nothing")
     void smsProviderDefaultsToTheFake() throws IOException {
 
