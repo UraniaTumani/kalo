@@ -6,6 +6,8 @@ import com.kalo.driver.entity.Driver;
 import com.kalo.driver.enums.DriverAvailabilityStatus;
 import com.kalo.driver.repository.DriverRepository;
 import com.kalo.driver.service.DriverLicenseSweepService;
+import com.kalo.ride.enums.RideStatus;
+import com.kalo.ride.repository.RideRepository;
 import com.kalo.ride.scheduler.SweepLock;
 import com.kalo.support.AbstractIntegrationTest;
 import com.kalo.support.TestDataFactory;
@@ -58,6 +60,9 @@ class DriverLicenseSweepIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     SweepLock sweepLock;
+
+    @Autowired
+    RideRepository rideRepository;
 
     @Test
     @DisplayName("an ONLINE driver on an expired licence is taken offline")
@@ -288,27 +293,42 @@ class DriverLicenseSweepIntegrationTest extends AbstractIntegrationTest {
             sweep.get(30, TimeUnit.SECONDS);
 
             /*
-             * The acceptance must lose on its own merits, not on timing: the
-             * licence check inside acceptRide runs under the same lock as the
-             * status transition, so there is no ordering in which an expired
-             * driver gets assigned.
+             * Every legal interleaving is accepted, and the assertion is about
+             * the OUTCOME rather than the error message.
+             *
+             * Two refusals are both correct here and which one happens is pure
+             * timing. If the acceptance reaches the licence check first it is
+             * refused on the licence. If the sweep commits first the driver is
+             * already OFFLINE, and "Driver must be online and available" is then
+             * an equally legitimate answer — the sweep did exactly its job.
+             *
+             * An earlier version of this test asserted the licence wording, which
+             * tied it to the ORDER the checks happen to run in: today the licence
+             * check sits above the availability check in acceptRide, so the
+             * licence message wins, but reordering them is a reasonable refactor
+             * that would break this test while the behaviour stayed correct. A
+             * test should not be the reason a safe refactor looks unsafe.
+             *
+             * What must hold regardless of interleaving is that no assignment
+             * happened. The licence gate itself is proved deterministically, with
+             * no sweep running and no race to resolve, by
+             * LicenseEnforcementIntegrationTest.cannotAcceptWithExpiredDriverLicence
+             * — which does assert the message, because there it is the only
+             * possible refusal.
              */
             assertThat(response.getStatus())
-                    .as("an expired licence must be refused however the race resolves")
+                    .as("an expired licence must never produce an assignment, "
+                            + "whichever check refuses it first")
                     .isNotEqualTo(200);
 
-            /*
-             * The REASON is asserted, not just the refusal.
-             *
-             * "not 200" would also be satisfied by the sweep having taken the
-             * driver offline first and the accept failing on availability
-             * instead — a pass that would survive the licence check being
-             * deleted. Naming the licence is what ties this test to the thing
-             * it is about.
-             */
-            assertThat(response.getContentAsString())
-                    .as("the refusal must be about the licence, not a side effect of the sweep")
-                    .contains("license expired on");
+            assertThat(rideStatus(rideId))
+                    .as("the ride must still be unassigned: anything else means an "
+                            + "expired licence was used for a new assignment")
+                    .isEqualTo(RideStatus.REQUESTED);
+
+            assertThat(availabilityOf(taxi.driver()))
+                    .as("and the driver must not have been put on a ride")
+                    .isNotEqualTo(DriverAvailabilityStatus.BUSY);
 
             assertThat(availabilityOf(taxi.driver()))
                     .as("the driver must never end up BUSY on an expired licence")
@@ -389,5 +409,17 @@ class DriverLicenseSweepIntegrationTest extends AbstractIntegrationTest {
 
     private DriverAvailabilityStatus availabilityOf(Driver driver) {
         return driverRepository.findById(driver.getId()).orElseThrow().getAvailabilityStatus();
+    }
+
+    /**
+     * The ride's own status, which is how "no assignment happened" is checked.
+     *
+     * Read rather than inspecting ride.getDriver(): the driver is a lazy proxy
+     * and there is no session open out here to initialise it. A ride that gained
+     * a driver would have left REQUESTED, so the status answers the question
+     * without touching the association.
+     */
+    private RideStatus rideStatus(long rideId) {
+        return rideRepository.findById(rideId).orElseThrow().getStatus();
     }
 }
