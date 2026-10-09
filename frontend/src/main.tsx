@@ -14,7 +14,27 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 10_000,
-      refetchOnWindowFocus: false,
+
+      /*
+       * F14: a tab that lost focus did not catch up when you came back to it.
+       *
+       * The partner ride queue was the screen where that cost something real. A
+       * dispatcher on another tab while a passenger booked came back to a queue
+       * that did not show the new request, and the request expires on a clock —
+       * so a configuration default was losing bookings. Reproduced as a test in
+       * e2e/realtime.spec.ts before this line changed.
+       *
+       * Deliberately NOT paired with refetchIntervalInBackground. A hidden tab
+       * stays silent: measured at zero requests while hidden, and that is worth
+       * keeping, because the alternative is every idle tab in every company
+       * polling for rides nobody is looking at. Catching up on return gets the
+       * screen right without that traffic.
+       *
+       * Refetching on focus is gated by staleTime above, which is the behaviour
+       * we want rather than a limitation: returning within ten seconds of the
+       * last fetch cannot have missed more than a single poll period.
+       */
+      refetchOnWindowFocus: true,
       // 4xx responses are deliberate answers from the API, not flakiness.
       retry: (failureCount, error) =>
         error instanceof ApiError && error.status < 500 ? false : failureCount < 2,
