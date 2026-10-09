@@ -2,6 +2,7 @@ package com.kalo.ride.service;
 
 import com.kalo.assignment.entity.DriverVehicleAssignment;
 import com.kalo.assignment.repository.DriverVehicleAssignmentRepository;
+import com.kalo.common.util.LicenseValidity;
 import com.kalo.common.exception.ConflictException;
 import com.kalo.common.exception.InvalidOperationException;
 import com.kalo.common.exception.ResourceNotFoundException;
@@ -282,6 +283,45 @@ public class RideServiceImpl implements RideService {
 
             throw new InvalidOperationException(
                     "Only an active driver can be assigned to a ride"
+            );
+        }
+
+        /*
+         * Licences are re-checked HERE, after the ride and the driver rows are
+         * both locked, rather than trusting the search that produced this offer.
+         *
+         * The search filters expired licences out, but a RideRequest lives for
+         * five minutes and a licence expires at midnight, so an offer can be
+         * built while a licence is valid and accepted after it is not. Checking
+         * at accept time under the same lock that guards the status transition
+         * closes that window: there is no instant between the check and the
+         * assignment in which the answer could change (F36).
+         */
+        if (!LicenseValidity.isValid(driver.getLicenseExpiryDate())) {
+
+            throw new InvalidOperationException(
+                    "Driver's license expired on "
+                            + driver.getLicenseExpiryDate()
+                            + ". Update the driver's license expiry date before "
+                            + "assigning them to a ride."
+            );
+        }
+
+        if (company.getLicenseExpiryDate() == null) {
+
+            throw new InvalidOperationException(
+                    "This company has no taxi license expiry date on record. "
+                            + "Add it in Settings before accepting rides."
+            );
+        }
+
+        if (!LicenseValidity.isValid(company.getLicenseExpiryDate())) {
+
+            throw new InvalidOperationException(
+                    "This company's taxi license expired on "
+                            + company.getLicenseExpiryDate()
+                            + ". Renew it and update the expiry date in Settings "
+                            + "before accepting rides."
             );
         }
 

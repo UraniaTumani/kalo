@@ -35,6 +35,13 @@ public class SweepLock {
      */
     static final long RIDE_TIMEOUT_SWEEP = 4_612_001L;
 
+    /**
+     * The driver licence sweep (F36). A different number, as the note above
+     * requires: two jobs sharing one advisory lock would mean whichever fired
+     * first silently prevented the other from running at all.
+     */
+    public static final long DRIVER_LICENSE_SWEEP = 4_612_002L;
+
     private final JdbcTemplate jdbcTemplate;
 
     /**
@@ -50,16 +57,37 @@ public class SweepLock {
      */
     @Transactional
     public boolean runExclusively(Runnable work) {
+        return take(RIDE_TIMEOUT_SWEEP, "Ride timeout sweep", work);
+    }
+
+    /**
+     * The same guarantee for a job other than the ride timeout sweep.
+     *
+     * An overload rather than a changed signature: the original call is the one
+     * every existing test exercises, and adding a second job is not a reason to
+     * rewrite them.
+     */
+    @Transactional
+    public boolean runExclusively(long lockId, String jobName, Runnable work) {
+        return take(lockId, jobName, work);
+    }
+
+    /*
+     * Private, so it runs inside whichever transaction the proxy opened for the
+     * public method that was called. Taking the lock in a method nobody can
+     * enter directly is what keeps "the lock is held for the whole job" true.
+     */
+    private boolean take(long lockId, String jobName, Runnable work) {
 
         Boolean acquired = jdbcTemplate.queryForObject(
                 "SELECT pg_try_advisory_xact_lock(?)",
                 Boolean.class,
-                RIDE_TIMEOUT_SWEEP
+                lockId
         );
 
         if (!Boolean.TRUE.equals(acquired)) {
 
-            log.debug("Ride timeout sweep skipped: another instance holds the lock");
+            log.debug("{} skipped: another instance holds the lock", jobName);
 
             return false;
         }

@@ -1,6 +1,7 @@
 package com.kalo.driver.service;
 
 import com.kalo.assignment.repository.DriverVehicleAssignmentRepository;
+import com.kalo.common.util.LicenseValidity;
 import com.kalo.common.exception.ConflictException;
 import com.kalo.common.util.PhoneNumberNormalizer;
 import com.kalo.common.exception.InvalidOperationException;
@@ -158,6 +159,30 @@ public class DriverServiceImpl
 
                 throw new InvalidOperationException(
                         "Driver must have an active vehicle assignment before going online"
+                );
+            }
+
+            /*
+             * An expired licence must not be brought back online (F36).
+             *
+             * Without this the scheduled sweep and the partner would fight: the
+             * sweep takes an expired driver offline, the partner sets them online
+             * again because nothing refused it, and the only visible effect is a
+             * driver who keeps going offline for no stated reason. Refusing here
+             * is what makes the sweep's result stick and gives the partner the
+             * explanation at the moment they act.
+             *
+             * Says the date rather than just "expired", because the fix is to
+             * renew the document and correct this field, and a partner needs to
+             * know which one is wrong.
+             */
+            if (!LicenseValidity.isValid(driver.getLicenseExpiryDate())) {
+
+                throw new InvalidOperationException(
+                        "This driver's license expired on "
+                                + driver.getLicenseExpiryDate()
+                                + ". Update the license expiry date before bringing "
+                                + "them back online."
                 );
             }
         }
@@ -434,8 +459,20 @@ public class DriverServiceImpl
             LocalDate licenseExpiryDate
     ) {
 
-        if (licenseExpiryDate
-                .isBefore(LocalDate.now())) {
+        /*
+         * Judged in Europe/Tirane, like every other licence decision (F36).
+         *
+         * This check predates the rest and read LocalDate.now(), the server's
+         * zone. That disagreed with the search, the availability update and ride
+         * acceptance, so a container running UTC could accept a licence on write
+         * that the search would then refuse to offer — a difference nobody would
+         * ever connect to a timezone. One rule, one zone.
+         *
+         * Also null-safe now, where the previous form would have thrown a
+         * NullPointerException. Unreachable through the API, since both driver
+         * DTOs require the field, but a business error beats a stack trace.
+         */
+        if (!LicenseValidity.isValid(licenseExpiryDate)) {
 
             throw new InvalidOperationException(
                     "Driver license has expired"

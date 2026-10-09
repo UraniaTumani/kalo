@@ -1,5 +1,6 @@
 package com.kalo.partner.service;
 
+import com.kalo.common.util.LicenseValidity;
 import com.kalo.common.exception.InvalidOperationException;
 import com.kalo.common.util.PhoneNumberNormalizer;
 import com.kalo.common.exception.ResourceNotFoundException;
@@ -227,8 +228,13 @@ public class PartnerServiceImpl implements PartnerService {
             );
         }
 
-        if (company.getLicenseExpiryDate()
-                .isBefore(LocalDate.now())) {
+        /*
+         * Europe/Tirane, matching the search and ride acceptance (F36). The
+         * null case is already refused above, so this is only about the zone:
+         * a company must not pass verification on a date the booking path will
+         * then treat as expired.
+         */
+        if (!LicenseValidity.isValid(company.getLicenseExpiryDate())) {
 
             throw new InvalidOperationException(
                     "Taxi license has expired"
