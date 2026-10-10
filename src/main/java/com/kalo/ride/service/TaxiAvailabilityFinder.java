@@ -1,6 +1,7 @@
 package com.kalo.ride.service;
 
 import com.kalo.common.util.DistanceCalculator;
+import com.kalo.common.util.LicenseValidity;
 import com.kalo.driver.entity.Driver;
 import com.kalo.driver.enums.DriverAvailabilityStatus;
 import com.kalo.driver.enums.DriverStatus;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -71,8 +73,17 @@ public class TaxiAvailabilityFinder {
          * One query returns driver + active vehicle assignment + vehicle +
          * company + last position. Everything expressible in SQL (driver
          * ACTIVE/ONLINE, vehicle ACTIVE, company APPROVED/ACTIVE, booking
-         * enabled, fresh GPS) is filtered by the database.
+         * enabled, fresh GPS, both licences still valid) is filtered by the
+         * database.
+         *
+         * The licence date is read once here and handed down, so every row in
+         * one search is judged against the same day — and so the zone that
+         * decides it is the licence's own (Europe/Tirane) rather than whatever
+         * the database container happens to be set to.
          */
+        LocalDate today =
+                LicenseValidity.today();
+
         List<AvailableTaxiRow> rows =
                 taxiSearchRepository
                         .findAvailableTaxis(
@@ -81,7 +92,8 @@ public class TaxiAvailabilityFinder {
                                 VehicleStatus.ACTIVE,
                                 VerificationStatus.APPROVED,
                                 CompanyStatus.ACTIVE,
-                                now.minus(MAX_LOCATION_AGE)
+                                now.minus(MAX_LOCATION_AGE),
+                                today
                         );
 
         /*

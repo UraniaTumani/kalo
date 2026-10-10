@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -69,5 +70,38 @@ public interface DriverRepository
     Optional<Driver> findForUpdateByIdAndCompanyId(
             @Param("driverId") Long driverId,
             @Param("companyId") Long companyId
+    );
+
+    /**
+     * Ids of drivers who are ONLINE on an expired licence (F36).
+     *
+     * ONLINE only, deliberately. A BUSY driver is on a ride, and a licence that
+     * lapsed mid-journey must not reach into that ride — the passenger is
+     * already in the car. The sweep's job is to stop the NEXT assignment, which
+     * means the only state it has any business changing is the one that offers a
+     * driver up for one.
+     *
+     * Ids rather than entities: each is re-read under a lock before anything is
+     * written, so loading the rows here would only be loading them twice.
+     */
+    @Query("""
+            SELECT d.id
+            FROM Driver d
+            WHERE d.availabilityStatus = :onlineStatus
+            AND d.licenseExpiryDate < :today
+            """)
+    List<Long> findIdsOnlineWithLicenseExpiredBefore(
+            @Param("onlineStatus") DriverAvailabilityStatus onlineStatus,
+            @Param("today") LocalDate today
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT d
+            FROM Driver d
+            WHERE d.id = :driverId
+            """)
+    Optional<Driver> findForUpdateById(
+            @Param("driverId") Long driverId
     );
 }

@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -43,6 +44,9 @@ public interface TaxiSearchRepository
               AND c.status = :companyStatus
               AND c.bookingEnabled = true
               AND dl.locationUpdatedAt >= :minimumLocationTime
+              AND d.licenseExpiryDate >= :today
+              AND c.licenseExpiryDate IS NOT NULL
+              AND c.licenseExpiryDate >= :today
             """)
     List<AvailableTaxiRow> findAvailableTaxis(
             @Param("driverStatus")
@@ -61,6 +65,22 @@ public interface TaxiSearchRepository
             CompanyStatus companyStatus,
 
             @Param("minimumLocationTime")
-            Instant minimumLocationTime
+            Instant minimumLocationTime,
+
+            /*
+             * Today in Europe/Tirane, supplied by the caller rather than read
+             * here.
+             *
+             * Passed in for two reasons. The database's own CURRENT_DATE is the
+             * container's zone, which is not the zone a licence is judged in;
+             * and one search must use a single date for every row it considers,
+             * rather than re-evaluating it per predicate.
+             *
+             * Both licence predicates are extra conditions on joins the query
+             * already makes, so enforcing this costs no additional query and no
+             * additional round trip (F36).
+             */
+            @Param("today")
+            LocalDate today
     );
 }
