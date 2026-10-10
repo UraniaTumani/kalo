@@ -16,8 +16,19 @@ public interface RideService {
             SelectTaxiOfferRequest request
     );
 
+    /**
+     * The partner's ride queue.
+     *
+     * @param status one status to show, or null for no status filter
+     * @param active TRUE to show everything still in flight
+     *               ({@link RideStatus#ACTIVE_STATUSES}); null or FALSE applies
+     *               no active filter, so {@code status} still governs
+     * @throws com.kalo.common.exception.InvalidOperationException if both
+     *         {@code active=true} and a {@code status} are given
+     */
     Page<PartnerRideResponse> getPartnerRides(
             RideStatus status,
+            Boolean active,
             Pageable pageable
     );
 

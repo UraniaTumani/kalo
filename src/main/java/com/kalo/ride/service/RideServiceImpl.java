@@ -992,23 +992,69 @@ public class RideServiceImpl implements RideService {
     @Transactional(readOnly = true)
     public Page<PartnerRideResponse> getPartnerRides(
             RideStatus status,
+            Boolean active,
             Pageable pageable
     ) {
+
+        /*
+         * Only TRUE turns the filter on (F41).
+         *
+         * active=false therefore means exactly what omitting it means: no active
+         * filter, so an accompanying status still applies and a request with
+         * neither is unfiltered. Spelled out because Boolean has three states
+         * here and the null one is the common case -- every caller that existed
+         * before this parameter sends nothing.
+         */
+        boolean activeOnly = Boolean.TRUE.equals(active);
+
+        /*
+         * Refused rather than resolved in some order of precedence. A request
+         * asking for one status AND for everything in flight is a caller bug,
+         * and guessing which half they meant would hide it.
+         *
+         * Checked before the company lookup so a malformed request costs no
+         * query.
+         */
+        if (activeOnly && status != null) {
+
+            throw new InvalidOperationException(
+                    "Ask for either a single status or active=true, not both"
+            );
+        }
 
         TaxiCompany company =
                 getCurrentPartnerCompany();
 
-        Page<Ride> rides =
-                status == null
-                        ? rideRepository.findAllByCompanyId(
-                                company.getId(),
-                                pageable
-                        )
-                        : rideRepository.findAllByCompanyIdAndStatus(
-                                company.getId(),
-                                status,
-                                pageable
-                        );
+        Page<Ride> rides;
+
+        if (activeOnly) {
+
+            /*
+             * The enum owns the definition. ACTIVE_STATUSES is the same list the
+             * search, the selection guard and migration 017's partial unique
+             * indexes work from, so "active" cannot come to mean two things.
+             */
+            rides = rideRepository.findAllByCompanyIdAndStatusIn(
+                    company.getId(),
+                    RideStatus.ACTIVE_STATUSES,
+                    pageable
+            );
+
+        } else if (status != null) {
+
+            rides = rideRepository.findAllByCompanyIdAndStatus(
+                    company.getId(),
+                    status,
+                    pageable
+            );
+
+        } else {
+
+            rides = rideRepository.findAllByCompanyId(
+                    company.getId(),
+                    pageable
+            );
+        }
 
         return rides.map(this::mapToPartnerResponse);
     }

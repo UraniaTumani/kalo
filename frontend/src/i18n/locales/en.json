@@ -361,7 +361,8 @@
     "assignedTo": "Assigned to",
     "noVehicleAssigned": "No vehicle",
     "activeAssignment": "Active",
-    "endedAssignment": "Ended"
+    "endedAssignment": "Ended",
+    "activeRides": "Active rides"
   },
   "availability": {
     "title": "Availability",

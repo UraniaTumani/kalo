@@ -29,7 +29,25 @@ import {
 } from '@/components/ui'
 import { cn, formatQueueTime } from '@/lib/utils'
 
-const FILTERS: (RideStatus | 'ALL')[] = [
+/**
+ * What a dispatcher can narrow the queue to.
+ *
+ * ACTIVE is first and is the default (F41). The queue used to open on ALL,
+ * where a company's work in hand is a handful of rows among all the history it
+ * has ever accumulated — on the development database, one actionable ride among
+ * thirty-four. REQUESTED alone was considered and rejected: it hides a ride the
+ * instant it becomes DRIVER_ASSIGNED, which is when the dispatcher starts
+ * needing it, since arriving, arrived, started and completed are all driven
+ * from this same screen.
+ *
+ * ACTIVE is not a RideStatus and deliberately is not modelled as one. The
+ * backend keeps the five statuses it stands for in RideStatus.ACTIVE_STATUSES;
+ * this sends `active=true` and lets that remain the only definition.
+ */
+type QueueFilter = RideStatus | 'ALL' | 'ACTIVE'
+
+const FILTERS: QueueFilter[] = [
+  'ACTIVE',
   'ALL',
   'REQUESTED',
   'DRIVER_ASSIGNED',
@@ -46,17 +64,25 @@ export function PartnerRidesPage() {
   const { t } = useTranslation()
   const label = useStatusLabel()
   const compact = useIsCompact()
-  const [status, setStatus] = useState<RideStatus | 'ALL'>('ALL')
+  const [status, setStatus] = useState<QueueFilter>('ACTIVE')
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<PartnerRideResponse | null>(null)
 
   const ridesQuery = useQuery({
+    /*
+     * `status` holds the filter's own value — 'ACTIVE', 'ALL' or a RideStatus —
+     * so the three cases cache separately without anything extra. Worth stating
+     * because the request parameters now diverge where the key does not look
+     * like it changed: ACTIVE sends `active=true` and no status, while a status
+     * filter sends the reverse.
+     */
     queryKey: ['partner', 'rides', status, page],
     queryFn: () =>
       partnerApi.rides({
         page,
         size: 10,
-        status: status === 'ALL' ? undefined : status,
+        status: status === 'ALL' || status === 'ACTIVE' ? undefined : status,
+        active: status === 'ACTIVE' ? true : undefined,
       }),
     // New ride requests arrive without any push channel, and REQUESTED rides
     // time out server-side, so the queue is polled.
@@ -90,7 +116,11 @@ export function PartnerRidesPage() {
           >
             {FILTERS.map((value) => (
               <option key={value} value={value}>
-                {value === 'ALL' ? t('partner.allStatuses') : label('rideStatus', value)}
+                {value === 'ACTIVE'
+                  ? t('partner.activeRides')
+                  : value === 'ALL'
+                    ? t('partner.allStatuses')
+                    : label('rideStatus', value)}
               </option>
             ))}
           </Select>

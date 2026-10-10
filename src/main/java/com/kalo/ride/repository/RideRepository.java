@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -65,6 +66,25 @@ public interface RideRepository
     Page<Ride> findAllByCompanyIdAndStatus(
             Long companyId,
             RideStatus status,
+            Pageable pageable
+    );
+
+    /**
+     * Partner rides in any of several statuses — the dispatcher's work in hand.
+     *
+     * Takes the set rather than naming the statuses, so the caller passes
+     * {@link RideStatus#ACTIVE_STATUSES} and the definition of "active" stays in
+     * the one place that already owns it (F41). Restating those five here would
+     * make a fourth copy of a list the enum, the frontend and two partial unique
+     * indexes already hold.
+     *
+     * Derived rather than a @Query for the same reason the two finders above are:
+     * Pageable's sort reaches the database untouched, which is what keeps the
+     * newest-first ordering the controller declares.
+     */
+    Page<Ride> findAllByCompanyIdAndStatusIn(
+            Long companyId,
+            Collection<RideStatus> statuses,
             Pageable pageable
     );
 
