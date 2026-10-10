@@ -3,7 +3,14 @@
 #
 #   bash scripts/load-test.sh              # every scenario at every level
 #   bash scripts/load-test.sh search       # one scenario
+#
 #   bash scripts/load-test.sh --baseline   # rate limiting off, labelled as such
+#
+# Contention needs a starved fleet rather than a wide one, so it is asked for
+# separately and seeded differently:
+#
+#   COMPANIES=3 DRIVERS_PER_COMPANY=1 CUSTOMERS=30 \
+#     bash scripts/load-test.sh contention
 #
 # Brings the stack up on its own database and ports, seeds a realistic world
 # through the real API, runs k6 in a container on the same docker network, and
@@ -151,6 +158,28 @@ esac
 case "$ONLY" in
   all|mixed)
     run_k6 "05-mixed" "05-mixed.js" "-e CUSTOMER_VUS=40 -e PARTNER_VUS=6 -e DURATION=10m"
+    ;;
+esac
+
+# Contention is deliberately NOT part of `all`.
+#
+# It needs the opposite world from every other scenario — three companies with
+# one driver each, rather than a hundred with two — because contention is what
+# happens when there is no spare driver. Running it against the wide fleet the
+# other scenarios need would produce thirty accepts that all succeed, which is
+# the precise false positive the scenario exists to rule out.
+#
+#   COMPANIES=3 DRIVERS_PER_COMPANY=1 CUSTOMERS=30 bash scripts/load-test.sh contention
+#
+case "$ONLY" in
+  contention)
+    run_k6 "06-contention" "06-contention.js" "-e RACE_VUS=${RACE_VUS:-30}"
+
+    # Judged by its own gate, because a clean contention run and a contention
+    # run that never happened produce identical invariants.
+    bash scripts/load-contention-check.sh \
+      "$RESULTS/06-contention-summary.json" "$RESULTS" \
+      | tee "$RESULTS/contention-validity.txt" || CONTENTION_INVALID=1
     ;;
 esac
 
