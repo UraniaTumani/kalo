@@ -405,7 +405,9 @@
       "FRIDAY": "Pre",
       "SATURDAY": "Sht",
       "SUNDAY": "Die"
-    }
+    },
+    "noHoursTitle": "Nuk keni caktuar ende oraret e punës",
+    "noHoursHint": "Derisa t'i caktoni, udhëtarët që kërkojnë taksi nuk do të shohin kompaninë tuaj. Zgjidhni ditët dhe orët kur pranoni rezervime më poshtë, pastaj ruajini."
   },
   "admin": {
     "verificationTitle": "Verifikimi i partnerëve",

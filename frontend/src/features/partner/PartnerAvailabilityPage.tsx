@@ -10,12 +10,33 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Alert, Button, Card, CardBody, CardHeader, Field, Input } from '@/components/ui'
 import { WeeklyScheduleEditor, DAYS } from './WeeklyScheduleEditor'
 
-const defaultHours = (): OperatingHoursResponse[] =>
+/**
+ * A week with nothing configured yet: every day closed (F20).
+ *
+ * Closed, not open, because that is what the backend does with a company that
+ * has no operating-hours rows — CompanyAvailabilityChecker treats an empty set
+ * as "not open today" before it looks at any day. This used to default to
+ * 08:00–22:00 open, which meant a newly approved company read a full open week
+ * off a system that was answering "closed all week" and excluding it from every
+ * customer search. The editor showed the exact opposite of the truth.
+ *
+ * The times are still here, and still 08:00–22:00, because they are the prefill
+ * a partner wants the moment they switch a day on. Only `closed` changed.
+ *
+ * Belt and braces rather than the fix itself, which is worth being honest about:
+ * the effect below now runs on an empty response and backfills every day as
+ * closed, so this initial state is overwritten before anything renders — and the
+ * page shows a spinner until the query resolves in any case. A mutation test
+ * confirmed that reverting either this default or that guard on its own leaves
+ * the screen correct; only reverting both reproduces F20. This stays because
+ * being right by default is cheaper than depending on an effect always running.
+ */
+const unconfiguredWeek = (): OperatingHoursResponse[] =>
   DAYS.map((dayOfWeek) => ({
     dayOfWeek,
     openTime: '08:00',
     closeTime: '22:00',
-    closed: false,
+    closed: true,
   }))
 
 export function PartnerAvailabilityPage() {
@@ -66,10 +87,18 @@ export function PartnerAvailabilityPage() {
 
   /* ------------------------------------------------------- operating hours */
 
-  const [hours, setHours] = useState<OperatingHoursResponse[]>(defaultHours)
+  const [hours, setHours] = useState<OperatingHoursResponse[]>(unconfiguredWeek)
 
   useEffect(() => {
-    if (!hoursQuery.data || hoursQuery.data.length === 0) return
+    /*
+     * Not loaded yet is not the same as loaded and empty.
+     *
+     * The old guard treated both as "leave the state alone", so a successful
+     * empty response — a company that has never set its hours — fell through
+     * to the initial state and was never corrected. An empty array is an
+     * answer, and the answer is that nothing is configured.
+     */
+    if (!hoursQuery.data) return
 
     // Backfill any day the company has not configured yet, so the editor always
     // shows a full week rather than a partial one.
@@ -85,6 +114,15 @@ export function PartnerAvailabilityPage() {
       ),
     )
   }, [hoursQuery.data])
+
+  /*
+   * Nothing configured at all, as opposed to a week deliberately set to closed.
+   *
+   * Read from the server's answer rather than from the editor's state, so it
+   * stops being true the moment the partner saves — including when they save a
+   * week that is still all closed, which is a decision rather than an omission.
+   */
+  const noHoursConfigured = hoursQuery.data?.length === 0
 
   const hoursMutation = useMutation({
     mutationFn: () => partnerApi.updateOperatingHours(hours),
@@ -171,6 +209,20 @@ export function PartnerAvailabilityPage() {
             {hoursMutation.error && <ErrorMessage error={hoursMutation.error} />}
             {hoursMutation.isSuccess && (
               <Alert tone="success">{t('availability.hoursSaved')}</Alert>
+            )}
+
+            {/*
+              Showing the week as closed is only half the fix.
+
+              A partner who has never set their hours would otherwise read a
+              correct but silent screen and still have no idea why nobody books
+              them. This says the consequence out loud, which is the part that
+              answers "am I ready to receive bookings" (F20).
+            */}
+            {noHoursConfigured && !hoursMutation.isSuccess && (
+              <Alert tone="warning" title={t('availability.noHoursTitle')}>
+                {t('availability.noHoursHint')}
+              </Alert>
             )}
 
             <WeeklyScheduleEditor

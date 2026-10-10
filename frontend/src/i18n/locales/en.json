@@ -405,7 +405,9 @@
       "FRIDAY": "Fri",
       "SATURDAY": "Sat",
       "SUNDAY": "Sun"
-    }
+    },
+    "noHoursTitle": "You have not set your operating hours yet",
+    "noHoursHint": "Until you do, passengers searching for a taxi will not see your company. Set the days and times you accept bookings below, then save."
   },
   "admin": {
     "verificationTitle": "Partner verification",
