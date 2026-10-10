@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Properties;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -141,19 +142,56 @@ class ProductionConfigurationTest {
      * correct for tests and would be a hole in production, so this checks the
      * production file does not carry the same switches.
      */
+    /**
+     * Every switch the test profile turns off, and what it costs in production.
+     *
+     * A list rather than three assertions, because the way this test failed once
+     * already is instructive: F36 added a third such switch and nobody thought to
+     * come back here, so licence enforcement's visible half shipped with no guard
+     * at all (F43). Three separate assertions invite that; one list that a reader
+     * can see is incomplete does not.
+     *
+     * The consequence is spelled out per switch rather than left as "must not be
+     * false", because whoever trips this needs to know what they turned off, and
+     * a bare property name does not tell them.
+     *
+     * ADDING A SWITCH: if you set something to false in
+     * src/test/resources/application.properties so the suite stays deterministic,
+     * add it here too.
+     *
+     * A cross-check that read the test profile and failed when this list was
+     * shorter was considered and rejected. It would be wrong for the first flag
+     * that is legitimately false in both profiles — a feature genuinely off in
+     * production — and covering that needs an exemption list that nothing yet
+     * justifies. One obvious place to look beats machinery that has to be argued
+     * with.
+     */
+    private static final Map<String, String> TEST_ONLY_SWITCHES = Map.of(
+            "app.rate-limit.enabled",
+            "rate limiting must not be disabled in production: an unauthenticated "
+                    + "endpoint that sends SMS is an endpoint that spends money",
+
+            "app.ride.timeout-sweep.enabled",
+            "the ride timeout sweep must not be disabled in production: with it off "
+                    + "everywhere, a company that never answers keeps the ride forever",
+
+            "app.driver.license-sweep.enabled",
+            "the driver licence sweep must not be disabled in production: a driver "
+                    + "whose licence lapsed would keep showing as ONLINE to their own "
+                    + "partner while never being offered a ride"
+    );
+
     @Test
     @DisplayName("the switches the test profile disables are not disabled in production")
     void testOnlySwitchesStayOutOfProduction() throws IOException {
 
         Properties p = production();
 
-        assertThat(p.getProperty("app.rate-limit.enabled"))
-                .as("rate limiting must not be disabled in production")
-                .isNotEqualTo("false");
-
-        assertThat(p.getProperty("app.ride.timeout-sweep.enabled"))
-                .as("the ride timeout sweep must not be disabled in production")
-                .isNotEqualTo("false");
+        TEST_ONLY_SWITCHES.forEach((property, consequence) ->
+                assertThat(p.getProperty(property))
+                        .as(consequence)
+                        .isNotEqualTo("false")
+        );
     }
 
     /**
