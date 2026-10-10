@@ -156,6 +156,25 @@ class ProductionConfigurationTest {
                 .isNotEqualTo("false");
     }
 
+    /**
+     * Pins the shipped response window, which the test profile does not.
+     *
+     * The test profile keeps 60 on purpose and RideTimeoutIntegrationTest mirrors
+     * that value, so no test in the suite would notice if production drifted back
+     * to a minute — which is exactly the change F33 was raised to make. Asserted
+     * on the file as shipped rather than on an injected property, because what
+     * matters is the default a deployment gets when it sets nothing.
+     */
+    @Test
+    @DisplayName("the company response window ships at two minutes")
+    void companyResponseWindowIsTwoMinutes() throws IOException {
+
+        assertThat(production().getProperty("app.ride.company-response-timeout-seconds"))
+                .as("F33 raised this to 120; a minute is not long enough for a "
+                        + "dispatcher who has to come back to the screen first")
+                .isEqualTo("120");
+    }
+
     @Test
     @DisplayName("no credential is hardcoded outside a placeholder")
     void credentialsComeFromTheEnvironment() throws IOException {
