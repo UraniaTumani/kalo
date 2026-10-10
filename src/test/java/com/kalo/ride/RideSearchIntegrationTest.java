@@ -114,6 +114,35 @@ class RideSearchIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("a company that has never configured operating hours is excluded")
+    void companyWithNoOperatingHoursExcluded() throws Exception {
+
+        TaxiCompany company = fixtures.approvedCompany();
+
+        /*
+         * Not the same as closeAllWeek below, and the difference is the whole of
+         * F20. That writes seven rows saying "closed"; this removes the rows
+         * altogether, which is the state EVERY company is in between approval
+         * and the first time its partner opens the availability page.
+         *
+         * The backend has always read an absent configuration as closed. What it
+         * had was no test saying so, which is how the frontend came to default
+         * the same state to a full open week and tell the partner they were
+         * trading.
+         */
+        jdbcTemplate.update(
+                "DELETE FROM company_operating_hours WHERE company_id = ?",
+                company.getId()
+        );
+
+        Driver driver = fixtures.driver(company, DriverStatus.ACTIVE, DriverAvailabilityStatus.ONLINE);
+        fixtures.assign(driver, fixtures.vehicle(company, VehicleStatus.ACTIVE));
+        fixtures.freshLocation(driver);
+
+        expectOptions(fixtures.customer(), 0);
+    }
+
+    @Test
     @DisplayName("a closed company is excluded")
     void closedCompanyExcluded() throws Exception {
 
