@@ -10,6 +10,7 @@ import {
   searchRides,
   track,
 } from './lib/common.js'
+import { classifyAccept } from './lib/contention.js'
 
 /**
  * Scenario 6 — contention on one driver.
@@ -37,6 +38,22 @@ import {
  * about a company, and it is asserted rather than assumed: setup resolves each
  * company's single driver id and every accept in a group carries it.
  *
+ * WHAT HAS ACTUALLY RUN, stated here because the distinction is easy to lose:
+ *
+ *   NOTHING IN THIS FILE HAS BEEN EXECUTED AGAINST A BACKEND. It is
+ *   syntax-checked, its pure decision logic is unit-tested, and the gate that
+ *   judges its output has twenty-three tests. None of that is the same as
+ *   having raced a real driver, and the first live run should be expected to
+ *   need adjustment.
+ *
+ *   same_driver, duplicates and accept_vs_cancel are scheduled and will run
+ *   when this scenario is invoked.
+ *
+ *   acceptVersusTimeout is DEFINED BUT NOT SCHEDULED. It has to sit on the
+ *   company response window, two minutes in production configuration, so one
+ *   iteration costs minutes. It is exported so it can be enabled deliberately
+ *   once that window is known for the environment under test, and until it has
+ *   run it proves nothing — it must not be reported as verified.
  * SYNCHRONISATION. k6 has no barrier, so setup computes an instant a few
  * seconds out and hands it to every virtual user, which sleeps until then and
  * fires. Overlap is measured rather than hoped for: each accept records the
@@ -76,8 +93,36 @@ const timeoutRaces = new Counter('kalo_timeout_races')
  */
 const acceptOffsetMs = new Trend('kalo_accept_offset_ms')
 
+/**
+ * How long each accept stayed open.
+ *
+ * Needed because an offset spread proves nothing on its own: thirty accepts
+ * issued across two seconds did not contend if each took forty milliseconds.
+ * Genuine overlap is spread < duration, so the gate needs both numbers.
+ */
+const acceptDurationMs = new Trend('kalo_accept_duration_ms')
+
 const RACE_VUS = Number(__ENV.RACE_VUS || 30)
 const BARRIER_DELAY_MS = Number(__ENV.BARRIER_DELAY_MS || 5000)
+
+/**
+ * How many drivers the race is spread across.
+ *
+ * ONE by default, which makes the expected outcome exact rather than
+ * approximate: thirty accepts naming one driver must produce exactly one
+ * winner and twenty-nine losers, and the gate can assert that number instead
+ * of settling for "at least one of each".
+ *
+ * Spreading across three drivers was the first design and was weaker than it
+ * looked. Thirty virtual users over three groups is ten per driver, so the
+ * correct result is THREE winners -- and a gate asserting "at least one won"
+ * passes equally for one, three or thirty. Thirty would mean the invariant had
+ * been violated, and the gate would not have noticed.
+ *
+ * Raise it to run a wider race, and tell the gate the same number through
+ * EXPECTED_RACE_DRIVERS so winners are still checked exactly.
+ */
+const RACE_DRIVERS = Number(__ENV.RACE_DRIVERS || 1)
 
 export const options = {
   scenarios: {
@@ -225,37 +270,6 @@ function waitForBarrier(at) {
   if (remaining > 0) sleep(remaining / 1000)
 }
 
-/**
- * Classifies an accept.
- *
- * Derived from what the API actually does rather than from what would be
- * convenient: RideServiceImpl refuses a driver who is not ONLINE with "Driver
- * must be online and available", refuses a ride that is no longer REQUESTED
- * with "Only a requested ride can be accepted", and the partial unique index
- * surfaces as a conflict. All three are a LOSS — the race resolved against
- * this caller — and none of them is an error.
- *
- * Anything else is counted separately rather than folded into either bucket,
- * because a 500 or an unexpected 400 is the finding, not the noise.
- */
-function classifyAccept(response) {
-  if (response.status === 200) return 'won'
-
-  if (response.status === 409) return 'lost'
-
-  if (response.status === 400) {
-    const body = response.body || ''
-    if (
-      body.includes('must be online and available') ||
-      body.includes('Only a requested ride can be accepted') ||
-      body.includes('active ride')
-    ) {
-      return 'lost'
-    }
-  }
-
-  return 'unexpected'
-}
 
 /* ----------------------------------------------------------------- setup */
 
@@ -289,8 +303,21 @@ export function setup() {
       .join(', ')}]`,
   )
 
+  /*
+   * Only the drivers taking part. Trimmed here rather than in each scenario so
+   * every scenario races the same fleet and the number the gate is told stays
+   * true for all of them.
+   */
+  const racing = groups.slice(0, Math.max(1, Math.min(RACE_DRIVERS, groups.length)))
+
+  console.log(
+    `contention: racing ${racing.length} driver(s) of ${groups.length} available; ` +
+      `expect exactly ${racing.length} winner(s) from ${RACE_VUS} accepts`,
+  )
+
   return {
-    groups,
+    groups: racing,
+    driversAvailable: groups.length,
     barrierAt: Date.now() + BARRIER_DELAY_MS,
   }
 }
@@ -347,6 +374,7 @@ export function sameDriverRace(data) {
    */
   contestedAccepts.add(1, { driver: String(group.driverId) })
   acceptOffsetMs.add(issuedAt - data.barrierAt, { driver: String(group.driverId) })
+  acceptDurationMs.add(accept.timings.duration, { driver: String(group.driverId) })
 
   const outcome = classifyAccept(accept)
 

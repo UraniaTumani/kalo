@@ -68,6 +68,50 @@ jobs:
       - name: Lint
         run: npm run lint
 
+  harness:
+    name: Load harness tests
+    runs-on: ubuntu-latest
+
+    # The load suite itself is never run in CI: it needs its own stack, takes
+    # tens of minutes and competes for the runner it is measuring. Its SCRIPTS
+    # are a different matter. They decide whether a load run gets reported as
+    # valid, and they were local-only until now — which meant the checks that
+    # stop an empty run looking like a successful one were themselves unchecked
+    # by anything automatic.
+    #
+    # These three need no stack. They stub docker and curl on PATH, or test
+    # pure functions, so they finish in seconds and touch no database.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Judges whether a load run is reportable: the GPS heartbeat staying
+      # inside the freshness window, and an empty fleet being an error rather
+      # than an idle pass.
+      - name: Heartbeat tests
+        run: bash scripts/test-load-heartbeat.sh
+
+      # Judges whether a contention run proved anything. Mostly negative
+      # controls, because a contention run is expected to come back clean and a
+      # clean result proves nothing on its own.
+      - name: Contention gate tests
+        run: bash scripts/test-load-contention.sh
+
+      # Win, loss and overlap decided on pure functions, where a wrong answer
+      # would otherwise only show up as a misreported live run.
+      - name: Contention logic tests
+        run: node scripts/test-contention-logic.mjs
+
+      # Syntax only. k6 is not installed here and the scenarios need a stack,
+      # so this catches a broken script before somebody discovers it twenty
+      # minutes into a run.
+      - name: k6 scripts parse
+        run: for f in load/*.js load/lib/*.js; do node --check "$f" || exit 1; done
+
   images:
     name: Build images
     runs-on: ubuntu-latest
@@ -175,7 +219,7 @@ jobs:
   regression:
     name: Regression gate
     runs-on: ubuntu-latest
-    needs: [backend, frontend, e2e, mobile-safari]
+    needs: [backend, frontend, e2e, mobile-safari, harness]
     if: always()
 
     steps:
@@ -185,11 +229,13 @@ jobs:
           echo "frontend: ${{ needs.frontend.result }}"
           echo "e2e:      ${{ needs.e2e.result }}"
           echo "safari:   ${{ needs.mobile-safari.result }}"
+          echo "harness:  ${{ needs.harness.result }}"
 
           if [ "${{ needs.backend.result }}"      != "success" ] || \
              [ "${{ needs.frontend.result }}"     != "success" ] || \
              [ "${{ needs.e2e.result }}"          != "success" ] || \
-             [ "${{ needs.mobile-safari.result }}" != "success" ]; then
+             [ "${{ needs.mobile-safari.result }}" != "success" ] || \
+             [ "${{ needs.harness.result }}"      != "success" ]; then
             echo "::error::One or more suites did not pass. main is not safe to merge into."
             exit 1
           fi

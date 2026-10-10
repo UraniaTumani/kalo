@@ -40,8 +40,38 @@ VALID=1
 note() { echo "  $1"; }
 fail() { echo "  ✗ $1"; VALID=0; }
 
+# A count out of the isolated load database.
+#
+# Errors are NOT swallowed. A query that fails returns nothing, and nothing
+# compared against "0" used to read as a violation — the gate failed closed,
+# which is right, but it failed with the wrong message and sent the reader
+# hunting a corruption that had not happened. Failure is now its own answer.
 q() {
-  docker exec "$PG" psql -U "$DB_USER" -d "$DB_NAME" -tAc "$1" 2>/dev/null | tr -d '\r'
+  local sql="$1" out status
+
+  out=$(docker exec "$PG" psql -U "$DB_USER" -d "$DB_NAME" -tAc "$sql" 2>&1)
+  status=$?
+
+  if [ "$status" -ne 0 ] || [ -z "$out" ]; then
+    echo "QUERY_FAILED"
+    return
+  fi
+
+  echo "$out" | tr -d '\r'
+}
+
+# Reads a count, failing the run when the database could not answer.
+count() {
+  local label="$1" sql="$2" value
+  value=$(q "$sql")
+
+  if [ "$value" = "QUERY_FAILED" ]; then
+    fail "could not read '${label}' from ${DB_NAME} on ${PG} — the invariants below are unverified"
+    echo "0"
+    return
+  fi
+
+  echo "$value"
 }
 
 # A counter out of the k6 JSON summary. Reads the structured output rather than
@@ -83,17 +113,38 @@ SERVER_ERRORS=$(metric kalo_server_errors)
 note "contested accepts ${CONTESTED}, won ${WON}, lost ${LOST}, unexpected ${UNEXPECTED}"
 note "duplicate selects refused ${DUP_REFUSED}, wrongly accepted ${DUP_ACCEPTED}"
 
-# 1. Did anything win? An all-refused run usually means the drivers were
-#    already busy or the booking step failed, and it would otherwise look like
-#    flawless contention handling.
-if [ "${WON:-0}" -lt 1 ]; then
-  fail "no accept succeeded — nothing was assigned, so nothing was contended"
+# 1. Exactly as many winners as there were drivers in the race.
+#
+#    "At least one won" was the first version of this check and it was too
+#    loose to be worth having. Thirty accepts over three drivers correctly
+#    produce THREE winners, and a gate happy with one or more passes equally
+#    for one, three, or thirty — where thirty would mean the per-driver
+#    invariant had been violated on every driver and the gate had not noticed.
+#
+#    The expected number is stated by whoever ran the race (EXPECTED_RACE_DRIVERS,
+#    matching the scenario's RACE_DRIVERS) rather than inferred, so the check is
+#    exact without being hardcoded to one particular shape of run.
+EXPECTED_WINNERS="${EXPECTED_RACE_DRIVERS:-1}"
+
+if [ "${WON:-0}" -ne "$EXPECTED_WINNERS" ]; then
+  if [ "${WON:-0}" -lt 1 ]; then
+    fail "no accept succeeded — nothing was assigned, so nothing was contended"
+  elif [ "${WON:-0}" -gt "$EXPECTED_WINNERS" ]; then
+    fail "${WON} accepts won against ${EXPECTED_WINNERS} driver(s) in the race — more winners than drivers means a driver took two rides"
+  else
+    fail "${WON} accepts won but ${EXPECTED_WINNERS} driver(s) were raced — a driver was never assigned, so part of the race did not happen"
+  fi
 fi
 
-# 2. Did anything lose? This is the gate that catches a fleet too large for the
-#    traffic: every accept finding a free driver is not contention.
+# 2. Everyone else lost. Checked as an exact complement rather than "at least
+#    one", so an accept that neither won nor lost nor was classified unexpected
+#    cannot go missing between the three buckets.
+EXPECTED_LOSERS=$(( ${CONTESTED:-0} - EXPECTED_WINNERS ))
+
 if [ "${LOST:-0}" -lt 1 ]; then
   fail "no accept was refused — every request found a free driver, so no race occurred"
+elif [ "${LOST:-0}" -ne "$EXPECTED_LOSERS" ]; then
+  fail "${LOST} accepts lost but ${EXPECTED_LOSERS} were expected from ${CONTESTED:-0} contested minus ${EXPECTED_WINNERS} winner(s) — attempts are unaccounted for"
 fi
 
 # 3. Was the attempt big enough to mean anything?
@@ -138,28 +189,75 @@ SPREAD=$(node -e '
   } catch (e) { console.log("unknown") }
 ' "$SUMMARY")
 
-if [ "$SPREAD" = "unknown" ]; then
+#    And how long an accept stayed open, because the spread alone decides
+#    nothing. Thirty accepts issued across two seconds did not contend if each
+#    took forty milliseconds — they queued. Overlap is spread < duration.
+DUR_MAX=$(node -e '
+  const fs = require("fs");
+  try {
+    const s = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+    const t = (s.metrics || {}).kalo_accept_duration_ms;
+    const v = t && (t.values || t);
+    console.log(v && v.max !== undefined ? String(Math.round(v.max)) : "unknown");
+  } catch (e) { console.log("unknown") }
+' "$SUMMARY")
+
+DUR_MIN=$(node -e '
+  const fs = require("fs");
+  try {
+    const s = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+    const t = (s.metrics || {}).kalo_accept_duration_ms;
+    const v = t && (t.values || t);
+    console.log(v && v.min !== undefined ? String(Math.round(v.min)) : "unknown");
+  } catch (e) { console.log("unknown") }
+' "$SUMMARY")
+
+if [ "$SPREAD" = "unknown" ] || [ "$DUR_MAX" = "unknown" ]; then
   # Not a note to be skimmed past: without the timings the central claim of the
   # scenario is unverified, and an unverified claim is not a passing one.
-  fail "no kalo_accept_offset_ms in the summary — overlap could not be verified, so contention is unproven"
+  fail "accept timings missing from the summary — overlap could not be verified, so contention is unproven"
 else
-  note "accept spread ${SPREAD}ms (limit ${MAX_SPREAD_MS}ms)"
+  note "accept spread ${SPREAD}ms, accept duration ${DUR_MIN}-${DUR_MAX}ms"
+
+  if [ "$SPREAD" -ge "$DUR_MAX" ]; then
+    fail "accepts were spread over ${SPREAD}ms while the longest took ${DUR_MAX}ms — they queued rather than raced, so no request overlapped another"
+  elif [ "$DUR_MIN" != "unknown" ] && [ "$SPREAD" -lt "$DUR_MIN" ]; then
+    note "✓ every accept was in flight at the same time"
+  else
+    note "✓ at least two accepts were in flight at the same time"
+  fi
+
+  # A sanity bound as well, so a pathologically slow backend cannot make any
+  # spread look like overlap.
   if [ "$SPREAD" -gt "$MAX_SPREAD_MS" ]; then
-    fail "accepts were spread over ${SPREAD}ms — too far apart to have contended"
+    fail "accepts were spread over ${SPREAD}ms, beyond the ${MAX_SPREAD_MS}ms this scenario calls simultaneous"
   fi
 fi
 
 # 7. And now the database, which is the only authority on what persisted.
-DOUBLE_DRIVER=$(q "SELECT count(*) FROM (SELECT driver_id FROM rides WHERE driver_id IS NOT NULL AND status IN ('DRIVER_ASSIGNED','DRIVER_ARRIVING','DRIVER_ARRIVED','IN_PROGRESS') GROUP BY driver_id HAVING count(*) > 1) x")
-DOUBLE_CUSTOMER=$(q "SELECT count(*) FROM (SELECT customer_id FROM rides WHERE status IN ('REQUESTED','DRIVER_ASSIGNED','DRIVER_ARRIVING','DRIVER_ARRIVED','IN_PROGRESS') GROUP BY customer_id HAVING count(*) > 1) x")
-BUSY_WITHOUT_RIDE=$(q "SELECT count(*) FROM drivers d WHERE d.availability_status = 'BUSY' AND NOT EXISTS (SELECT 1 FROM rides r WHERE r.driver_id = d.id AND r.status IN ('DRIVER_ASSIGNED','DRIVER_ARRIVING','DRIVER_ARRIVED','IN_PROGRESS'))")
-ASSIGNED_SEARCHING=$(q "SELECT count(*) FROM rides r JOIN ride_requests rq ON rq.id = r.ride_request_id WHERE r.status IN ('DRIVER_ASSIGNED','DRIVER_ARRIVING','DRIVER_ARRIVED','IN_PROGRESS') AND rq.status = 'SEARCHING'")
+DOUBLE_DRIVER=$(count "drivers with two active rides" "SELECT count(*) FROM (SELECT driver_id FROM rides WHERE driver_id IS NOT NULL AND status IN ('DRIVER_ASSIGNED','DRIVER_ARRIVING','DRIVER_ARRIVED','IN_PROGRESS') GROUP BY driver_id HAVING count(*) > 1) x")
+DOUBLE_CUSTOMER=$(count "customers with two active rides" "SELECT count(*) FROM (SELECT customer_id FROM rides WHERE status IN ('REQUESTED','DRIVER_ASSIGNED','DRIVER_ARRIVING','DRIVER_ARRIVED','IN_PROGRESS') GROUP BY customer_id HAVING count(*) > 1) x")
+BUSY_WITHOUT_RIDE=$(count "drivers BUSY with no ride" "SELECT count(*) FROM drivers d WHERE d.availability_status = 'BUSY' AND NOT EXISTS (SELECT 1 FROM rides r WHERE r.driver_id = d.id AND r.status IN ('DRIVER_ASSIGNED','DRIVER_ARRIVING','DRIVER_ARRIVED','IN_PROGRESS'))")
+ASSIGNED_SEARCHING=$(count "assigned rides whose request is SEARCHING" "SELECT count(*) FROM rides r JOIN ride_requests rq ON rq.id = r.ride_request_id WHERE r.status IN ('DRIVER_ASSIGNED','DRIVER_ARRIVING','DRIVER_ARRIVED','IN_PROGRESS') AND rq.status = 'SEARCHING'")
 
+# Per driver, not just globally: the number of drivers actually holding an
+# active ride must equal the number raced. Fewer means a driver was never
+# assigned; more is impossible without a violation.
+ASSIGNED_DRIVERS=$(count "drivers holding an active ride" "SELECT count(DISTINCT driver_id) FROM rides WHERE driver_id IS NOT NULL AND status IN ('DRIVER_ASSIGNED','DRIVER_ARRIVING','DRIVER_ARRIVED','IN_PROGRESS')")
+
+note "drivers holding an active ride ${ASSIGNED_DRIVERS:-?} (raced ${EXPECTED_WINNERS})"
 note "drivers with two active rides ${DOUBLE_DRIVER:-?}, customers with two ${DOUBLE_CUSTOMER:-?}"
 note "drivers BUSY with no active ride ${BUSY_WITHOUT_RIDE:-?}, assigned rides whose request is SEARCHING ${ASSIGNED_SEARCHING:-?}"
 
 [ "${DOUBLE_DRIVER:-1}" = "0" ] || fail "a driver holds more than one active ride"
 [ "${DOUBLE_CUSTOMER:-1}" = "0" ] || fail "a customer holds more than one active ride"
+
+# The per-driver half of the winner check, taken from persisted state rather
+# than from k6's counters. Both have to agree: the counters say how many accepts
+# the API blessed, this says how many drivers actually hold a ride.
+if [ "${ASSIGNED_DRIVERS:-0}" -ne "$EXPECTED_WINNERS" ]; then
+  fail "${ASSIGNED_DRIVERS:-0} driver(s) hold an active ride but ${EXPECTED_WINNERS} were raced — the winners k6 counted and the drivers the database assigned do not agree"
+fi
 
 # The two states the accept-versus-cancel race can corrupt. A BUSY driver with
 # no ride is stranded and takes their company out of search; an assigned ride

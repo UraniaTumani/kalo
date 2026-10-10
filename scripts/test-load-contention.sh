@@ -25,6 +25,7 @@ bad() { FAILURES=$(( FAILURES + 1 )); echo "  FAIL $1"; }
 summary() {
   local file="$1" contested="$2" won="$3" lost="$4" unexpected="$5"
   local dup_refused="${6:-3}" dup_accepted="${7:-0}" errors="${8:-0}" spread="${9:-40}"
+  local dur_min="${10:-30}" dur_max="${11:-80}"
 
   cat > "$file" <<JSON
 {
@@ -36,7 +37,8 @@ summary() {
     "kalo_duplicate_refused":  { "count": $dup_refused },
     "kalo_duplicate_accepted": { "count": $dup_accepted },
     "kalo_server_errors":      { "count": $errors },
-    "kalo_accept_offset_ms":   { "min": 0, "max": $spread, "avg": 10 }
+    "kalo_accept_offset_ms":   { "min": 0, "max": $spread, "avg": 10 },
+    "kalo_accept_duration_ms": { "min": $dur_min, "max": $dur_max, "avg": 50 }
   },
   "metrics_trend_note": "kalo_accept_offset_ms carries the barrier offsets"
 }
@@ -46,6 +48,7 @@ JSON
 # A `docker` whose psql answers the four invariant queries with given values.
 stub_db() {
   local dir="$1" double_driver="$2" double_customer="$3" busy="$4" searching="$5"
+  local assigned_drivers="${6:-1}"
 
   mkdir -p "$dir"
   cat > "$dir/docker" <<STUB
@@ -57,6 +60,7 @@ for arg in "\$@"; do
     *"GROUP BY customer_id HAVING"*) echo "$double_customer"; exit 0 ;;
     *"availability_status = 'BUSY'"*) echo "$busy"; exit 0 ;;
     *"rq.status = 'SEARCHING'"*) echo "$searching"; exit 0 ;;
+    *"count(DISTINCT driver_id)"*) echo "$assigned_drivers"; exit 0 ;;
   esac
 done
 echo "0"
@@ -143,7 +147,7 @@ rm -rf "$WORK"
 # requests presented as simultaneous ones.
 WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0
 summary "$WORK/summary.json" 30 1 29 0 3 0 0 60000
-expect_invalid "accepts spread too far apart to contend" "$WORK" "too far apart"
+expect_invalid "accepts spread far beyond any request duration" "$WORK" "queued rather than raced"
 rm -rf "$WORK"
 
 # ------------------------------------------------- genuine defects detected
@@ -216,6 +220,81 @@ rm -rf "$WORK"
 WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0
 echo '{"metrics":{}}' > "$WORK/summary.json"
 expect_invalid "an empty summary is refused" "$WORK" "no accept succeeded"
+rm -rf "$WORK"
+
+
+# ------------------------------------------- overlap must beat the duration
+
+# The gap this closes. A spread of 200ms is well inside what this scenario
+# calls simultaneous, and still means nothing if every accept finished in 80ms:
+# the requests went one after another and each found the driver free in turn.
+# Barrier timing alone cannot tell those two runs apart.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1
+summary "$WORK/summary.json" 30 1 29 0 3 0 0 200 30 80
+expect_invalid "a spread longer than the slowest accept is not overlap" "$WORK" "queued rather than raced"
+rm -rf "$WORK"
+
+# And the shape that genuinely overlapped: spread smaller than the fastest
+# accept means every one of them was in flight together.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1
+summary "$WORK/summary.json" 30 1 29 0 3 0 0 10 30 80
+expect_valid "a spread inside the fastest accept is full overlap" "$WORK"
+rm -rf "$WORK"
+
+# -------------------------------------------------- winners per driver raced
+
+# More winners than drivers in the race. Every driver would have had to take
+# two rides, which the old "at least one won" gate passed without comment.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 3
+summary "$WORK/summary.json" 30 3 27 0
+expect_invalid "three winners against one raced driver is refused" "$WORK" "more winners than drivers"
+rm -rf "$WORK"
+
+# Fewer winners than drivers raced: part of the race never happened, usually
+# because a driver was already busy or its booking failed.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1
+summary "$WORK/summary.json" 30 1 29 0
+EXPECTED_RACE_DRIVERS=2 expect_invalid "one winner against two raced drivers is refused" "$WORK" "part of the race did not happen"
+rm -rf "$WORK"
+
+# Three drivers raced, three winners, invariants clean: the wider race, valid.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 3
+summary "$WORK/summary.json" 30 3 27 0
+EXPECTED_RACE_DRIVERS=3 expect_valid "three winners against three raced drivers passes" "$WORK"
+rm -rf "$WORK"
+
+# ------------------------------------------------- attempts must all account
+
+# Attempts that neither won nor lost nor were classified. Something was dropped
+# between the buckets and the totals no longer describe the run.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1
+summary "$WORK/summary.json" 30 1 20 0
+expect_invalid "losers that do not complement the winners are refused" "$WORK" "unaccounted for"
+rm -rf "$WORK"
+
+# ------------------------------------- k6 and the database have to agree
+
+# k6 counted a winner; the database holds no assigned driver. One of them is
+# wrong and the run cannot be trusted either way.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 0
+summary "$WORK/summary.json" 30 1 29 0
+expect_invalid "a counted winner with no assigned driver is refused" "$WORK" "do not agree"
+rm -rf "$WORK"
+
+# --------------------------------------------------------- database failure
+
+# The check that used to fail for the wrong reason. A query that errors
+# returned nothing, nothing read as a violation, and the reader went hunting a
+# corruption that had not happened.
+WORK=$(mktemp -d); mkdir -p "$WORK/bin"
+cat > "$WORK/bin/docker" <<'STUB'
+#!/usr/bin/env bash
+echo "could not connect to server" >&2
+exit 2
+STUB
+chmod +x "$WORK/bin/docker"
+summary "$WORK/summary.json" 30 1 29 0
+expect_invalid "an unreachable database is reported as unverified" "$WORK" "could not read"
 rm -rf "$WORK"
 
 # ------------------------------------------------------------------ summary

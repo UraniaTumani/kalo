@@ -1,0 +1,6 @@
+{
+  "name": "kalo-load",
+  "private": true,
+  "type": "module",
+  "description": "k6 scripts. 'type: module' is here so node can import lib/contention.js for its unit test; k6 does not read this file."
+}
