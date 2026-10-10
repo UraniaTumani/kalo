@@ -59,10 +59,19 @@ if ! grep -q '"phone"' "$DATA/users.json" 2>/dev/null; then
   exit 1
 fi
 
-# Keeps the fleet visible: a position older than five minutes takes its driver
-# out of search, so without this a long run would measure an emptying system.
+# Keeps the fleet visible: a position older than TWO MINUTES takes its driver
+# out of search — MAX_LOCATION_AGE in TaxiAvailabilityFinder — so without this a
+# long run would measure an emptying system, and would look faster for it.
+#
+# The breach file is how the heartbeat tells this script that its own cycle has
+# grown past that window. A warning in a log nobody greps is the same as no
+# warning, so the validity gate at the end reads this file and refuses to call
+# the run valid.
 echo "▸ starting the driver heartbeat"
-BASE_URL="$BASE_HOST" bash scripts/load-heartbeat.sh > "$RESULTS/heartbeat.log" 2>&1 &
+BREACH="$RESULTS/heartbeat-breach.txt"
+: > "$BREACH"
+BASE_URL="$BASE_HOST" HEARTBEAT_BREACH_FILE="$BREACH" \
+  bash scripts/load-heartbeat.sh > "$RESULTS/heartbeat.log" 2>&1 &
 HEARTBEAT=$!
 trap 'kill $HEARTBEAT 2>/dev/null' EXIT
 
@@ -155,6 +164,92 @@ echo "▸ database invariants after the run"
   echo "total users:                       $(docker exec kalo-load-postgres-1 psql -U kalo_load -d kalo_load -tAc "SELECT count(*) FROM users" 2>/dev/null | tr -d '\r')"
   echo "max PostgreSQL connections seen:   $(cat "$RESULTS"/*-resources.csv 2>/dev/null | awk -F, 'NR>1 && $8+0>m {m=$8} END {print m+0}')"
 } | tee "$RESULTS/invariants.txt"
+
+# ---------------------------------------------------------------------------
+# Was the run valid at all?
+#
+# Every number above can look excellent for the wrong reason. A fleet that aged
+# out of search returns nothing, fast; a run that attempted little has no
+# errors; and "no driver held two active rides" is a perfect score for a test
+# that never tried to give one two. So the invariants are reported first and
+# then interrogated, and this section decides whether they are worth reading.
+#
+# Deliberately a gate rather than a note. The failure mode being guarded against
+# is a confident report built on an empty system.
+# ---------------------------------------------------------------------------
+
+q() { docker exec kalo-load-postgres-1 psql -U kalo_load -d kalo_load -tAc "$1" 2>/dev/null | tr -d '\r'; }
+
+echo
+echo "▸ run validity"
+
+VALID=1
+note() { echo "  $1"; }
+fail() { echo "  ✗ $1"; VALID=0; }
+
+# 1. Did the heartbeat keep up? The heartbeat itself decides this and writes the
+#    verdict; anything in the file means some driver aged out while the run was
+#    being measured.
+if [ -s "$BREACH" ]; then
+  fail "the GPS heartbeat fell behind the 120s freshness window:"
+  sed 's/^/      /' "$BREACH"
+  note "  every latency figure after the first breach describes an emptying fleet"
+else
+  note "✓ GPS heartbeat stayed inside the freshness window"
+fi
+
+# 2. Is the fleet fresh NOW? A pass that finished long ago leaves stale rows
+#    even if no cycle ever breached, so the end state is checked directly
+#    against the production rule rather than inferred from timings.
+STALE=$(q "SELECT count(*) FROM drivers d JOIN driver_locations dl ON dl.driver_id = d.id WHERE d.availability_status = 'ONLINE' AND dl.location_updated_at < now() - interval '120 seconds'")
+ONLINE=$(q "SELECT count(*) FROM drivers WHERE availability_status = 'ONLINE'")
+
+if [ "${STALE:-1}" = "0" ]; then
+  note "✓ all ${ONLINE:-?} ONLINE drivers have a position inside 120s"
+else
+  fail "${STALE} of ${ONLINE} ONLINE drivers have a stale position — search was returning less than the full fleet"
+fi
+
+# 3. Did the run touch the fleet it claims to have tested? Distinct counts, not
+#    totals: one company serving every ride would pass a totals check.
+COMPANIES=$(q "SELECT count(*) FROM taxi_companies WHERE verification_status='APPROVED'")
+COMPANIES_USED=$(q "SELECT count(DISTINCT company_id) FROM rides")
+CUSTOMERS_USED=$(q "SELECT count(DISTINCT customer_id) FROM rides")
+RIDES=$(q "SELECT count(*) FROM rides")
+
+note "companies approved ${COMPANIES:-?}, companies that received a ride ${COMPANIES_USED:-?}"
+note "distinct customers that booked ${CUSTOMERS_USED:-?}, ride attempts ${RIDES:-?}"
+
+if [ "${RIDES:-0}" -lt "${MIN_RIDES:-1}" ]; then
+  fail "only ${RIDES:-0} ride attempts — too little traffic for the invariants below to mean anything"
+fi
+
+if [ "${COMPANIES_USED:-0}" -lt "${MIN_COMPANIES_USED:-1}" ]; then
+  fail "only ${COMPANIES_USED:-0} companies received a ride, against ${COMPANIES:-?} approved"
+fi
+
+# 4. Were the rides real, or were they refusals? A run that degraded into
+#    measuring rejection paths gets faster as it gets less useful.
+REJECTED=$(grep -ho 'kalo_business_rejections[^0-9]*[0-9]*' "$RESULTS"/*.log 2>/dev/null | grep -oE '[0-9]+$' | awk '{s+=$1} END {print s+0}')
+LIMITED=$(grep -ho 'kalo_rate_limited[^0-9]*[0-9]*' "$RESULTS"/*.log 2>/dev/null | grep -oE '[0-9]+$' | awk '{s+=$1} END {print s+0}')
+
+note "business rejections ${REJECTED:-0}, rate limited ${LIMITED:-0}"
+
+if [ "${LIMITED:-0}" -gt "${MAX_RATE_LIMITED:-0}" ]; then
+  fail "${LIMITED} requests were rate limited — the run measured the limiter, not capacity"
+fi
+
+# 5. Did the timeout sweep keep up? If it fell behind, rides stopped timing out
+#    and the lifecycle under test was not the one production runs.
+SWEPT=$(q "SELECT count(*) FROM rides WHERE status='NO_RESPONSE'")
+note "rides timed out by the sweep ${SWEPT:-?}"
+
+echo
+if [ "$VALID" = "1" ]; then
+  echo "  ✓ run is valid — the figures above describe a working system under load"
+else
+  echo "  ✗ RUN IS NOT VALID. Fix the causes above and run again; do not quote these numbers."
+fi
 
 echo
 echo "▸ results in $RESULTS"
