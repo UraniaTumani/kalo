@@ -361,7 +361,8 @@
     "assignedTo": "Caktuar te",
     "noVehicleAssigned": "Pa automjet",
     "activeAssignment": "Aktiv",
-    "endedAssignment": "Përfunduar"
+    "endedAssignment": "Përfunduar",
+    "activeRides": "Udhëtimet aktive"
   },
   "availability": {
     "title": "Disponueshmëria",

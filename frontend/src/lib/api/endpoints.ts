@@ -335,7 +335,7 @@ export const partnerApi = {
 
   /* rides */
 
-  rides: (params?: PageParams & { status?: RideStatus }) =>
+  rides: (params?: PageParams & { status?: RideStatus; active?: boolean }) =>
     api.get<Page<PartnerRideResponse>>('/api/v1/partner/rides', params),
 
   accept: (rideId: number, driverId: number) =>

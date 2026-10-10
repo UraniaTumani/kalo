@@ -30,6 +30,22 @@ public class PartnerRideController {
             @RequestParam(required = false)
             RideStatus status,
 
+            /*
+             * Everything still in flight, in one request (F41).
+             *
+             * A separate parameter rather than a pseudo-status like
+             * `status=ACTIVE`, which would mean taking this as a String and
+             * converting by hand, losing the enum binding that makes an unknown
+             * status a 400 today. Additive too: every request made before this
+             * existed sends nothing and behaves exactly as it did.
+             *
+             * Boolean rather than boolean so "not sent" stays distinguishable
+             * from "sent as false" at this layer; the service treats them the
+             * same and is tested doing so.
+             */
+            @RequestParam(required = false)
+            Boolean active,
+
             @PageableDefault(
                     size = 20,
                     sort = "requestedAt",
@@ -41,6 +57,7 @@ public class PartnerRideController {
         return ResponseEntity.ok(
                 rideService.getPartnerRides(
                         status,
+                        active,
                         pageable
                 )
         );
