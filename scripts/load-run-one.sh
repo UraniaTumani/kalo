@@ -73,12 +73,27 @@ MSYS_NO_PATHCONV=1 docker run --rm -i \
 K6_EXIT=${PIPESTATUS[0]}
 ELAPSED=$(( $(date +%s) - STARTED ))
 
+# k6's own verdict, written where the validity gate can read it.
+#
+# It was captured here already and used for nothing but a line in runs.txt.
+# The first real contention run crossed a k6 threshold -- 29 contested accepts
+# against a required 30 -- so k6 exited non-zero, and the gate, which never
+# looked, declared the run VALID. A failed threshold is k6 saying the run did
+# not meet its own preconditions, and no amount of clean invariants afterwards
+# makes that a pass.
+echo "$K6_EXIT" > "$RESULTS/$NAME-k6-exit.txt"
+
 touch "$CSV.stop"
 wait "$MONITOR" 2>/dev/null
 kill "$MONITOR" 2>/dev/null
 
 echo
-if health_ok; then
+if [ "$K6_EXIT" -ne 0 ]; then
+  echo "✗ k6 exited $K6_EXIT — a threshold failed or the run was aborted."
+  echo "  The scenario did not meet its own preconditions, so its results are"
+  echo "  not reportable however clean the invariants look."
+  VERDICT=INVALID
+elif health_ok; then
   echo "✓ post-flight: daemon up, all containers still healthy"
   VERDICT=VALID
 else

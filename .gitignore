@@ -43,3 +43,10 @@ frontend/test-results/
 # Load-test artefacts: raw k6 output and generated fixtures.
 load/results/
 load/.data/
+
+# Seed fixtures kept from an earlier run. load-seed.sh truncates .data on every
+# seed, so a run's own partners.json and users.json are gone as soon as the
+# next one is seeded — and those two files are what identify which companies
+# and customers a preserved run used. Worth copying aside before re-seeding,
+# and not worth committing.
+load/.data-*
