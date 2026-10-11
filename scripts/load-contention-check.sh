@@ -14,14 +14,25 @@
 # never tried to give one two. Each check below therefore pairs a negative
 # result with evidence that the attempt was real:
 #
+#   k6 agreed     k6's own thresholds passed, so the run met its preconditions
 #   wins > 0      somebody was assigned, so the fleet was not already busy and
 #                 setup did not silently fail
 #   losses > 0    somebody was refused, so requests genuinely competed
-#   overlap       the accepts arrived close enough together to contend
+#   everyone      every virtual user that entered is accounted for
+#   overlap       measured, from the instants the accepts opened and closed
 #   one driver    they named the same driver, not merely the same company
+#   each scenario every scheduled scenario produced evidence of its own
 #   invariants    and after all that, the database still holds
 #
 # Dropping any one of them lets a quiet run look like a successful one.
+#
+# WHAT THE FIRST REAL RUN TAUGHT THIS FILE. It passed a run that k6 had
+# failed, on 29 of 30 participants, with an overlap verdict of "every accept
+# was in flight at the same time" derived from a metric that reported the same
+# impossible value for every sample, and with two of three scheduled scenarios
+# having recorded nothing at all. Four separate ways of concluding something
+# from an absence. The rule that came out of it: a check must be able to tell
+# its own evidence from the lack of it, and when it cannot, it fails.
 set -u
 
 SUMMARY="${1:-}"
@@ -31,10 +42,20 @@ PG="${PG_CONTAINER:-kalo-load-postgres-1}"
 DB_USER="${DB_USERNAME:-kalo_load}"
 DB_NAME="${DB_NAME:-kalo_load}"
 
-# The widest spread of accept timestamps that can still be called simultaneous.
-# Generous: the barrier aims for the same millisecond, and anything inside a
-# second is contention on a request that takes tens of milliseconds.
-MAX_SPREAD_MS="${MAX_ACCEPT_SPREAD_MS:-1000}"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# How many virtual users the race was configured with.
+#
+# Derived from the run rather than guessed: the scenario's RACE_VUS and this
+# must be the same number, and every participant has to be accounted for
+# against it. The old floor of "at least 2 contested accepts" would have passed
+# a 30-user race in which 28 users never got off the ground.
+EXPECTED_VUS="${EXPECTED_RACE_VUS:-30}"
+
+# How many drivers the race was spread across; one winner is expected per
+# driver. Stated by whoever ran the race (matching the scenario's RACE_DRIVERS)
+# rather than inferred, so the check is exact without being hardcoded.
+EXPECTED_WINNERS="${EXPECTED_RACE_DRIVERS:-1}"
 
 VALID=1
 note() { echo "  $1"; }
@@ -74,25 +95,6 @@ count() {
   echo "$value"
 }
 
-# A counter out of the k6 JSON summary. Reads the structured output rather than
-# scraping the console, so a change of log format cannot quietly zero a gate.
-metric() {
-  local name="$1"
-  node -e '
-    const fs = require("fs");
-    const [file, key] = process.argv.slice(1);
-    try {
-      const summary = JSON.parse(fs.readFileSync(file, "utf8"));
-      const m = (summary.metrics || {})[key];
-      if (!m) { console.log("0"); process.exit(0) }
-      const v = m.count ?? m.value ?? (m.values && (m.values.count ?? m.values.value));
-      console.log(String(v ?? 0));
-    } catch (e) {
-      console.log("0");
-    }
-  ' "$SUMMARY" "$name"
-}
-
 echo "▸ contention validity"
 
 if [ -z "$SUMMARY" ] || [ ! -f "$SUMMARY" ]; then
@@ -102,30 +104,118 @@ if [ -z "$SUMMARY" ] || [ ! -f "$SUMMARY" ]; then
   exit 1
 fi
 
-CONTESTED=$(metric kalo_contested_accepts)
-WON=$(metric kalo_accept_won)
-LOST=$(metric kalo_accept_lost)
-UNEXPECTED=$(metric kalo_accept_unexpected)
-DUP_REFUSED=$(metric kalo_duplicate_refused)
-DUP_ACCEPTED=$(metric kalo_duplicate_accepted)
-SERVER_ERRORS=$(metric kalo_server_errors)
-
-note "contested accepts ${CONTESTED}, won ${WON}, lost ${LOST}, unexpected ${UNEXPECTED}"
-note "duplicate selects refused ${DUP_REFUSED}, wrongly accepted ${DUP_ACCEPTED}"
-
-# 1. Exactly as many winners as there were drivers in the race.
+# --------------------------------------------------------------- k6's verdict
 #
-#    "At least one won" was the first version of this check and it was too
-#    loose to be worth having. Thirty accepts over three drivers correctly
-#    produce THREE winners, and a gate happy with one or more passes equally
-#    for one, three, or thirty — where thirty would mean the per-driver
-#    invariant had been violated on every driver and the gate had not noticed.
+# Checked first and on its own, because it is k6 saying the run did not meet
+# the preconditions the scenario declared. The first real run crossed
+# `kalo_contested_accepts: count>=30` at 29 and exited non-zero; this gate had
+# no idea and reported VALID. Clean invariants after a failed threshold are a
+# clean measurement of a run that should not have counted.
 #
-#    The expected number is stated by whoever ran the race (EXPECTED_RACE_DRIVERS,
-#    matching the scenario's RACE_DRIVERS) rather than inferred, so the check is
-#    exact without being hardcoded to one particular shape of run.
-EXPECTED_WINNERS="${EXPECTED_RACE_DRIVERS:-1}"
+# The file is written by load-run-one.sh next to the summary. Its absence is
+# not treated as success: an unknown k6 status leaves the central question open.
+K6_EXIT_FILE="${K6_EXIT_FILE:-}"
 
+if [ -z "$K6_EXIT_FILE" ]; then
+  # Same directory and stem as the summary: <results>/<name>-k6-exit.txt
+  K6_EXIT_FILE="${SUMMARY%-summary.json}-k6-exit.txt"
+fi
+
+if [ -f "$K6_EXIT_FILE" ]; then
+  K6_EXIT=$(tr -dc '0-9-' < "$K6_EXIT_FILE" | head -c 8)
+  K6_EXIT="${K6_EXIT:-missing}"
+else
+  K6_EXIT="missing"
+fi
+
+if [ "$K6_EXIT" = "missing" ]; then
+  fail "k6's exit status was not recorded (looked in '${K6_EXIT_FILE}') — a failed threshold would be invisible, so the run cannot be called valid"
+elif [ "$K6_EXIT" != "0" ]; then
+  fail "k6 exited ${K6_EXIT} — one of its own thresholds failed, so the scenario did not meet its declared preconditions"
+else
+  note "k6 exit 0 — its own thresholds passed"
+fi
+
+# ----------------------------------------------------------------- the facts
+#
+# One node call, because the judgements are arithmetic over JSON and they live
+# in load/lib/contention.js where unit tests can reach them. Inlining them here
+# as `node -e` strings is how the unsound overlap rule came to be untested.
+FACTS="$RESULTS/contention-facts.txt"
+
+if ! node "$ROOT/scripts/contention-verdict.mjs" "$SUMMARY" > "$FACTS" 2>&1; then
+  fail "could not read the k6 summary: $(head -1 "$FACTS")"
+  echo
+  echo "  ✗ CONTENTION RUN IS NOT VALID."
+  exit 1
+fi
+
+# A fact, or empty when the metric was absent. Absent and zero are different
+# answers and are never collapsed: one means nothing measured it.
+fact() { sed -n "s/^$1=//p" "$FACTS" | head -1; }
+
+ENTERED=$(fact entered)
+CONTESTED=$(fact contested)
+WON=$(fact won)
+LOST=$(fact lost)
+UNEXPECTED=$(fact unexpected)
+SERVER_ERRORS=$(fact server_errors)
+TIMING_SAMPLES=$(fact timing_samples)
+OFFSET_MIN=$(fact offset_min)
+DUP_ATTEMPTS=$(fact duplicate_attempts)
+DUP_REFUSED=$(fact duplicate_refused)
+DUP_ACCEPTED=$(fact duplicate_accepted)
+CANCEL_ATTEMPTS=$(fact cancel_attempts)
+CANCEL_RACES=$(fact cancel_races)
+TIMEOUT_RACES=$(fact timeout_races)
+OVERLAP_OK=$(fact overlap_ok)
+OVERLAP_SPREAD=$(fact overlap_spread_ms)
+OVERLAP_REASON=$(fact overlap_reason)
+RECONCILE_OK=$(fact reconcile_ok)
+RECONCILE_PROBLEMS=$(fact reconcile_problems)
+RECONCILE_SKIPPED=$(fact reconcile_skipped)
+
+note "entered ${ENTERED:-<absent>}, contested ${CONTESTED:-<absent>}, won ${WON:-<absent>}, lost ${LOST:-<absent>}, unexpected ${UNEXPECTED:-<absent>}"
+note "duplicate attempts ${DUP_ATTEMPTS:-<absent>} (refused ${DUP_REFUSED:-<absent>}, wrongly accepted ${DUP_ACCEPTED:-<absent>}), cancel attempts ${CANCEL_ATTEMPTS:-<absent>}"
+
+# ------------------------------------------------- every participant counted
+#
+# The denominator has to exist before any ratio means anything. A summary with
+# no kalo_race_entered predates participant accounting and cannot answer
+# "did everyone take part?", which is not a detail: the first real run lost one
+# of thirty users to a failed booking and reported the other 29 as the race.
+if [ -z "$ENTERED" ]; then
+  fail "the summary carries no kalo_race_entered — without it a virtual user that never reached an accept is invisible"
+elif [ "$ENTERED" -ne "$EXPECTED_VUS" ]; then
+  fail "${ENTERED} virtual user(s) entered the race but ${EXPECTED_VUS} were expected — either the run was not the size it claims, or EXPECTED_RACE_VUS here does not match RACE_VUS in the scenario"
+fi
+
+if [ -z "$CONTESTED" ]; then
+  fail "the summary carries no kalo_contested_accepts — nothing says an accept was ever attempted"
+elif [ "$CONTESTED" -ne "$EXPECTED_VUS" ]; then
+  fail "${CONTESTED} accept(s) were attempted but ${EXPECTED_VUS} virtual users were configured — $(( EXPECTED_VUS - CONTESTED )) never reached an accept, so part of the race did not happen"
+fi
+
+# And the arithmetic closes: entered == contested + the named reasons, and
+# contested == won + lost + unexpected. Both sums come from the shared library.
+if [ "${RECONCILE_SKIPPED:-0}" = "1" ]; then
+  : # nothing to reconcile against; the missing-denominator failure above says so
+elif [ "${RECONCILE_OK:-0}" != "1" ]; then
+  i=0
+  while [ "$i" -lt "${RECONCILE_PROBLEMS:-0}" ]; do
+    fail "$(fact "reconcile_problem_${i}")"
+    i=$(( i + 1 ))
+  done
+  [ "${RECONCILE_PROBLEMS:-0}" -gt 0 ] || fail "the attempt tallies do not reconcile"
+fi
+
+# ------------------------------------------------------- winners and losers
+#
+# Exactly as many winners as there were drivers in the race. "At least one won"
+# was the first version and was too loose to be worth having: thirty accepts
+# over three drivers correctly produce THREE winners, and a gate happy with one
+# or more passes equally for one, three, or thirty — where thirty would mean
+# the per-driver invariant had been violated on every driver.
 if [ "${WON:-0}" -ne "$EXPECTED_WINNERS" ]; then
   if [ "${WON:-0}" -lt 1 ]; then
     fail "no accept succeeded — nothing was assigned, so nothing was contended"
@@ -136,9 +226,6 @@ if [ "${WON:-0}" -ne "$EXPECTED_WINNERS" ]; then
   fi
 fi
 
-# 2. Everyone else lost. Checked as an exact complement rather than "at least
-#    one", so an accept that neither won nor lost nor was classified unexpected
-#    cannot go missing between the three buckets.
 EXPECTED_LOSERS=$(( ${CONTESTED:-0} - EXPECTED_WINNERS ))
 
 if [ "${LOST:-0}" -lt 1 ]; then
@@ -147,13 +234,8 @@ elif [ "${LOST:-0}" -ne "$EXPECTED_LOSERS" ]; then
   fail "${LOST} accepts lost but ${EXPECTED_LOSERS} were expected from ${CONTESTED:-0} contested minus ${EXPECTED_WINNERS} winner(s) — attempts are unaccounted for"
 fi
 
-# 3. Was the attempt big enough to mean anything?
-if [ "${CONTESTED:-0}" -lt "${MIN_CONTESTED:-2}" ]; then
-  fail "only ${CONTESTED:-0} contested accepts — too few to demonstrate anything"
-fi
-
-# 4. Nothing unexplained. A unique-index violation reaching the client as a 500
-#    is the worst outcome available here and must not be averaged away.
+# Nothing unexplained. A unique-index violation reaching the client as a 500 is
+# the worst outcome available here and must not be averaged away.
 if [ "${UNEXPECTED:-0}" -gt 0 ]; then
   fail "${UNEXPECTED} accept(s) failed for an unclassified reason — read them before trusting the rest"
 fi
@@ -162,79 +244,86 @@ if [ "${SERVER_ERRORS:-0}" -gt 0 ]; then
   fail "${SERVER_ERRORS} server error(s) — a refusal became a crash"
 fi
 
-# 5. A duplicate that was accepted is a straight defect.
+# --------------------------------------------------------------- the overlap
+#
+# The central claim, and the one the first real run got wrong. The rule used to
+# be `spread < duration`, computed from two unrelated metrics; a spread of zero
+# satisfied it perfectly, so a metric reporting one constant value for every
+# sample read as flawless synchronisation. The replacement compares measured
+# instants — max(start) < min(end) — which a degenerate input cannot satisfy,
+# because satisfying it requires two different numbers in a given order.
+#
+# load/lib/contention.js:assessIntervalOverlap holds the rule and its reasons.
+#
+# The absent case is separated from the mismatched one so that each has a
+# message of its own. It first shared the word "unverifiable" with the
+# library's refusal below, which made the two indistinguishable in the test
+# output — and a mutation that deleted this branch passed the suite, because
+# the assertion could not tell which check had spoken. Distinct wording is
+# what makes the branch testable, and an empty value here would also make the
+# numeric comparison that follows a bash error rather than a verdict.
+if [ -z "$TIMING_SAMPLES" ]; then
+  fail "the summary carries no kalo_accept_timing_samples — nothing counted how many accepts were timed, so their min and max describe an unknown number of them"
+elif [ "$TIMING_SAMPLES" -ne "${CONTESTED:-0}" ]; then
+  fail "${TIMING_SAMPLES} accept(s) were timed but ${CONTESTED:-0} were attempted — the timings describe part of the run, so the overlap they show is not the run's"
+fi
+
+# There is one passing verdict, not two. The library offers no "at least two
+# accepts overlapped" conclusion, because four aggregate numbers cannot support
+# one — see assessIntervalOverlap for why the obvious test is vacuous.
+if [ "${OVERLAP_OK:-0}" != "1" ]; then
+  fail "overlap not demonstrated: ${OVERLAP_REASON:-no reason given}"
+else
+  note "accept window: starts ${OVERLAP_SPREAD}ms apart, durations $(fact accept_dur_min)-$(fact accept_dur_max)ms"
+  note "✓ ${OVERLAP_REASON}"
+fi
+
+# The diagnostic offset, which must not be negative. waitForBarrier returns
+# only once the barrier has passed, so a negative offset is impossible — and
+# the barrier shares a clock with the timings above, so an impossible reading
+# here discredits those too.
+if [ -n "$OFFSET_MIN" ]; then
+  case "$OFFSET_MIN" in
+    -*)
+      fail "the barrier offset reports ${OFFSET_MIN}ms, which cannot happen — waitForBarrier returns only after the barrier, so the clock or the instrumentation is broken and the timings share it"
+      ;;
+  esac
+fi
+
+# ----------------------------------------------- every scheduled scenario
+#
+# Positive evidence from each, because both of these recorded NOTHING in the
+# first real run — they shared the raced fleet, whose only driver was busy by
+# the time they started — and the gate printed a note and passed. A scheduled
+# scenario that attempted nothing tested nothing.
+if [ -z "$DUP_ATTEMPTS" ] || [ "$DUP_ATTEMPTS" -lt 1 ]; then
+  fail "the duplicate scenario attempted nothing — it was scheduled, so a run in which it never got started is not a run that tested duplicates"
+elif [ $(( ${DUP_REFUSED:-0} + ${DUP_ACCEPTED:-0} )) -lt 1 ]; then
+  fail "${DUP_ATTEMPTS} duplicate attempt(s) but none reached a decision — every pair failed before the second submission, so nothing was tested"
+fi
+
 if [ "${DUP_ACCEPTED:-0}" -gt 0 ]; then
   fail "${DUP_ACCEPTED} duplicate submission(s) were accepted rather than refused"
 fi
 
-if [ "${DUP_REFUSED:-0}" -lt 1 ]; then
-  note "! no duplicate submissions were refused — the duplicate scenario may not have run"
+if [ -z "$CANCEL_ATTEMPTS" ] || [ "$CANCEL_ATTEMPTS" -lt 1 ]; then
+  fail "the accept-versus-cancel scenario attempted nothing — it was scheduled, so its invariants below are untested"
+elif [ -z "$CANCEL_RACES" ] || [ "$CANCEL_RACES" -lt 1 ]; then
+  fail "${CANCEL_ATTEMPTS} cancel attempt(s) but no race was recorded — nothing reached the simultaneous accept and cancel"
 fi
 
-# 6. Did the accepts actually overlap, and did they name one driver?
-#
-#    Without this the run could be a sequence of unrelated accepts spread over
-#    minutes, each finding the driver free, reported as contention.
-#    Read from the kalo_accept_offset_ms trend: max minus min is how far the
-#    first and last accept were from each other.
-SPREAD=$(node -e '
-  const fs = require("fs");
-  try {
-    const s = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-    const t = (s.metrics || {}).kalo_accept_offset_ms;
-    if (!t) { console.log("unknown"); process.exit(0) }
-    const v = t.values || t;
-    if (v.min === undefined || v.max === undefined) { console.log("unknown"); process.exit(0) }
-    console.log(String(Math.round(v.max - v.min)));
-  } catch (e) { console.log("unknown") }
-' "$SUMMARY")
-
-#    And how long an accept stayed open, because the spread alone decides
-#    nothing. Thirty accepts issued across two seconds did not contend if each
-#    took forty milliseconds — they queued. Overlap is spread < duration.
-DUR_MAX=$(node -e '
-  const fs = require("fs");
-  try {
-    const s = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-    const t = (s.metrics || {}).kalo_accept_duration_ms;
-    const v = t && (t.values || t);
-    console.log(v && v.max !== undefined ? String(Math.round(v.max)) : "unknown");
-  } catch (e) { console.log("unknown") }
-' "$SUMMARY")
-
-DUR_MIN=$(node -e '
-  const fs = require("fs");
-  try {
-    const s = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-    const t = (s.metrics || {}).kalo_accept_duration_ms;
-    const v = t && (t.values || t);
-    console.log(v && v.min !== undefined ? String(Math.round(v.min)) : "unknown");
-  } catch (e) { console.log("unknown") }
-' "$SUMMARY")
-
-if [ "$SPREAD" = "unknown" ] || [ "$DUR_MAX" = "unknown" ]; then
-  # Not a note to be skimmed past: without the timings the central claim of the
-  # scenario is unverified, and an unverified claim is not a passing one.
-  fail "accept timings missing from the summary — overlap could not be verified, so contention is unproven"
+# accept-versus-timeout is exported but deliberately not scheduled. Said out
+# loud every time, because an unrun scenario reported as nothing is an unrun
+# scenario a reader will assume passed.
+if [ -z "$TIMEOUT_RACES" ] || [ "$TIMEOUT_RACES" -lt 1 ]; then
+  note "— accept-versus-timeout: NOT VERIFIED (defined, never executed; do not report it as covered)"
 else
-  note "accept spread ${SPREAD}ms, accept duration ${DUR_MIN}-${DUR_MAX}ms"
-
-  if [ "$SPREAD" -ge "$DUR_MAX" ]; then
-    fail "accepts were spread over ${SPREAD}ms while the longest took ${DUR_MAX}ms — they queued rather than raced, so no request overlapped another"
-  elif [ "$DUR_MIN" != "unknown" ] && [ "$SPREAD" -lt "$DUR_MIN" ]; then
-    note "✓ every accept was in flight at the same time"
-  else
-    note "✓ at least two accepts were in flight at the same time"
-  fi
-
-  # A sanity bound as well, so a pathologically slow backend cannot make any
-  # spread look like overlap.
-  if [ "$SPREAD" -gt "$MAX_SPREAD_MS" ]; then
-    fail "accepts were spread over ${SPREAD}ms, beyond the ${MAX_SPREAD_MS}ms this scenario calls simultaneous"
-  fi
+  note "accept-versus-timeout raced ${TIMEOUT_RACES} time(s)"
 fi
 
-# 7. And now the database, which is the only authority on what persisted.
+# ------------------------------------------------------------- the database
+#
+# The only authority on what persisted.
 DOUBLE_DRIVER=$(count "drivers with two active rides" "SELECT count(*) FROM (SELECT driver_id FROM rides WHERE driver_id IS NOT NULL AND status IN ('DRIVER_ASSIGNED','DRIVER_ARRIVING','DRIVER_ARRIVED','IN_PROGRESS') GROUP BY driver_id HAVING count(*) > 1) x")
 DOUBLE_CUSTOMER=$(count "customers with two active rides" "SELECT count(*) FROM (SELECT customer_id FROM rides WHERE status IN ('REQUESTED','DRIVER_ASSIGNED','DRIVER_ARRIVING','DRIVER_ARRIVED','IN_PROGRESS') GROUP BY customer_id HAVING count(*) > 1) x")
 BUSY_WITHOUT_RIDE=$(count "drivers BUSY with no ride" "SELECT count(*) FROM drivers d WHERE d.availability_status = 'BUSY' AND NOT EXISTS (SELECT 1 FROM rides r WHERE r.driver_id = d.id AND r.status IN ('DRIVER_ASSIGNED','DRIVER_ARRIVING','DRIVER_ARRIVED','IN_PROGRESS'))")
@@ -243,7 +332,25 @@ ASSIGNED_SEARCHING=$(count "assigned rides whose request is SEARCHING" "SELECT c
 # Per driver, not just globally: the number of drivers actually holding an
 # active ride must equal the number raced. Fewer means a driver was never
 # assigned; more is impossible without a violation.
-ASSIGNED_DRIVERS=$(count "drivers holding an active ride" "SELECT count(DISTINCT driver_id) FROM rides WHERE driver_id IS NOT NULL AND status IN ('DRIVER_ASSIGNED','DRIVER_ARRIVING','DRIVER_ARRIVED','IN_PROGRESS')")
+#
+# SCOPED TO THIS RUN when RUN_SINCE is given, and this is not a nicety. The
+# count is a per-run figure that was being read globally, which is only correct
+# against a freshly created database. The load database is now deliberately
+# preserved between runs, so a second run would find its own winner plus the
+# first run's — two drivers holding a ride where one was raced — and the gate
+# would report a violation that had not happened.
+#
+# The invariant queries above stay global on purpose. "No driver holds two
+# active rides" is true of the whole database or it is not true, and a
+# violation left by an earlier run is worth failing on wherever it came from.
+if [ -n "${RUN_SINCE:-}" ]; then
+  SINCE_CLAUSE="AND created_at >= '${RUN_SINCE}'"
+  note "counting assignments from this run only (since ${RUN_SINCE})"
+else
+  SINCE_CLAUSE=""
+fi
+
+ASSIGNED_DRIVERS=$(count "drivers holding an active ride" "SELECT count(DISTINCT driver_id) FROM rides WHERE driver_id IS NOT NULL AND status IN ('DRIVER_ASSIGNED','DRIVER_ARRIVING','DRIVER_ARRIVED','IN_PROGRESS') ${SINCE_CLAUSE}")
 
 note "drivers holding an active ride ${ASSIGNED_DRIVERS:-?} (raced ${EXPECTED_WINNERS})"
 note "drivers with two active rides ${DOUBLE_DRIVER:-?}, customers with two ${DOUBLE_CUSTOMER:-?}"
