@@ -134,7 +134,31 @@
     "pageFailed": "This page could not be displayed",
     "loadFailed": "Could not load this data. Check that the backend is running.",
     "staleBackend": "The server returned a plain list where a paged result was expected. The backend is probably running an older build than this frontend — restart it from the current main branch.",
-    "unexpectedShape": "The server returned an unexpected response for this list."
+    "unexpectedShape": "The server returned an unexpected response for this list.",
+    "backend": {
+      "accountInactive": "Your account is not active. Contact support to continue.",
+      "activeRideExists": "You already have a ride in progress. Finish or cancel it before booking another.",
+      "samePickupAndDestination": "Pick-up and destination cannot be the same place.",
+      "customersOnly": "Only a customer account can do this.",
+      "requestExpired": "This search has expired. Search again to see who is available now.",
+      "requestNotSelectable": "This search has already been used. Search again to choose a company.",
+      "requestNotFound": "This search could not be found. Search again.",
+      "offerNotFound": "That offer is no longer available. Search again.",
+      "companyUnavailable": "That company is no longer available. Choose another.",
+      "companyNotAcceptingBookings": "That company is not taking bookings right now. Choose another.",
+      "companyOutOfArea": "That company does not serve this pick-up point. Choose another.",
+      "companyNoPaymentMethod": "That company has no payment method set up. Choose another.",
+      "companyAlreadyTried": "You have already tried that company for this ride. Choose another.",
+      "companyLicenceExpired": "That company's taxi licence has expired. Choose another.",
+      "companyLicenceMissing": "That company has no taxi licence on record. Choose another.",
+      "noActiveRide": "You have no ride in progress.",
+      "rideNotFound": "That ride could not be found.",
+      "rideNotActive": "That ride is no longer active.",
+      "cancelAfterStart": "The ride has already started and can no longer be cancelled.",
+      "cancelCompleted": "A completed ride cannot be cancelled.",
+      "alreadyCancelled": "That ride is already cancelled.",
+      "cancelDeclined": "A declined ride cannot be cancelled."
+    }
   },
   "rideStatus": {
     "REQUESTED": "Requested",
