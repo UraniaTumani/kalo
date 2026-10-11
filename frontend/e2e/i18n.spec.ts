@@ -114,4 +114,63 @@ test.describe('Language', () => {
       expect(leaked, `untranslated key on ${screen}: ${leaked?.[0]}`).toBeNull()
     }
   })
+
+  /**
+   * F39 · a refused rule reads in the customer's language.
+   *
+   * The backend answers a refused business rule with a finished English
+   * sentence, and the frontend used to show it as-is — so an Albanian-speaking
+   * customer was told "Pickup and destination cannot be the same" in English,
+   * inside an otherwise Albanian screen. That was a documented trade-off, and
+   * the scale is what made it a finding: the server throws such a sentence in
+   * roughly 126 places.
+   *
+   * This covers the subset a customer can reach. The rule used here is chosen
+   * because exactly ONE applies: RideSearchServiceImpl compares the two
+   * coordinate pairs and refuses when they are identical, so picking the same
+   * address twice reaches that rule and no other. A failure whose message
+   * depends on which of several rules fires first would make this test about
+   * validation ordering rather than about translation.
+   */
+  test('F39 · a backend rule refusal is shown in Albanian, not English', async ({
+    page,
+    context,
+    guards,
+  }) => {
+    void guards
+
+    const tokens = await apiLogin(page.request, SEEDED.customer.phone, SEEDED.customer.password)
+    await seedSession(context, tokens, 'sq')
+
+    await page.goto('/ride')
+
+    /* The same place twice, which is what the rule refuses. */
+    await page.getByLabel(/^vendi i nisjes/i).fill('Rruga e Kavajes')
+    await page.getByRole('option').first().click()
+
+    await page.getByLabel(/^destinacioni/i).fill('Rruga e Kavajes')
+    await page.getByRole('option').first().click()
+
+    const refused = page.waitForResponse(
+      (r) => r.url().includes('/api/v1/rides/search') && r.request().method() === 'POST',
+    )
+    await page.getByRole('button', { name: 'Kërko taksi të disponueshme' }).click()
+
+    const response = await refused
+    expect(response.status(), 'the rule must refuse this search').toBe(400)
+    expect(
+      (await response.text()).includes('Pickup and destination cannot be the same'),
+      'the server is expected to answer in English — that is the premise of this test',
+    ).toBeTruthy()
+
+    /*
+     * Both halves. The Albanian sentence present, and the English one the
+     * server actually sent absent from the page — either alone would pass for
+     * a screen that showed both, or neither.
+     */
+    const alert = page.getByRole('alert')
+    await expect(alert).toContainText('Nisja dhe destinacioni nuk mund të jenë i njëjti vend.')
+    await expect(page.getByText('Pickup and destination cannot be the same')).toHaveCount(0)
+  })
+
 })

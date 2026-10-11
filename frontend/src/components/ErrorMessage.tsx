@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { ApiError } from '@/lib/api/client'
 import { GeolocationError } from '@/lib/geolocation'
 import { UnexpectedResponseError } from '@/lib/api/page'
+import { backendMessageKey } from '@/lib/api/backendMessages'
 import { Alert } from './ui'
 
 /**
@@ -35,6 +36,24 @@ export function useErrorMessage() {
       // API, so they are not the backend talking.
       if (error.status === 502 || error.status === 503 || error.status === 504) {
         return t('errors.unreachable')
+      }
+
+      /*
+       * F39: the rules a customer can actually hit, in their own language.
+       *
+       * The fallthrough below stays exactly as it was, and still handles most
+       * of the roughly 126 places the backend throws a sentence. What changes
+       * is that the subset a customer can reach — searching, choosing a
+       * company, cancelling — is looked up first, so an Albanian-speaking
+       * customer is not told "Ride request has expired" in English.
+       *
+       * backendMessages.ts holds the table and the reasoning, including why
+       * the match is exact and why partner and admin screens are left on the
+       * fallthrough on purpose.
+       */
+      const translated = backendMessageKey(error.message)
+      if (translated) {
+        return t(translated)
       }
 
       if (error.status === 404) {
