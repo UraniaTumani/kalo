@@ -11,7 +11,12 @@ import {
   searchRides,
   track,
 } from './lib/common.js'
-import { classifyAccept } from './lib/contention.js'
+import {
+  assessCancelRace,
+  classifyAccept,
+  classifyCancel,
+  classifyDuplicate,
+} from './lib/contention.js'
 
 /**
  * Scenario 6 — contention on one driver.
@@ -173,6 +178,29 @@ const duplicateAttempts = new Counter('kalo_duplicate_attempts')
 const cancelAttempts = new Counter('kalo_cancel_attempts')
 
 /**
+ * A duplicate that was neither refused nor accepted.
+ *
+ * The bucket that did not exist, and whose absence inverted the scenario's
+ * verdict: the second submission was judged by `status >= 300`, so a 500 — the
+ * server crashing on a duplicate — counted as a refusal and therefore as
+ * correct duplicate handling.
+ */
+const duplicateUnexpected = new Counter('kalo_duplicate_unexpected')
+
+/**
+ * Every way of not reaching the second submission.
+ *
+ * Needed for the same reason the race needs its own: a scenario that returned
+ * early and a scenario that found nothing wrong produce the same empty
+ * outcome counters. No offer matching its own company is the one that actually
+ * happened on the first real run.
+ */
+const duplicateNoToken = new Counter('kalo_duplicate_no_token')
+const duplicateNoSearch = new Counter('kalo_duplicate_no_search')
+const duplicateNoOffer = new Counter('kalo_duplicate_no_offer')
+const duplicateFirstFailed = new Counter('kalo_duplicate_first_failed')
+
+/**
  * Which side won each accept-versus-cancel race.
  *
  * Both outcomes are legitimate -- a customer may cancel while a company is
@@ -185,6 +213,21 @@ const cancelAttempts = new Counter('kalo_cancel_attempts')
 const cancelAcceptWon = new Counter('kalo_cancel_accept_won')
 const cancelAcceptRefused = new Counter('kalo_cancel_accept_refused')
 const cancelAcceptUnexpected = new Counter('kalo_cancel_accept_unexpected')
+
+/**
+ * And what became of the cancel, which was not recorded at all.
+ *
+ * Both orderings of this race leave the ride cancellable, so the cancel must
+ * succeed every time; a refusal means the ride reached a state the race cannot
+ * produce. Without these counters that failure was invisible unless it
+ * happened to arrive as a 5xx.
+ */
+const cancelOk = new Counter('kalo_cancel_ok')
+const cancelRejected = new Counter('kalo_cancel_rejected')
+const cancelUnexpected = new Counter('kalo_cancel_unexpected')
+
+/** Pairs of outcomes the ride lifecycle does not allow. Always a finding. */
+const cancelIllegal = new Counter('kalo_cancel_illegal')
 
 /**
  * How long each accept stayed open.
@@ -346,6 +389,36 @@ export const options = {
      */
     kalo_duplicate_attempts: ['count>0'],
     kalo_cancel_attempts: ['count>0'],
+
+    /*
+     * POSITIVE evidence from each, not merely an attempt. A scenario can be
+     * scheduled, start, and still establish nothing — the duplicate scenario
+     * did exactly that on the first real run, searching and returning without
+     * ever submitting twice.
+     *
+     *   a duplicate was refused     the behaviour under test actually happened
+     *   a cancel race was decided   the cancel reached the lifecycle at all
+     */
+    kalo_duplicate_refused: ['count>0'],
+    kalo_cancel_ok: ['count>0'],
+
+    /*
+     * And the outcomes that are defects outright. A duplicate accepted is a
+     * second ride from one request; an unexpected one is usually the server
+     * crashing on the retry, which the old `status >= 300` test counted as
+     * correct handling.
+     */
+    kalo_duplicate_accepted: ['count==0'],
+    kalo_duplicate_unexpected: ['count==0'],
+
+    /*
+     * A cancel refused, or a pair of outcomes the lifecycle cannot produce.
+     * Both orderings of the race leave the ride cancellable, so neither is
+     * reachable without something being wrong.
+     */
+    kalo_cancel_rejected: ['count==0'],
+    kalo_cancel_unexpected: ['count==0'],
+    kalo_cancel_illegal: ['count==0'],
   },
 
   summaryTrendStats: ['avg', 'min', 'med', 'p(95)', 'p(99)', 'max'],
@@ -767,6 +840,34 @@ export function sameDriverRace(data) {
  *
  * A retry, a double click, a flaky network. The second must be refused rather
  * than producing a second ride or a second assignment.
+ *
+ * WHAT MAKES IT A DUPLICATE, in this API's terms. Selecting an offer moves the
+ * ride request from SEARCHING to SELECTED and creates the ride; RideServiceImpl
+ * then refuses any further select for that request with "Ride request is not
+ * available for taxi selection". So the duplicate is a second POST to
+ * /rides/requests/{id}/select naming THE SAME request and THE SAME offer, as
+ * the same customer, with the same body — which is exactly what a retry or a
+ * double click puts on the wire. Two selects with different request ids would
+ * be two bookings and would prove nothing at all.
+ *
+ * WHAT COUNTS AS EVIDENCE. Only a second submission that was refused for that
+ * reason. Three things that look like evidence and are not:
+ *
+ *   no offer matched    the scenario searched and returned without submitting
+ *                       anything twice. This is what happened on the first
+ *                       real run, where it shared the raced fleet and the only
+ *                       driver was already BUSY, and the run was reported
+ *                       valid on it
+ *   the first failed    a pair that both failed is a failed booking, not a
+ *                       refused duplicate
+ *   any 4xx or 5xx      a 500 is the server crashing on the retry and a 429 is
+ *                       the limiter answering instead of the business rule.
+ *                       The second submission used to be judged by
+ *                       `status >= 300`, so both counted as refusals and
+ *                       therefore as correct duplicate handling
+ *
+ * Each of those is counted separately now, and the gate requires at least one
+ * genuine refusal plus an accounting that closes.
  */
 export function duplicateRequests(data) {
   /*
@@ -795,8 +896,14 @@ export function duplicateRequests(data) {
   const group = fleet[__VU % fleet.length]
   const user = reservedCustomer(DUPLICATE_BAND, DUPLICATE_VUS)
 
+  /*
+   * Each way of not reaching the duplicate is counted, so "the scenario found
+   * nothing wrong" cannot be confused with "the scenario never got started".
+   * The gate requires these to account for every attempt.
+   */
   const token = customerToken(user)
   if (!token) {
+    duplicateNoToken.add(1)
     sleep(1)
     return
   }
@@ -804,6 +911,7 @@ export function duplicateRequests(data) {
   const search = searchRides(token)
   track(search, 'search')
   if (search.status !== 201) {
+    duplicateNoSearch.add(1, { status: String(search.status) })
     sleep(1)
     return
   }
@@ -816,10 +924,18 @@ export function duplicateRequests(data) {
     const mine = offers.filter((o) => Number(o.companyId) === Number(group.companyId))
     if (mine.length > 0) offerId = mine[0].offerId
   } catch {
+    duplicateNoOffer.add(1)
     sleep(1)
     return
   }
   if (!requestId || !offerId) {
+    /*
+     * No offer from this scenario's own company. Named rather than silent,
+     * because this is exactly how the scenario came to record nothing on the
+     * first real run: it shared the raced fleet, whose driver was BUSY, so
+     * every user searched, matched no offer and returned.
+     */
+    duplicateNoOffer.add(1)
     sleep(1)
     return
   }
@@ -827,7 +943,13 @@ export function duplicateRequests(data) {
   const body = JSON.stringify({ offerId })
   const headers = authHeaders(token)
 
-  /* Both selects for the same request, back to back. */
+  /*
+   * THE SAME SUBMISSION TWICE: same request, same offer, same customer, same
+   * body, back to back. That is what makes it a duplicate rather than two
+   * bookings — selecting an offer moves the request from SEARCHING to
+   * SELECTED, so the second call is the same logical operation arriving again,
+   * which is what a retry or a double click sends.
+   */
   const first = http.post(`${BASE}/api/v1/rides/requests/${requestId}/select`, body, {
     headers,
     tags: { endpoint: 'select' },
@@ -840,11 +962,34 @@ export function duplicateRequests(data) {
   /*
    * Only meaningful when the FIRST succeeded. A pair that both failed is not a
    * refused duplicate, it is a failed booking, and counting it as success is
-   * exactly the false positive to avoid.
+   * exactly the false positive to avoid. 201 exactly, not "not an error":
+   * RideSearchController returns CREATED for a select.
    */
-  if (first.status < 300) {
-    if (second.status >= 300) duplicateRefused.add(1)
-    else duplicateAccepted.add(1)
+  if (first.status !== 201) {
+    duplicateFirstFailed.add(1, { status: String(first.status) })
+    track(first, 'select')
+    sleep(1)
+    return
+  }
+
+  /*
+   * And the second judged on WHY it failed, not merely that it did.
+   *
+   * This was `second.status >= 300`, which counted a 500 as a refusal — the
+   * server crashing on a duplicate recorded as correct duplicate handling, the
+   * worst available outcome reading as the best one. classifyDuplicate looks
+   * for the refusal the API actually gives ("Ride request is not available for
+   * taxi selection", 400) and puts everything else in its own bucket.
+   */
+  const outcome = classifyDuplicate(second)
+
+  if (outcome === 'refused') duplicateRefused.add(1)
+  else if (outcome === 'accepted') {
+    duplicateAccepted.add(1)
+    track(second, 'select_duplicate')
+  } else {
+    duplicateUnexpected.add(1, { status: String(second.status) })
+    track(second, 'select_duplicate')
   }
 }
 
@@ -937,26 +1082,45 @@ export function acceptVersusCancel(data) {
   cancelRaces.add(1, { ride: String(rideId) })
 
   /*
-   * Which side the race fell to, which until now was not recorded at all.
+   * BOTH sides classified, and the pair checked against the lifecycle.
    *
-   * It has to be, because this scenario can leave a driver holding a ride. The
-   * gate cross-checks the race's winners against the drivers the database
-   * actually assigned, and that check read every driver assigned during the
-   * run -- so an accept winning here would have added a second assigned driver
-   * to a race that expected one, and the gate would have reported a violation
-   * that had not happened. It never surfaced on the first real run only
-   * because this scenario was starved and recorded nothing.
+   * Only the accept was classified before, and the cancel not at all, so a
+   * cancel refused — or crashing — was invisible unless it happened to be a
+   * 5xx. That left the scenario unable to answer the one question it exists
+   * for, because the interesting failure is not which side wins but the ride
+   * ending somewhere the lifecycle does not allow.
    *
-   * Either side winning is legitimate, so this is counted rather than judged.
-   * Only an outcome that is neither is a finding.
+   * assessCancelRace holds the reasoning: both orderings leave the ride
+   * CANCELLED with no driver holding it, so a refused cancel is a finding and
+   * a winning accept does NOT leave an assignment behind.
    */
-  const outcome = classifyAccept(responses[0])
+  const acceptOutcome = classifyAccept(responses[0])
+  const cancelOutcome = classifyCancel(responses[1])
 
-  if (outcome === 'won') cancelAcceptWon.add(1)
-  else if (outcome === 'lost') cancelAcceptRefused.add(1)
+  if (acceptOutcome === 'won') cancelAcceptWon.add(1)
+  else if (acceptOutcome === 'lost') cancelAcceptRefused.add(1)
   else {
     cancelAcceptUnexpected.add(1, { status: String(responses[0].status) })
     track(responses[0], 'cancel_race')
+  }
+
+  if (cancelOutcome === 'cancelled') cancelOk.add(1)
+  else if (cancelOutcome === 'refused') {
+    cancelRejected.add(1, { status: String(responses[1].status) })
+    track(responses[1], 'cancel_race')
+  } else {
+    cancelUnexpected.add(1, { status: String(responses[1].status) })
+    track(responses[1], 'cancel_race')
+  }
+
+  const verdict = assessCancelRace(acceptOutcome, cancelOutcome)
+
+  if (!verdict.legal) {
+    cancelIllegal.add(1)
+    console.log(
+      `cancel race ILLEGAL on ride ${rideId}: ${verdict.reason} ` +
+        `(accept ${responses[0].status}, cancel ${responses[1].status})`,
+    )
   }
 
   for (const response of responses) {

@@ -66,13 +66,22 @@ const v = {
   offset_min: 0,
   offset_max: 40,
   duplicate_attempts: 6,
-  duplicate_refused: 3,
+  duplicate_refused: 6,
   duplicate_accepted: 0,
   cancel_attempts: 1,
   cancel_races: 1,
   cancel_accept_won: 1,
   cancel_accept_refused: 0,
   cancel_accept_unexpected: 0,
+  cancel_ok: 1,
+  cancel_rejected: 0,
+  cancel_unexpected: 0,
+  cancel_illegal: 0,
+  duplicate_unexpected: 0,
+  duplicate_no_token: 0,
+  duplicate_no_search: 0,
+  duplicate_no_offer: 0,
+  duplicate_first_failed: 0,
   timeout_races: '-',
 }
 
@@ -116,6 +125,15 @@ counter('kalo_cancel_races', v.cancel_races)
 counter('kalo_cancel_accept_won', v.cancel_accept_won)
 counter('kalo_cancel_accept_refused', v.cancel_accept_refused)
 counter('kalo_cancel_accept_unexpected', v.cancel_accept_unexpected)
+counter('kalo_cancel_ok', v.cancel_ok)
+counter('kalo_cancel_rejected', v.cancel_rejected)
+counter('kalo_cancel_unexpected', v.cancel_unexpected)
+counter('kalo_cancel_illegal', v.cancel_illegal)
+counter('kalo_duplicate_unexpected', v.duplicate_unexpected)
+counter('kalo_duplicate_no_token', v.duplicate_no_token)
+counter('kalo_duplicate_no_search', v.duplicate_no_search)
+counter('kalo_duplicate_no_offer', v.duplicate_no_offer)
+counter('kalo_duplicate_first_failed', v.duplicate_first_failed)
 counter('kalo_timeout_races', v.timeout_races)
 
 trend('kalo_accept_start_ms', v.start_min, v.start_max)
@@ -147,7 +165,7 @@ k6_exit() {
 # A `docker` whose psql answers the invariant queries with given values.
 stub_db() {
   local dir="$1" double_driver="$2" double_customer="$3" busy="$4" searching="$5"
-  local assigned_drivers="${6:-1}"
+  local assigned_drivers="${6:-1}" cancelled="${7:-9}"
 
   mkdir -p "$dir"
   cat > "$dir/docker" <<STUB
@@ -160,6 +178,7 @@ for arg in "\$@"; do
     *"availability_status = 'BUSY'"*) echo "$busy"; exit 0 ;;
     *"rq.status = 'SEARCHING'"*) echo "$searching"; exit 0 ;;
     *"count(DISTINCT driver_id)"*) echo "$assigned_drivers"; exit 0 ;;
+    *"status = 'CANCELLED'"*) echo "$cancelled"; exit 0 ;;
   esac
 done
 echo "0"
@@ -361,6 +380,7 @@ for arg in "$@"; do
     *"count(DISTINCT driver_id)"*"created_at >="*) echo "1"; exit 0 ;;
     # Unscoped: this run's winner plus one left behind by an earlier run.
     *"count(DISTINCT driver_id)"*) echo "2"; exit 0 ;;
+    *"status = 'CANCELLED'"*) echo "9"; exit 0 ;;
   esac
 done
 echo "0"
@@ -375,7 +395,7 @@ STUB
 # nothing.
 WORK=$(mktemp -d); stub_db_scoped "$WORK/bin"; k6_exit "$WORK" 0
 summary "$WORK" cancel_accept_won=0 cancel_accept_refused=1
-expect_invalid "an earlier run's winner is refused when the count is unscoped" "$WORK" "more than the 1 the race assigned"
+expect_invalid "an earlier run's winner is refused when the count is unscoped" "$WORK" "2 driver(s) hold an active ride"
 rm -rf "$WORK"
 
 WORK=$(mktemp -d); stub_db_scoped "$WORK/bin"; k6_exit "$WORK" 0
@@ -413,6 +433,7 @@ for arg in "\$@"; do
     *"$fragment"*"created_at >="*) echo "0"; exit 0 ;;
     *"$fragment"*) echo "1"; exit 0 ;;
     *"count(DISTINCT driver_id)"*) echo "1"; exit 0 ;;
+    *"status = 'CANCELLED'"*) echo "9"; exit 0 ;;
   esac
 done
 echo "0"
@@ -442,29 +463,31 @@ rm -rf "$WORK"
 
 # ------------------------------- the cancel race assigns a driver of its own
 
-# The bug this bound exists for, and it would have failed the second real run.
+# A winning accept must NOT leave a driver assigned, and the lifecycle is why.
 #
-# accept_vs_cancel accepts a ride on its own driver. When that accept beats the
-# cancel, the run ends with two drivers holding a ride against one raced — and
-# the check demanded exact equality. It never showed on the first real run only
-# because the scenario was starved and its contribution was always zero.
+# This was briefly allowed — the gate permitted one extra assigned driver per
+# cancel race whose accept won, on the assumption that a winning accept leaves
+# its driver holding the ride. RideServiceImpl.cancelRide says otherwise:
+# cancellation is refused from only five states and DRIVER_ASSIGNED is not one
+# of them, so the cancel succeeds anyway and frees the driver. Either ordering
+# ends CANCELLED with nobody holding it.
+#
+# So two assigned drivers against one raced is a violation however the cancel
+# race went, and the allowance was simply wrong.
 WORK=$(mktemp -d); stub_db_scoped "$WORK/bin"; k6_exit "$WORK" 0
 summary "$WORK" cancel_accept_won=1 cancel_accept_refused=0
-expect_valid "a cancel race whose accept won may leave a second driver assigned" "$WORK"
+expect_invalid "a second assigned driver is refused even when a cancel race's accept won" "$WORK" "the cancel scenario leaves none"
 rm -rf "$WORK"
 
-# And the allowance is exactly one per such race, not a blank cheque: two
-# assigned drivers with no cancel-race accept to account for the second is
-# still refused.
 WORK=$(mktemp -d); stub_db_scoped "$WORK/bin"; k6_exit "$WORK" 0
 summary "$WORK" cancel_accept_won=0 cancel_accept_refused=1
-expect_invalid "an unaccounted second assigned driver is refused" "$WORK" "nothing accounts for"
+expect_invalid "an unaccounted second assigned driver is refused" "$WORK" "2 driver(s) hold an active ride"
 rm -rf "$WORK"
 
 # Fewer assigned drivers than the race won: a driver the race assigned is
 # missing, whatever the cancel race did.
 WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 0; k6_exit "$WORK" 0; summary "$WORK"
-expect_invalid "no assigned driver at all is still refused" "$WORK" "do not agree"
+expect_invalid "no assigned driver at all is still refused" "$WORK" "0 driver(s) hold an active ride"
 rm -rf "$WORK"
 
 # The cancel race's own outcomes have to add up. A race nobody classified is a
@@ -487,12 +510,127 @@ summary "$WORK" cancel_accept_won=0 cancel_accept_refused=1
 expect_valid_saying "the gate reports which side won the cancel race" "$WORK" "accept refused 1"
 rm -rf "$WORK"
 
+# ------------------------------------------- the cancel side, finally judged
+
+# A REFUSED cancel is a finding, not a tie.
+#
+# Every state the accept can leave the ride in — REQUESTED or DRIVER_ASSIGNED
+# — is cancellable, so a refusal means the ride reached a state this race
+# cannot produce. The cancel response was not classified at all before, so
+# this was invisible unless it happened to arrive as a 5xx.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0
+summary "$WORK" cancel_ok=0 cancel_rejected=1
+expect_invalid "a refused cancel is refused, not read as a tie" "$WORK" "cancel(s) were refused"
+rm -rf "$WORK"
+
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0
+summary "$WORK" cancel_ok=0 cancel_unexpected=1
+expect_invalid "a cancel that failed for an unclassified reason is refused" "$WORK" "cancel(s) failed for an unclassified reason"
+rm -rf "$WORK"
+
+# A pair of outcomes the lifecycle cannot produce, flagged by the scenario
+# itself through assessCancelRace.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0
+summary "$WORK" cancel_illegal=1
+expect_invalid "an illegal outcome pair is refused" "$WORK" "the ride lifecycle does not allow"
+rm -rf "$WORK"
+
+# The cancel side has to account for every race, exactly as the accept side
+# does. Counting only one of the two is how a refused cancel went unseen.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0
+summary "$WORK" cancel_races=3 cancel_accept_won=1 cancel_accept_refused=2 cancel_ok=1
+expect_invalid "cancel outcomes that do not account for every race are refused" "$WORK" "cancel side is unaccounted for"
+rm -rf "$WORK"
+
+# Races recorded but no cancel ever succeeded: the scenario never reached the
+# behaviour it exists to exercise.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0
+summary "$WORK" cancel_ok=0 cancel_rejected=1
+expect_invalid "no successful cancel at all is refused" "$WORK" "no cancel succeeded"
+rm -rf "$WORK"
+
+# And the outcome has to match what persisted. Every decided race leaves its
+# ride CANCELLED whichever side landed first, so the run must hold at least
+# that many cancelled rides of its own. Counters agreeing with each other while
+# disagreeing with the database is the shape this catches.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1 0; k6_exit "$WORK" 0
+summary "$WORK"
+expect_invalid "a cancel race with no cancelled ride behind it is refused" "$WORK" "the state the database holds do not agree"
+rm -rf "$WORK"
+
+# ----------------------------------- the duplicate scenario, judged on reason
+
+# The inversion this closes.
+#
+# The second submission was judged by `status >= 300`, so a 500 — the server
+# crashing on a retry — counted as a refusal and therefore as correct
+# duplicate handling. The worst available outcome read as the best one.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0
+summary "$WORK" duplicate_refused=5 duplicate_unexpected=1
+expect_invalid "an unclassified duplicate response is refused, not counted as handling" "$WORK" "is not duplicate handling, it is the defect"
+rm -rf "$WORK"
+
+# Positive evidence, not merely an attempt. Six users that all searched and
+# found no offer from their own company attempted nothing twice — which is
+# exactly what happened on the first real run.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0
+summary "$WORK" duplicate_refused=0 duplicate_no_offer=6
+expect_invalid "duplicates that never submitted twice fail the run" "$WORK" "no duplicate submission was refused"
+rm -rf "$WORK"
+
+# Nor does a run pass on an ACCEPTED duplicate being the only outcome: that is
+# the defect, and it is also not evidence of refusal.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0
+summary "$WORK" duplicate_refused=0 duplicate_accepted=6
+expect_invalid "an accepted duplicate is not positive evidence of handling" "$WORK" "no duplicate submission was refused"
+rm -rf "$WORK"
+
+# Every attempt accounted for: outcomes plus named bail reasons must equal the
+# attempts, so an attempt that disappeared cannot be absorbed.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0
+summary "$WORK" duplicate_attempts=6 duplicate_refused=2
+expect_invalid "duplicate attempts that do not reconcile are refused" "$WORK" "vanished"
+rm -rf "$WORK"
+
+# A partly-bailed scenario is fine so long as something was actually refused
+# and the arithmetic closes: one user lost its offer, five submitted twice.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0
+summary "$WORK" duplicate_attempts=6 duplicate_refused=5 duplicate_no_offer=1
+expect_valid "some users bailing is fine while the rest prove the refusal" "$WORK"
+rm -rf "$WORK"
+
+# A summary that predates the bail counters must still be judged, not crash.
+#
+# The arithmetic read them with command substitution inside `$(( ))`, where an
+# empty result is a syntax ERROR rather than a zero — so an older summary broke
+# the gate outright instead of being assessed. Absent counters are now read
+# into variables first, where emptiness is zero.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0
+summary "$WORK" duplicate_no_token=- duplicate_no_search=- duplicate_no_offer=- duplicate_first_failed=-
+STATUS=$(run_gate "$WORK")
+if [ "$STATUS" != "0" ]; then
+  bad "absent duplicate bail counters are judged, not crashed on"
+  sed 's/^/        /' "$WORK/out"
+elif grep -qi "syntax error\|operand expected" "$WORK/out"; then
+  bad "absent duplicate bail counters produce a shell error"
+  sed 's/^/        /' "$WORK/out"
+else
+  ok "absent duplicate bail counters are judged, not crashed on"
+fi
+rm -rf "$WORK"
+
+# And the single-iteration caveat is stated on every run, so nobody reads one
+# interleaving as race coverage.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0; summary "$WORK"
+expect_valid_saying "the cancel scenario's single iteration is stated as such" "$WORK" "not race coverage demonstrated"
+rm -rf "$WORK"
+
 # ------------------------------------- k6 and the database have to agree
 
 # k6 counted a winner; the database holds no assigned driver. One of them is
 # wrong and the run cannot be trusted either way.
 WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 0; k6_exit "$WORK" 0; summary "$WORK"
-expect_invalid "a counted winner with no assigned driver is refused" "$WORK" "do not agree"
+expect_invalid "a counted winner with no assigned driver is refused" "$WORK" "0 driver(s) hold an active ride"
 rm -rf "$WORK"
 
 # --------------------------------------------------------- database failure
@@ -664,7 +802,7 @@ rm -rf "$WORK"
 # Attempted, but nothing got as far as a second submission: no duplicate was
 # ever decided, so the scenario produced no evidence either way.
 WORK=$(setup_work duplicate_attempts=6 duplicate_refused=0 duplicate_accepted=0)
-expect_invalid "duplicates attempted but never decided fails the run" "$WORK" "none reached a decision"
+expect_invalid "duplicates attempted but never decided fails the run" "$WORK" "no duplicate submission was refused"
 rm -rf "$WORK"
 
 WORK=$(setup_work cancel_attempts=0 cancel_races=0)
