@@ -34,6 +34,23 @@ export function BookRidePage() {
         destinationLongitude: destination!.lng,
         destinationAddress: destination!.label,
       }),
+    /*
+     * F38: a failed selection left its red banner on the page for ever.
+     *
+     * selectMutation keeps its error until something clears it, and nothing
+     * did. So "Ride request has expired" stayed on screen under a fresh set of
+     * search results, describing a request that no longer existed — the worst
+     * version of this being that it sat there before the customer had chosen
+     * any company at all, so the page claimed a failure for an action they had
+     * not taken yet.
+     *
+     * Cleared here rather than in the button's onClick because the stale
+     * banner is a property of the mutation's lifetime, not of one control: any
+     * caller that starts a search gets the reset, including one added later.
+     */
+    onMutate: () => {
+      selectMutation.reset()
+    },
     onSuccess: setSearch,
   })
 
