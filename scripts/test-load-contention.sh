@@ -619,6 +619,33 @@ else
 fi
 rm -rf "$WORK"
 
+# ------------------------------- the explanation must match the assertion
+
+# A verdict and the sentence printed beside it have to agree.
+#
+# The assigned-driver note once promised an allowance the rule did not grant:
+# "and up to N more may come from a cancel race whose accept won", left behind
+# when that bound was replaced by exact equality. The second real run printed
+# it on a passing result, telling the reader that two assigned drivers against
+# one raced would have been acceptable — when the gate would have failed it.
+#
+# Both directions are checked, because either alone is weak: the note must
+# state the exact expectation, and must not contain the allowance language that
+# could creep back in.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0; summary "$WORK"
+expect_valid_saying "the assigned-driver note states the exact expectation" "$WORK" "exactly that many are expected"
+rm -rf "$WORK"
+
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0; summary "$WORK"
+run_gate "$WORK" > /dev/null
+if grep -qE "up to .* more may come from|may come from a cancel race" "$WORK/out"; then
+  bad "the assigned-driver note promises an allowance the rule does not grant"
+  grep -E "holding an active ride" "$WORK/out" | sed 's/^/        /'
+else
+  ok "the assigned-driver note promises no allowance the rule does not grant"
+fi
+rm -rf "$WORK"
+
 # And the single-iteration caveat is stated on every run, so nobody reads one
 # interleaving as race coverage.
 WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0; summary "$WORK"
