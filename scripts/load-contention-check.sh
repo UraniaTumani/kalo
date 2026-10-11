@@ -355,7 +355,16 @@ fi
 
 ASSIGNED_DRIVERS=$(count "drivers holding an active ride" "SELECT count(DISTINCT driver_id) FROM rides WHERE driver_id IS NOT NULL AND status IN ('DRIVER_ASSIGNED','DRIVER_ARRIVING','DRIVER_ARRIVED','IN_PROGRESS') ${SINCE_CLAUSE}")
 
-note "drivers holding an active ride ${ASSIGNED_DRIVERS:-?} — the race assigned ${EXPECTED_WINNERS}, and up to $(fact cancel_accept_won || echo 0) more may come from a cancel race whose accept won"
+# Says what the rule below actually requires, which is exact equality.
+#
+# This note used to add "and up to N more may come from a cancel race whose
+# accept won" — wording left behind when that allowance was removed. The rule
+# was exact and the explanation printed beside it described a looser one, so a
+# reader of a passing run was told that two assigned drivers against one raced
+# would have been acceptable. It would have failed. A verdict and its
+# explanation disagreeing is its own kind of misreport, even when the verdict
+# is right.
+note "drivers holding an active ride ${ASSIGNED_DRIVERS:-?} — the race assigned ${EXPECTED_WINNERS}, and exactly that many are expected, since the cancel scenario leaves none"
 note "drivers with two active rides ${DOUBLE_DRIVER:-?}, customers with two ${DOUBLE_CUSTOMER:-?}"
 note "drivers BUSY with no active ride ${BUSY_WITHOUT_RIDE:-?}, assigned rides whose request is SEARCHING ${ASSIGNED_SEARCHING:-?}"
 
