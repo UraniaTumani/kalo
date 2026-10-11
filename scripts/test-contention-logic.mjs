@@ -11,8 +11,11 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
-  classifyAccept,
+  assessCancelRace,
   assessIntervalOverlap,
+  classifyAccept,
+  classifyCancel,
+  classifyDuplicate,
   reconcileAccepts,
 } from '../load/lib/contention.js'
 
@@ -280,6 +283,142 @@ check('an empty tally does not read as balanced by accident', () => {
 })
 
 
+/* ---------------------------------------------------------- cancel side */
+
+/*
+ * RideServiceImpl.cancelRide refuses exactly five states: IN_PROGRESS,
+ * COMPLETED, CANCELLED, DECLINED and NO_RESPONSE. All five are legal API
+ * behaviour, and none of them is reachable in the accept-versus-cancel race —
+ * which is what makes a refused cancel there a finding rather than a tie.
+ */
+check('a 200 means the ride was cancelled', () => {
+  assert.equal(classifyCancel({ status: 200 }), 'cancelled')
+})
+
+check('a refusal naming a non-cancellable state is a refusal', () => {
+  for (const message of [
+    'Ride cannot be cancelled after it has started',
+    'Completed ride cannot be cancelled',
+    'Ride is already cancelled',
+    'Declined ride cannot be cancelled',
+    'Ride is no longer active',
+  ]) {
+    assert.equal(
+      classifyCancel({ status: 400, body: JSON.stringify({ message }) }),
+      'refused',
+      message,
+    )
+  }
+})
+
+check('a 500 on cancel is never a refusal', () => {
+  assert.equal(classifyCancel({ status: 500, body: 'boom' }), 'unexpected')
+})
+
+check('an unexplained 400 on cancel is not quietly a refusal', () => {
+  assert.equal(
+    classifyCancel({ status: 400, body: '{"message":"Something else"}' }),
+    'unexpected',
+  )
+})
+
+check('a malformed cancel response is unexpected, not success', () => {
+  assert.equal(classifyCancel(null), 'unexpected')
+  assert.equal(classifyCancel({}), 'unexpected')
+})
+
+/* ------------------------------------------------ the pair, against the law */
+
+check('the cancel landing first and refusing the accept is legal', () => {
+  const r = assessCancelRace('lost', 'cancelled')
+  assert.equal(r.legal, true)
+  assert.equal(r.leavesAssigned, false)
+})
+
+/*
+ * The ordering that matters most, and the one that corrected the gate: the
+ * accept lands, DRIVER_ASSIGNED is cancellable, so the cancel succeeds anyway
+ * and frees the driver. Nobody is left holding the ride, which is why the
+ * gate's assigned-driver count is exact rather than allowing for this.
+ */
+check('the accept landing first and then being cancelled is legal', () => {
+  const r = assessCancelRace('won', 'cancelled')
+  assert.equal(r.legal, true)
+  assert.equal(r.leavesAssigned, false)
+  assert.match(r.reason, /undid it/)
+})
+
+check('a refused cancel is illegal whichever way the accept went', () => {
+  for (const accept of ['won', 'lost']) {
+    const r = assessCancelRace(accept, 'refused')
+    assert.equal(r.legal, false, accept)
+    assert.match(r.reason, /every state the accept can leave the ride in is cancellable/)
+  }
+})
+
+check('a cancel that failed for an unclassified reason is illegal', () => {
+  assert.equal(assessCancelRace('won', 'unexpected').legal, false)
+  assert.equal(assessCancelRace('lost', 'unexpected').legal, false)
+})
+
+check('an unclassified accept is illegal even when the cancel succeeded', () => {
+  const r = assessCancelRace('unexpected', 'cancelled')
+  assert.equal(r.legal, false)
+  assert.match(r.reason, /the accept failed for an unclassified reason/)
+})
+
+/* ------------------------------------------------------ duplicate side */
+
+/*
+ * Selecting an offer moves the request from SEARCHING to SELECTED, so the
+ * second select is refused with "Ride request is not available for taxi
+ * selection" as a 400. That one refusal is the evidence the scenario exists
+ * for.
+ */
+check('the SELECTED-request refusal is a refused duplicate', () => {
+  assert.equal(
+    classifyDuplicate({
+      status: 400,
+      body: '{"message":"Ride request is not available for taxi selection"}',
+    }),
+    'refused',
+  )
+})
+
+check('a conflict is a refused duplicate without reading the body', () => {
+  assert.equal(classifyDuplicate({ status: 409 }), 'refused')
+})
+
+check('a second ride created from one request is the defect', () => {
+  assert.equal(classifyDuplicate({ status: 201 }), 'accepted')
+})
+
+/*
+ * The inversion this replaced. The scenario judged the second submission by
+ * `status >= 300`, so a 500 counted as a refusal and therefore as correct
+ * duplicate handling: the server crashing on a retry read as the behaviour
+ * under test working.
+ */
+check('a 500 on the duplicate is never a refusal', () => {
+  assert.equal(classifyDuplicate({ status: 500, body: 'boom' }), 'unexpected')
+})
+
+check('a rate-limited duplicate is not duplicate handling', () => {
+  assert.equal(classifyDuplicate({ status: 429 }), 'unexpected')
+})
+
+check('an unexplained 400 on the duplicate is not quietly a refusal', () => {
+  assert.equal(
+    classifyDuplicate({ status: 400, body: '{"message":"Final amount must be positive"}' }),
+    'unexpected',
+  )
+})
+
+check('a malformed duplicate response is unexpected, not refused', () => {
+  assert.equal(classifyDuplicate(null), 'unexpected')
+  assert.equal(classifyDuplicate({}), 'unexpected')
+})
+
 /* ------------------------------------- the scenario's customer reservation */
 
 /*
@@ -301,10 +440,24 @@ check('an empty tally does not read as balanced by accident', () => {
  * exec.scenario.iterationInTest is scenario-local and contiguous, so that is
  * what has to be used.
  */
-const scenario = readFileSync(
+const scenarioSource = readFileSync(
   new URL('../load/06-contention.js', import.meta.url),
   'utf8',
 )
+
+/*
+ * Comments stripped before anything is matched against the source.
+ *
+ * These checks assert what the scenario DOES, and its comments quote what it
+ * used to do -- including the `second.status >= 300` test that counted a 500
+ * as a refusal. Matching the raw file found that sentence and reported the bug
+ * as still present. Explaining a fix must not be mistaken for not having
+ * applied it.
+ */
+const BLOCK_COMMENT = new RegExp('/\\*[\\s\\S]*?\\*/', 'g')
+const LINE_COMMENT = new RegExp('^[ \\t]*//.*$', 'gm')
+
+const scenario = scenarioSource.replace(BLOCK_COMMENT, '').replace(LINE_COMMENT, '')
 
 const reservation = scenario.slice(
   scenario.indexOf('function reservedCustomer'),
@@ -349,6 +502,83 @@ check('every scenario draws from a band rather than an ad-hoc offset', () => {
     !/users\[\(__VU \+ \d+\) % users\.length\]/.test(scenario),
     'an ad-hoc customer offset is back in the scenario',
   )
+})
+
+
+/* ------------------------ the scenarios send what they claim to send */
+
+/*
+ * Proof from the source that the duplicate scenario submits the SAME logical
+ * operation twice, rather than two bookings that happen to look alike.
+ *
+ * The API's semantics decide what "the same" means here: selecting an offer
+ * moves the ride request from SEARCHING to SELECTED, so a duplicate is a
+ * second select naming the same request and the same offer. Two selects with
+ * different request ids would be two bookings and would prove nothing.
+ */
+const duplicateBody = scenario.slice(
+  scenario.indexOf('export function duplicateRequests'),
+  scenario.indexOf('export function acceptVersusCancel'),
+)
+
+check('the duplicate scenario exists where these checks look', () => {
+  assert.ok(duplicateBody.length > 200, 'duplicateRequests body not found')
+})
+
+check('both submissions go to the select endpoint for one request id', () => {
+  const posts = [
+    ...duplicateBody.matchAll(
+      /http\.post\(\s*`\$\{BASE\}\/api\/v1\/rides\/requests\/\$\{requestId\}\/select`/g,
+    ),
+  ]
+  assert.equal(posts.length, 2, `expected two selects for ${'${requestId}'}, found ${posts.length}`)
+})
+
+check('both submissions send the same body and the same credentials', () => {
+  /* One `body` and one `headers`, built once and passed to both calls. */
+  assert.match(duplicateBody, /const body = JSON\.stringify\(\{ offerId \}\)/)
+  assert.match(duplicateBody, /const headers = authHeaders\(token\)/)
+  const bodyArgs = [...duplicateBody.matchAll(/select`,\s*body,/g)]
+  assert.equal(bodyArgs.length, 2, 'the two selects do not both send `body`')
+})
+
+check('the second submission is judged by classifyDuplicate, not by a status range', () => {
+  assert.match(duplicateBody, /classifyDuplicate\(second\)/)
+  assert.ok(
+    !/second\.status >= 300/.test(duplicateBody),
+    'the second submission is judged by `status >= 300` again, which counts a 500 as a refusal',
+  )
+})
+
+check('the first submission must be a 201 before the duplicate means anything', () => {
+  assert.match(duplicateBody, /first\.status !== 201/)
+})
+
+/*
+ * And the cancel race classifies BOTH sides. Only the accept was classified
+ * before, so a refused or crashing cancel left no trace unless it happened to
+ * arrive as a 5xx.
+ */
+const cancelBody = scenario.slice(
+  scenario.indexOf('export function acceptVersusCancel'),
+  scenario.indexOf('export function acceptVersusTimeout'),
+)
+
+check('the cancel scenario exists where these checks look', () => {
+  assert.ok(cancelBody.length > 200, 'acceptVersusCancel body not found')
+})
+
+check('the cancel race classifies the accept and the cancel', () => {
+  assert.match(cancelBody, /classifyAccept\(responses\[0\]\)/)
+  assert.match(cancelBody, /classifyCancel\(responses\[1\]\)/)
+})
+
+check('the cancel race checks the pair against the lifecycle', () => {
+  assert.match(cancelBody, /assessCancelRace\(acceptOutcome, cancelOutcome\)/)
+})
+
+check('both requests go out together rather than one after the other', () => {
+  assert.match(cancelBody, /http\.batch\(\[/)
 })
 
 console.log(`\n  ${passed} passed${process.exitCode ? ', some failed' : ', 0 failed'}`)

@@ -107,6 +107,23 @@ say('cancel_accept_refused', counter('kalo_cancel_accept_refused'))
 say('cancel_accept_unexpected', counter('kalo_cancel_accept_unexpected'))
 
 /*
+ * And what became of the cancel. Both orderings of the race leave the ride
+ * cancellable, so the cancel must succeed every time and the ride must end
+ * CANCELLED — which the gate checks against the database, not just here.
+ */
+say('cancel_ok', counter('kalo_cancel_ok'))
+say('cancel_rejected', counter('kalo_cancel_rejected'))
+say('cancel_unexpected', counter('kalo_cancel_unexpected'))
+say('cancel_illegal', counter('kalo_cancel_illegal'))
+
+/* The duplicate scenario's own outcomes and every way of not reaching one. */
+say('duplicate_unexpected', counter('kalo_duplicate_unexpected'))
+say('duplicate_no_token', counter('kalo_duplicate_no_token'))
+say('duplicate_no_search', counter('kalo_duplicate_no_search'))
+say('duplicate_no_offer', counter('kalo_duplicate_no_offer'))
+say('duplicate_first_failed', counter('kalo_duplicate_first_failed'))
+
+/*
  * accept-versus-timeout is exported but not scheduled. Its absence is reported
  * as NOT VERIFIED rather than as nothing, so a reader is never left to infer
  * that a scenario which never ran was fine.

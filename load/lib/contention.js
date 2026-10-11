@@ -245,3 +245,151 @@ export function reconcileAccepts(tally) {
 
   return { balanced: problems.length === 0, problems }
 }
+
+/**
+ * Which refusals a cancel can legitimately give.
+ *
+ * Taken from RideServiceImpl.cancelRide, which refuses only five states:
+ * IN_PROGRESS, COMPLETED, CANCELLED, DECLINED and NO_RESPONSE. Everything
+ * else — REQUESTED, DRIVER_ASSIGNED, DRIVER_ARRIVING, DRIVER_ARRIVED — is
+ * cancellable, and cancelling frees a BUSY driver and sets the request to
+ * CANCELLED.
+ *
+ * All five are the API behaving correctly. None of them is reachable in the
+ * accept-versus-cancel race, which is the point: see assessCancelRace.
+ */
+const CANCEL_REFUSAL_PHRASES = [
+  'cannot be cancelled after it has started',
+  'Completed ride cannot be cancelled',
+  'already cancelled',
+  'Declined ride cannot be cancelled',
+  'no longer active',
+]
+
+/**
+ * @param {{status: number, body?: string}} response
+ * @returns {'cancelled'|'refused'|'unexpected'}
+ */
+export function classifyCancel(response) {
+  if (!response || typeof response.status !== 'number') return 'unexpected'
+
+  /* RideSearchController returns 200 with the cancelled ride. */
+  if (response.status === 200) return 'cancelled'
+
+  if (response.status === 400) {
+    const body = response.body || ''
+    if (CANCEL_REFUSAL_PHRASES.some((phrase) => body.includes(phrase))) {
+      return 'refused'
+    }
+  }
+
+  return 'unexpected'
+}
+
+/**
+ * Whether an accept-versus-cancel race ended in a state the ride lifecycle
+ * allows, and what it should have left behind.
+ *
+ * Both calls take a row lock, so they serialise, and there are exactly two
+ * orderings:
+ *
+ *   cancel first   REQUESTED -> CANCELLED, so the accept then finds a ride
+ *                  that is no longer REQUESTED and is refused
+ *   accept first   REQUESTED -> DRIVER_ASSIGNED with the driver BUSY, and
+ *                  DRIVER_ASSIGNED is cancellable, so the cancel then
+ *                  succeeds and frees the driver again
+ *
+ * THE CANCEL SUCCEEDS EITHER WAY. That is not a convenience, it is the
+ * property worth testing: every state the accept can leave the ride in is one
+ * the cancel accepts, so a refused cancel means the lifecycle did something it
+ * should not have. The ride ends CANCELLED in both orderings, and neither
+ * leaves a driver holding it.
+ *
+ * The refusals in CANCEL_REFUSAL_PHRASES are all legal API behaviour and none
+ * is reachable here: the ride cannot be IN_PROGRESS, COMPLETED, DECLINED or
+ * already CANCELLED, and the request window is minutes away from NO_RESPONSE.
+ *
+ * @param {'won'|'lost'|'unexpected'} accept    from classifyAccept
+ * @param {'cancelled'|'refused'|'unexpected'} cancel  from classifyCancel
+ * @returns {{legal: boolean, leavesAssigned: boolean, reason: string}}
+ */
+export function assessCancelRace(accept, cancel) {
+  if (cancel === 'refused') {
+    return {
+      legal: false,
+      leavesAssigned: accept === 'won',
+      reason:
+        `the cancel was refused (accept ${accept}) — every state the accept ` +
+        'can leave the ride in is cancellable, so a refusal here means the ' +
+        'ride reached a state this race cannot produce',
+    }
+  }
+
+  if (cancel === 'unexpected') {
+    return {
+      legal: false,
+      leavesAssigned: accept === 'won',
+      reason: `the cancel failed for an unclassified reason (accept ${accept})`,
+    }
+  }
+
+  if (accept === 'unexpected') {
+    return {
+      legal: false,
+      leavesAssigned: false,
+      reason: 'the accept failed for an unclassified reason while the cancel succeeded',
+    }
+  }
+
+  /*
+   * The two legal shapes. Neither leaves a driver assigned: the cancel either
+   * beat the accept, or undid it and freed the driver.
+   */
+  return {
+    legal: true,
+    leavesAssigned: false,
+    reason:
+      accept === 'won'
+        ? 'the accept landed first and the cancel then undid it, freeing the driver'
+        : 'the cancel landed first and the accept was refused',
+  }
+}
+
+/**
+ * The second of two identical submissions.
+ *
+ * Selecting an offer moves the request from SEARCHING to SELECTED, so a second
+ * select for the same request is refused by RideServiceImpl with "Ride request
+ * is not available for taxi selection" as a 400. That one refusal is the
+ * evidence this scenario exists to collect.
+ *
+ * The distinction this draws is the whole point, and it was previously not
+ * drawn at all: the scenario counted ANY `status >= 300` on the second
+ * submission as a refusal, so a 500 — the server crashing on a duplicate —
+ * was recorded as correct duplicate handling. The worst available outcome read
+ * as the best one.
+ *
+ * @param {{status: number, body?: string}} response
+ * @returns {'refused'|'accepted'|'unexpected'}
+ */
+export function classifyDuplicate(response) {
+  if (!response || typeof response.status !== 'number') return 'unexpected'
+
+  /* A second ride created from one request is the defect itself. */
+  if (response.status === 201) return 'accepted'
+
+  if (response.status === 409) return 'refused'
+
+  if (response.status === 400) {
+    const body = response.body || ''
+    if (body.includes('not available for taxi selection')) return 'refused'
+  }
+
+  /*
+   * Everything else is counted on its own: a 500 is the duplicate crashing the
+   * server, a 429 is the limiter answering instead of the business rule, and a
+   * 400 nobody predicted is a finding. Folding any of them into "refused"
+   * reports a failure as the behaviour under test.
+   */
+  return 'unexpected'
+}

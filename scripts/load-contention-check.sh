@@ -298,10 +298,13 @@ fi
 # scenario that attempted nothing tested nothing.
 if [ -z "$DUP_ATTEMPTS" ] || [ "$DUP_ATTEMPTS" -lt 1 ]; then
   fail "the duplicate scenario attempted nothing — it was scheduled, so a run in which it never got started is not a run that tested duplicates"
-elif [ $(( ${DUP_REFUSED:-0} + ${DUP_ACCEPTED:-0} )) -lt 1 ]; then
-  fail "${DUP_ATTEMPTS} duplicate attempt(s) but none reached a decision — every pair failed before the second submission, so nothing was tested"
 fi
 
+# Whether anything reached a decision, and whether the second submission was
+# refused for the right reason, is judged further down in one place, where the
+# bail reasons and the outcome buckets are read together. Checking "refused or
+# accepted is at least one" here as well would pass a run whose only outcome
+# was an ACCEPTED duplicate, which is the defect.
 if [ "${DUP_ACCEPTED:-0}" -gt 0 ]; then
   fail "${DUP_ACCEPTED} duplicate submission(s) were accepted rather than refused"
 fi
@@ -364,47 +367,125 @@ note "drivers BUSY with no active ride ${BUSY_WITHOUT_RIDE:-?}, assigned rides w
 # the API blessed, this says how many drivers actually hold a ride.
 # The race's winners are not the only assignments a run can make.
 #
-# accept_vs_cancel accepts a ride too, on its own driver, and when that accept
-# beats the cancel it leaves that driver holding one. This check used to demand
-# exact equality with the race's winners, which would have failed the next run
-# outright: two drivers holding a ride against one raced. It never surfaced on
-# the first real run only because that scenario was starved and recorded
-# nothing, so the number it would have added was always zero.
+# EXACT, and the ride lifecycle is why.
 #
-# Bounded rather than exact, and the bound is measured, not assumed:
+# This was briefly a bound — the race's winners plus one per cancel race whose
+# accept won — on the assumption that a winning accept leaves its driver
+# holding the ride. Reading RideServiceImpl.cancelRide shows it does not.
+# Cancellation is refused from only five states (IN_PROGRESS, COMPLETED,
+# CANCELLED, DECLINED, NO_RESPONSE) and DRIVER_ASSIGNED is not among them, so:
 #
-#   at least   the race's winners, or a driver the race assigned is missing
-#   at most    those plus one per cancel race whose ACCEPT won; a cancel that
-#              won leaves nobody assigned, and a cancel landing after a
-#              successful accept frees the driver again, so this is a ceiling
+#   cancel first   REQUESTED -> CANCELLED, and the accept is then refused
+#   accept first   DRIVER_ASSIGNED with the driver BUSY, and the cancel then
+#                  succeeds anyway, freeing the driver
 #
-# With no cancel races the two collapse back to equality, which is what a
-# race-only run gets.
+# Either way the ride ends CANCELLED and nobody is left holding it. The cancel
+# scenario contributes exactly zero assigned drivers, so the race's winners are
+# the whole of it and the looser bound was simply wrong.
 CANCEL_ACCEPT_WON=$(fact cancel_accept_won)
 CANCEL_ACCEPT_REFUSED=$(fact cancel_accept_refused)
 CANCEL_ACCEPT_UNEXPECTED=$(fact cancel_accept_unexpected)
+CANCEL_OK=$(fact cancel_ok)
+CANCEL_REJECTED=$(fact cancel_rejected)
+CANCEL_UNEXPECTED=$(fact cancel_unexpected)
+CANCEL_ILLEGAL=$(fact cancel_illegal)
 
-ASSIGNED_CEILING=$(( EXPECTED_WINNERS + ${CANCEL_ACCEPT_WON:-0} ))
-
-if [ "${ASSIGNED_DRIVERS:-0}" -lt "$EXPECTED_WINNERS" ]; then
-  fail "${ASSIGNED_DRIVERS:-0} driver(s) hold an active ride but the race assigned ${EXPECTED_WINNERS} — the winners k6 counted and the drivers the database assigned do not agree"
-elif [ "${ASSIGNED_DRIVERS:-0}" -gt "$ASSIGNED_CEILING" ]; then
-  fail "${ASSIGNED_DRIVERS:-0} driver(s) hold an active ride from this run, which is more than the ${EXPECTED_WINNERS} the race assigned plus the ${CANCEL_ACCEPT_WON:-0} accept(s) that won a cancel race — something was assigned that nothing accounts for"
+if [ "${ASSIGNED_DRIVERS:-0}" -ne "$EXPECTED_WINNERS" ]; then
+  fail "${ASSIGNED_DRIVERS:-0} driver(s) hold an active ride from this run but the race assigned ${EXPECTED_WINNERS} — and the cancel scenario leaves none, since every state its accept can reach is cancellable"
 fi
 
-# The cancel race's own arithmetic. Every race fell to one side or the other,
-# and an outcome that is neither is a finding rather than a tie.
+# The cancel race, judged on BOTH sides and against what persisted.
 if [ -n "$CANCEL_RACES" ] && [ "${CANCEL_RACES:-0}" -gt 0 ]; then
-  CANCEL_DECIDED=$(( ${CANCEL_ACCEPT_WON:-0} + ${CANCEL_ACCEPT_REFUSED:-0} + ${CANCEL_ACCEPT_UNEXPECTED:-0} ))
+  note "cancel races ${CANCEL_RACES}: accept won ${CANCEL_ACCEPT_WON:-0}, accept refused ${CANCEL_ACCEPT_REFUSED:-0}, cancel succeeded ${CANCEL_OK:-0}"
+  note "  (one iteration per cancel driver — an interleaving observed, not race coverage demonstrated)"
 
-  note "cancel races ${CANCEL_RACES}: accept won ${CANCEL_ACCEPT_WON:-0}, accept refused ${CANCEL_ACCEPT_REFUSED:-0}"
+  # Both tallies have to close. The accept side was the only one counted
+  # before, so a cancel that was refused or crashed left no trace at all
+  # unless it happened to arrive as a 5xx.
+  ACCEPT_DECIDED=$(( ${CANCEL_ACCEPT_WON:-0} + ${CANCEL_ACCEPT_REFUSED:-0} + ${CANCEL_ACCEPT_UNEXPECTED:-0} ))
+  CANCEL_DECIDED=$(( ${CANCEL_OK:-0} + ${CANCEL_REJECTED:-0} + ${CANCEL_UNEXPECTED:-0} ))
+
+  if [ "$ACCEPT_DECIDED" -ne "${CANCEL_RACES:-0}" ]; then
+    fail "${CANCEL_RACES} cancel race(s) ran but ${ACCEPT_DECIDED} accept outcome(s) were recorded — a race whose result nobody classified cannot be reasoned about"
+  fi
 
   if [ "$CANCEL_DECIDED" -ne "${CANCEL_RACES:-0}" ]; then
-    fail "${CANCEL_RACES} cancel race(s) ran but ${CANCEL_DECIDED} outcome(s) were recorded — a race whose result nobody classified cannot be reasoned about"
+    fail "${CANCEL_RACES} cancel race(s) ran but ${CANCEL_DECIDED} cancel outcome(s) were recorded — the cancel side is unaccounted for"
   fi
 
   if [ "${CANCEL_ACCEPT_UNEXPECTED:-0}" -gt 0 ]; then
     fail "${CANCEL_ACCEPT_UNEXPECTED} accept(s) in a cancel race failed for an unclassified reason — read them before trusting the invariants below"
+  fi
+
+  # A refused cancel is a finding, not a tie. Every state the accept can leave
+  # the ride in is cancellable, so a refusal means the ride reached a state
+  # this race cannot produce.
+  if [ "${CANCEL_REJECTED:-0}" -gt 0 ]; then
+    fail "${CANCEL_REJECTED} cancel(s) were refused — REQUESTED and DRIVER_ASSIGNED are both cancellable, so the ride reached a state this race cannot produce"
+  fi
+
+  if [ "${CANCEL_UNEXPECTED:-0}" -gt 0 ]; then
+    fail "${CANCEL_UNEXPECTED} cancel(s) failed for an unclassified reason"
+  fi
+
+  if [ "${CANCEL_ILLEGAL:-0}" -gt 0 ]; then
+    fail "${CANCEL_ILLEGAL} cancel race(s) ended in a pair of outcomes the ride lifecycle does not allow — see the k6 log for each"
+  fi
+
+  if [ -z "$CANCEL_OK" ] || [ "${CANCEL_OK:-0}" -lt 1 ]; then
+    fail "no cancel succeeded — the scenario never reached the behaviour it exists to exercise"
+  fi
+
+  # And the persisted state has to agree with the outcome recorded. Every
+  # decided race leaves its ride CANCELLED, whichever side landed first, so
+  # the run must hold at least that many cancelled rides of its own.
+  CANCELLED_RIDES=$(count "rides cancelled by this run" "SELECT count(*) FROM rides WHERE status = 'CANCELLED' ${SINCE_CLAUSE}")
+
+  note "  rides cancelled ${CANCELLED_RIDES:-?} (${CANCEL_RACES} race(s) each end cancelled)"
+
+  if [ "${CANCELLED_RIDES:-0}" -lt "${CANCEL_RACES:-0}" ]; then
+    fail "${CANCEL_RACES} cancel race(s) were recorded but only ${CANCELLED_RIDES:-0} ride(s) from this run are CANCELLED — the outcome k6 counted and the state the database holds do not agree"
+  fi
+fi
+
+# The duplicate scenario, judged on WHY the second submission failed.
+if [ -n "$DUP_ATTEMPTS" ] && [ "${DUP_ATTEMPTS:-0}" -gt 0 ]; then
+  DUP_UNEXPECTED=$(fact duplicate_unexpected)
+
+  # Read into variables first, then add.
+  #
+  # An empty VARIABLE is zero in arithmetic context; an empty COMMAND
+  # SUBSTITUTION is a syntax error, so `$(( $(fact a) + $(fact b) ))` breaks
+  # outright on a summary that predates these counters — which is precisely the
+  # summary a gate has to cope with. The parameter expansions below are what
+  # make the absent case a zero rather than a crash.
+  DUP_NO_TOKEN=$(fact duplicate_no_token)
+  DUP_NO_SEARCH=$(fact duplicate_no_search)
+  DUP_NO_OFFER=$(fact duplicate_no_offer)
+  DUP_FIRST_FAILED=$(fact duplicate_first_failed)
+
+  DUP_DECIDED=$(( ${DUP_REFUSED:-0} + ${DUP_ACCEPTED:-0} + ${DUP_UNEXPECTED:-0} ))
+  DUP_BAILED=$(( ${DUP_NO_TOKEN:-0} + ${DUP_NO_SEARCH:-0} + ${DUP_NO_OFFER:-0} \
+    + ${DUP_FIRST_FAILED:-0} ))
+
+  note "duplicate submissions: refused ${DUP_REFUSED:-0}, accepted ${DUP_ACCEPTED:-0}, unclassified ${DUP_UNEXPECTED:-0}; ${DUP_BAILED} never got that far"
+
+  # An unclassified second submission is usually the server crashing on the
+  # retry. It used to be counted as a refusal, and therefore as the behaviour
+  # under test working.
+  if [ "${DUP_UNEXPECTED:-0}" -gt 0 ]; then
+    fail "${DUP_UNEXPECTED} duplicate submission(s) failed for an unclassified reason — a 500 on a retry is not duplicate handling, it is the defect"
+  fi
+
+  if [ "$(( DUP_DECIDED + DUP_BAILED ))" -ne "${DUP_ATTEMPTS:-0}" ]; then
+    fail "${DUP_ATTEMPTS} duplicate attempt(s) but ${DUP_DECIDED} reached a decision and ${DUP_BAILED} recorded a reason for not doing so — $(( DUP_ATTEMPTS - DUP_DECIDED - DUP_BAILED )) vanished"
+  fi
+
+  # The positive evidence. Attempts that all bailed — every user searching and
+  # finding no offer from its own company, which is what happened on the first
+  # real run — mean the duplicate path was never exercised.
+  if [ -z "$DUP_REFUSED" ] || [ "${DUP_REFUSED:-0}" -lt 1 ]; then
+    fail "no duplicate submission was refused — the second select never reached the SELECTED-request rule, so duplicate handling is untested whatever else the run shows"
   fi
 fi
 
