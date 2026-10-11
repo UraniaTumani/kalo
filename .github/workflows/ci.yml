@@ -79,8 +79,9 @@ jobs:
     # stop an empty run looking like a successful one were themselves unchecked
     # by anything automatic.
     #
-    # These three need no stack. They stub docker and curl on PATH, or test
-    # pure functions, so they finish in seconds and touch no database.
+    # None of these need a stack. They stub docker and curl on PATH, assert
+    # against script source, or test pure functions, so they finish in seconds
+    # and touch no database.
     steps:
       - uses: actions/checkout@v4
 
@@ -106,11 +107,23 @@ jobs:
       - name: Contention logic tests
         run: node scripts/test-contention-logic.mjs
 
+      # The one entry point for a real contention run, whose single promise is
+      # that it destroys nothing. Mostly static assertions against its own
+      # source — no `down`, no `-v`, no truncate — because that promise is the
+      # reason it exists and a promise in a comment is not a guarantee.
+      - name: Contention runner tests
+        run: bash scripts/test-load-contention-run.sh
+
       # Syntax only. k6 is not installed here and the scenarios need a stack,
       # so this catches a broken script before somebody discovers it twenty
-      # minutes into a run.
-      - name: k6 scripts parse
-        run: for f in load/*.js load/lib/*.js; do node --check "$f" || exit 1; done
+      # minutes into a run. The verdict reader is included because it is the
+      # one piece the gate cannot run without, and a parse error in it would
+      # surface as "could not read the k6 summary" after a real run.
+      - name: k6 scripts and verdict reader parse
+        run: |
+          for f in load/*.js load/lib/*.js scripts/contention-verdict.mjs; do
+            node --check "$f" || exit 1
+          done
 
   images:
     name: Build images

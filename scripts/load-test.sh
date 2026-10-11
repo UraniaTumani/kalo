@@ -116,6 +116,13 @@ run_k6() {
       --quiet \
       "/scripts/$script" 2>&1 | tee "$RESULTS/$name.log" | tail -30
 
+  # k6's own verdict, where the validity gate can read it.
+  #
+  # A failed threshold is k6 saying the run did not meet the preconditions its
+  # scenario declared. The contention gate used to have no way to know, and
+  # reported a run VALID that k6 had already failed.
+  echo "${PIPESTATUS[0]}" > "$RESULTS/$name-k6-exit.txt"
+
   kill "$monitor" 2>/dev/null
   wait "$monitor" 2>/dev/null
 
@@ -173,11 +180,18 @@ esac
 #
 case "$ONLY" in
   contention)
-    run_k6 "06-contention" "06-contention.js" "-e RACE_VUS=${RACE_VUS:-30}"
+    run_k6 "06-contention" "06-contention.js" \
+      "-e RACE_VUS=${RACE_VUS:-30} -e RACE_DRIVERS=${RACE_DRIVERS:-1}"
 
     # Judged by its own gate, because a clean contention run and a contention
     # run that never happened produce identical invariants.
-    bash scripts/load-contention-check.sh \
+    #
+    # The gate is told the same two numbers the scenario was given, so its
+    # winner and participant checks are exact rather than approximate. Leaving
+    # it to infer them is how "at least one accept won" came to pass a run in
+    # which a driver could have taken thirty rides.
+    EXPECTED_RACE_VUS="${RACE_VUS:-30}" EXPECTED_RACE_DRIVERS="${RACE_DRIVERS:-1}" \
+      bash scripts/load-contention-check.sh \
       "$RESULTS/06-contention-summary.json" "$RESULTS" \
       | tee "$RESULTS/contention-validity.txt" || CONTENTION_INVALID=1
     ;;
@@ -215,6 +229,17 @@ echo "▸ run validity"
 VALID=1
 note() { echo "  $1"; }
 fail() { echo "  ✗ $1"; VALID=0; }
+
+# 0. Did the contention gate accept the run?
+#
+#    It already printed its reasons above; this is what makes them count.
+#    CONTENTION_INVALID was set by the contention case and then read by
+#    nothing, so a run the gate had refused still reached the bottom of this
+#    script and announced itself valid. The gate's whole job is to refuse, and
+#    a refusal nobody acts on is the same as not checking.
+if [ "${CONTENTION_INVALID:-0}" != "0" ]; then
+  fail "the contention gate refused this run — see contention-validity.txt above"
+fi
 
 # 1. Did the heartbeat keep up? The heartbeat itself decides this and writes the
 #    verdict; anything in the file means some driver aged out while the run was
