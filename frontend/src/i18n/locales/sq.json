@@ -134,7 +134,31 @@
     "pageFailed": "Kjo faqe nuk mund të shfaqet",
     "loadFailed": "Të dhënat nuk u ngarkuan. Kontrolloni që backend-i po funksionon.",
     "staleBackend": "Serveri ktheu një listë të thjeshtë aty ku pritej një rezultat me faqe. Backend-i ka gjasa të jetë një version më i vjetër se ky frontend — rindizeni nga dega kryesore aktuale.",
-    "unexpectedShape": "Serveri ktheu një përgjigje të papritur për këtë listë."
+    "unexpectedShape": "Serveri ktheu një përgjigje të papritur për këtë listë.",
+    "backend": {
+      "accountInactive": "Llogaria juaj nuk është aktive. Kontaktoni mbështetjen për të vazhduar.",
+      "activeRideExists": "Keni tashmë një udhëtim në vazhdim. Përfundojeni ose anulojeni para se të rezervoni një tjetër.",
+      "samePickupAndDestination": "Nisja dhe destinacioni nuk mund të jenë i njëjti vend.",
+      "customersOnly": "Vetëm një llogari klienti mund ta bëjë këtë.",
+      "requestExpired": "Kjo kërkesë ka skaduar. Kërkoni përsëri për të parë kush është i lirë tani.",
+      "requestNotSelectable": "Kjo kërkesë është përdorur tashmë. Kërkoni përsëri për të zgjedhur një kompani.",
+      "requestNotFound": "Kjo kërkesë nuk u gjet. Kërkoni përsëri.",
+      "offerNotFound": "Kjo ofertë nuk është më e disponueshme. Kërkoni përsëri.",
+      "companyUnavailable": "Kjo kompani nuk është më e disponueshme. Zgjidhni një tjetër.",
+      "companyNotAcceptingBookings": "Kjo kompani nuk po pranon rezervime për momentin. Zgjidhni një tjetër.",
+      "companyOutOfArea": "Kjo kompani nuk e mbulon këtë pikë nisjeje. Zgjidhni një tjetër.",
+      "companyNoPaymentMethod": "Kjo kompani nuk ka një mënyrë pagese të konfiguruar. Zgjidhni një tjetër.",
+      "companyAlreadyTried": "E keni provuar tashmë këtë kompani për këtë udhëtim. Zgjidhni një tjetër.",
+      "companyLicenceExpired": "Licenca e taksisë e kësaj kompanie ka skaduar. Zgjidhni një tjetër.",
+      "companyLicenceMissing": "Kjo kompani nuk ka licencë taksie të regjistruar. Zgjidhni një tjetër.",
+      "noActiveRide": "Nuk keni asnjë udhëtim në vazhdim.",
+      "rideNotFound": "Ky udhëtim nuk u gjet.",
+      "rideNotActive": "Ky udhëtim nuk është më aktiv.",
+      "cancelAfterStart": "Udhëtimi ka nisur tashmë dhe nuk mund të anulohet më.",
+      "cancelCompleted": "Një udhëtim i përfunduar nuk mund të anulohet.",
+      "alreadyCancelled": "Ky udhëtim është anuluar tashmë.",
+      "cancelDeclined": "Një udhëtim i refuzuar nuk mund të anulohet."
+    }
   },
   "rideStatus": {
     "REQUESTED": "E kërkuar",
