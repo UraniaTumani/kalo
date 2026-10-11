@@ -98,6 +98,15 @@ say('cancel_attempts', counter('kalo_cancel_attempts'))
 say('cancel_races', counter('kalo_cancel_races'))
 
 /*
+ * Which side each accept-versus-cancel race fell to. Both are legitimate; the
+ * gate needs the numbers because an accept that won leaves a driver holding a
+ * ride that the main race did not assign.
+ */
+say('cancel_accept_won', counter('kalo_cancel_accept_won'))
+say('cancel_accept_refused', counter('kalo_cancel_accept_refused'))
+say('cancel_accept_unexpected', counter('kalo_cancel_accept_unexpected'))
+
+/*
  * accept-versus-timeout is exported but not scheduled. Its absence is reported
  * as NOT VERIFIED rather than as nothing, so a reader is never left to infer
  * that a scenario which never ran was fine.

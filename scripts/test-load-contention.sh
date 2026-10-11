@@ -68,8 +68,11 @@ const v = {
   duplicate_attempts: 6,
   duplicate_refused: 3,
   duplicate_accepted: 0,
-  cancel_attempts: 6,
-  cancel_races: 6,
+  cancel_attempts: 1,
+  cancel_races: 1,
+  cancel_accept_won: 1,
+  cancel_accept_refused: 0,
+  cancel_accept_unexpected: 0,
   timeout_races: '-',
 }
 
@@ -110,6 +113,9 @@ counter('kalo_duplicate_refused', v.duplicate_refused)
 counter('kalo_duplicate_accepted', v.duplicate_accepted)
 counter('kalo_cancel_attempts', v.cancel_attempts)
 counter('kalo_cancel_races', v.cancel_races)
+counter('kalo_cancel_accept_won', v.cancel_accept_won)
+counter('kalo_cancel_accept_refused', v.cancel_accept_refused)
+counter('kalo_cancel_accept_unexpected', v.cancel_accept_unexpected)
 counter('kalo_timeout_races', v.timeout_races)
 
 trend('kalo_accept_start_ms', v.start_min, v.start_max)
@@ -362,17 +368,123 @@ STUB
   chmod +x "$dir/docker"
 }
 
-WORK=$(mktemp -d); stub_db_scoped "$WORK/bin"; k6_exit "$WORK" 0; summary "$WORK"
-expect_invalid "an earlier run's winner is refused when the count is unscoped" "$WORK" "do not agree"
+# The cancel race's accept is REFUSED in these three, so the ceiling on
+# assigned drivers collapses to the race's own winner and the leak is the only
+# thing that can push the count to two. Without that the allowance for a
+# winning cancel-race accept would cover the leak and the case would prove
+# nothing.
+WORK=$(mktemp -d); stub_db_scoped "$WORK/bin"; k6_exit "$WORK" 0
+summary "$WORK" cancel_accept_won=0 cancel_accept_refused=1
+expect_invalid "an earlier run's winner is refused when the count is unscoped" "$WORK" "more than the 1 the race assigned"
 rm -rf "$WORK"
 
-WORK=$(mktemp -d); stub_db_scoped "$WORK/bin"; k6_exit "$WORK" 0; summary "$WORK"
+WORK=$(mktemp -d); stub_db_scoped "$WORK/bin"; k6_exit "$WORK" 0
+summary "$WORK" cancel_accept_won=0 cancel_accept_refused=1
 RUN_SINCE='2026-10-11 04:00:00' expect_valid "scoping the count to this run ignores what earlier runs left" "$WORK"
 rm -rf "$WORK"
 
 # And the scoping is stated, so nobody reads a scoped figure as a global one.
-WORK=$(mktemp -d); stub_db_scoped "$WORK/bin"; k6_exit "$WORK" 0; summary "$WORK"
+WORK=$(mktemp -d); stub_db_scoped "$WORK/bin"; k6_exit "$WORK" 0
+summary "$WORK" cancel_accept_won=0 cancel_accept_refused=1
 RUN_SINCE='2026-10-11 04:00:00' expect_valid_saying "the gate says when it has scoped the count" "$WORK" "from this run only"
+rm -rf "$WORK"
+
+# --------------------------- the real invariants are never scoped to a run
+
+# Scoping is for the per-run figures only.
+#
+# "No driver holds two active rides" is true of the whole database or it is not
+# true, and a violation an earlier run left behind is worth failing on wherever
+# it came from. The temptation, once RUN_SINCE exists, is to apply it
+# everywhere so that a run is only judged on its own rows — which would mean a
+# corrupted database could pass indefinitely as long as each new run was clean.
+#
+# This stub answers the invariant queries with a violation only in their
+# UNSCOPED form. The gate must still fail with RUN_SINCE set; if the bound were
+# ever added to these queries, the stub would answer zero and this test would
+# catch it.
+stub_db_global_violation() {
+  local dir="$1" fragment="$2"
+  mkdir -p "$dir"
+  cat > "$dir/docker" <<STUB
+#!/usr/bin/env bash
+for arg in "\$@"; do
+  case "\$arg" in
+    *"$fragment"*"created_at >="*) echo "0"; exit 0 ;;
+    *"$fragment"*) echo "1"; exit 0 ;;
+    *"count(DISTINCT driver_id)"*) echo "1"; exit 0 ;;
+  esac
+done
+echo "0"
+STUB
+  chmod +x "$dir/docker"
+}
+
+WORK=$(mktemp -d); stub_db_global_violation "$WORK/bin" "GROUP BY driver_id HAVING"
+k6_exit "$WORK" 0; summary "$WORK" cancel_accept_won=0 cancel_accept_refused=1
+RUN_SINCE='2026-10-11 04:00:00' expect_invalid "a driver with two active rides fails even when the run is scoped" "$WORK" "more than one active ride"
+rm -rf "$WORK"
+
+WORK=$(mktemp -d); stub_db_global_violation "$WORK/bin" "GROUP BY customer_id HAVING"
+k6_exit "$WORK" 0; summary "$WORK" cancel_accept_won=0 cancel_accept_refused=1
+RUN_SINCE='2026-10-11 04:00:00' expect_invalid "a customer with two active rides fails even when the run is scoped" "$WORK" "customer holds more than one"
+rm -rf "$WORK"
+
+WORK=$(mktemp -d); stub_db_global_violation "$WORK/bin" "availability_status = 'BUSY'"
+k6_exit "$WORK" 0; summary "$WORK" cancel_accept_won=0 cancel_accept_refused=1
+RUN_SINCE='2026-10-11 04:00:00' expect_invalid "a stranded BUSY driver fails even when the run is scoped" "$WORK" "stranded by a lost race"
+rm -rf "$WORK"
+
+WORK=$(mktemp -d); stub_db_global_violation "$WORK/bin" "rq.status = 'SEARCHING'"
+k6_exit "$WORK" 0; summary "$WORK" cancel_accept_won=0 cancel_accept_refused=1
+RUN_SINCE='2026-10-11 04:00:00' expect_invalid "an assigned ride whose request is SEARCHING fails even when the run is scoped" "$WORK" "back to SEARCHING"
+rm -rf "$WORK"
+
+# ------------------------------- the cancel race assigns a driver of its own
+
+# The bug this bound exists for, and it would have failed the second real run.
+#
+# accept_vs_cancel accepts a ride on its own driver. When that accept beats the
+# cancel, the run ends with two drivers holding a ride against one raced — and
+# the check demanded exact equality. It never showed on the first real run only
+# because the scenario was starved and its contribution was always zero.
+WORK=$(mktemp -d); stub_db_scoped "$WORK/bin"; k6_exit "$WORK" 0
+summary "$WORK" cancel_accept_won=1 cancel_accept_refused=0
+expect_valid "a cancel race whose accept won may leave a second driver assigned" "$WORK"
+rm -rf "$WORK"
+
+# And the allowance is exactly one per such race, not a blank cheque: two
+# assigned drivers with no cancel-race accept to account for the second is
+# still refused.
+WORK=$(mktemp -d); stub_db_scoped "$WORK/bin"; k6_exit "$WORK" 0
+summary "$WORK" cancel_accept_won=0 cancel_accept_refused=1
+expect_invalid "an unaccounted second assigned driver is refused" "$WORK" "nothing accounts for"
+rm -rf "$WORK"
+
+# Fewer assigned drivers than the race won: a driver the race assigned is
+# missing, whatever the cancel race did.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 0; k6_exit "$WORK" 0; summary "$WORK"
+expect_invalid "no assigned driver at all is still refused" "$WORK" "do not agree"
+rm -rf "$WORK"
+
+# The cancel race's own outcomes have to add up. A race nobody classified is a
+# race that cannot be reasoned about, and it is also how the bound above would
+# be silently widened.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0
+summary "$WORK" cancel_races=3 cancel_accept_won=1 cancel_accept_refused=0
+expect_invalid "cancel races whose outcomes do not sum are refused" "$WORK" "outcome(s) were recorded"
+rm -rf "$WORK"
+
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0
+summary "$WORK" cancel_accept_won=0 cancel_accept_refused=0 cancel_accept_unexpected=1
+expect_invalid "an unclassified cancel-race accept is refused" "$WORK" "unclassified reason"
+rm -rf "$WORK"
+
+# Both sides are legitimate, so the gate reports which one won rather than
+# judging it.
+WORK=$(mktemp -d); stub_db "$WORK/bin" 0 0 0 0 1; k6_exit "$WORK" 0
+summary "$WORK" cancel_accept_won=0 cancel_accept_refused=1
+expect_valid_saying "the gate reports which side won the cancel race" "$WORK" "accept refused 1"
 rm -rf "$WORK"
 
 # ------------------------------------- k6 and the database have to agree

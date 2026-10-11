@@ -9,6 +9,7 @@
  * both are testable here rather than only in a live run.
  */
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
   classifyAccept,
   assessIntervalOverlap,
@@ -276,6 +277,78 @@ check('an empty tally does not read as balanced by accident', () => {
    * for having no participants, which is a different complaint. */
   assert.equal(reconcileAccepts({}).balanced, true)
   assert.equal(reconcileAccepts({ entered: 30 }).balanced, false)
+})
+
+
+/* ------------------------------------- the scenario's customer reservation */
+
+/*
+ * Static assertions on load/06-contention.js.
+ *
+ * The customer each virtual user books as cannot be unit-tested here -- it
+ * needs k6's execution context -- but the one thing it must not do is
+ * checkable from the source, and it is worth checking because the obvious
+ * implementation is wrong.
+ *
+ * `(__VU - 1) % bandSize` looks correct and is not. k6 numbers __VU across the
+ * whole test and does not give a scenario a contiguous block: measured with
+ * k6 itself, an eight-user race beside two other scenarios got __VU 1-7 and 9,
+ * with 8 going to the cancel scenario. Both 1 and 9 then map to slot 0, two
+ * racing users draw the same customer, and the second booking is refused by
+ * the one-active-ride-per-customer index -- a lost participant, which fails
+ * the whole run.
+ *
+ * exec.scenario.iterationInTest is scenario-local and contiguous, so that is
+ * what has to be used.
+ */
+const scenario = readFileSync(
+  new URL('../load/06-contention.js', import.meta.url),
+  'utf8',
+)
+
+const reservation = scenario.slice(
+  scenario.indexOf('function reservedCustomer'),
+  scenario.indexOf('function reservedCustomer') + 1400,
+)
+
+check('the customer reservation exists at all', () => {
+  assert.ok(
+    reservation.includes('function reservedCustomer'),
+    'reservedCustomer not found — these checks would pass vacuously',
+  )
+})
+
+check('it takes its slot from the scenario-local iteration counter', () => {
+  assert.match(reservation, /exec\.scenario\.iterationInTest\s*%\s*bandSize/)
+})
+
+check('it does not take its slot from __VU, which is not scenario-local', () => {
+  const slotLine = reservation
+    .split('\n')
+    .find((l) => l.includes('const slot ='))
+  assert.ok(slotLine, 'no slot assignment found')
+  assert.ok(
+    !slotLine.includes('__VU'),
+    `the slot is derived from __VU, which k6 numbers across the whole test: ${slotLine.trim()}`,
+  )
+})
+
+check('k6/execution is imported, or the slot above cannot work', () => {
+  assert.match(scenario, /import exec from 'k6\/execution'/)
+})
+
+check('the bands are laid out from RACE_VUS so they cannot overlap', () => {
+  assert.match(scenario, /const DUPLICATE_BAND = RACE_VUS/)
+  assert.match(scenario, /const CANCEL_BAND = RACE_VUS \+ DUPLICATE_VUS/)
+})
+
+check('every scenario draws from a band rather than an ad-hoc offset', () => {
+  /* The offsets this replaced: users[(__VU + 100) % users.length] and friends,
+   * whose ranges overlap for any realistic fixture length. */
+  assert.ok(
+    !/users\[\(__VU \+ \d+\) % users\.length\]/.test(scenario),
+    'an ad-hoc customer offset is back in the scenario',
+  )
 })
 
 console.log(`\n  ${passed} passed${process.exitCode ? ', some failed' : ', 0 failed'}`)

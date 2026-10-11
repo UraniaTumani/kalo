@@ -1,6 +1,7 @@
 import http from 'k6/http'
 import { sleep } from 'k6'
 import { SharedArray } from 'k6/data'
+import exec from 'k6/execution'
 import { Counter, Trend } from 'k6/metrics'
 import {
   BASE,
@@ -172,6 +173,20 @@ const duplicateAttempts = new Counter('kalo_duplicate_attempts')
 const cancelAttempts = new Counter('kalo_cancel_attempts')
 
 /**
+ * Which side won each accept-versus-cancel race.
+ *
+ * Both outcomes are legitimate -- a customer may cancel while a company is
+ * accepting, and either may land first -- so these are counted, not judged.
+ * They exist because the outcome has a consequence the gate has to know: an
+ * accept that wins leaves a driver holding a ride, which is a driver the race
+ * did not assign. Without these counters the gate's cross-check between k6's
+ * winners and the database's assigned drivers has no way to allow for it.
+ */
+const cancelAcceptWon = new Counter('kalo_cancel_accept_won')
+const cancelAcceptRefused = new Counter('kalo_cancel_accept_refused')
+const cancelAcceptUnexpected = new Counter('kalo_cancel_accept_unexpected')
+
+/**
  * How long each accept stayed open.
  *
  * Needed because an offset spread proves nothing on its own: thirty accepts
@@ -202,6 +217,38 @@ const BARRIER_DELAY_MS = Number(__ENV.BARRIER_DELAY_MS || 5000)
  */
 const RACE_DRIVERS = Number(__ENV.RACE_DRIVERS || 1)
 
+/**
+ * The customer bands, declared here because options below is built from them.
+ *
+ * Each scenario draws its customers from a slice no other scenario touches. A
+ * customer may hold only one active ride, so overlapping slices let one
+ * scenario's leftovers refuse another's bookings -- and for accept_vs_cancel,
+ * which gets one virtual user and one chance, that is the difference between a
+ * recorded race and a failed run.
+ *
+ *   race         [0, RACE_VUS)
+ *   duplicates   [RACE_VUS, RACE_VUS + DUPLICATE_VUS)
+ *   cancel       [RACE_VUS + DUPLICATE_VUS, ... + CANCEL_VUS)
+ *   timeout      after those, for when it is ever scheduled
+ *
+ * Laid out from RACE_VUS rather than from __VU, which k6 numbers across the
+ * whole test rather than per scenario, so the bands cannot drift into each
+ * other whatever ids it hands out.
+ */
+const DUPLICATE_VUS = 6
+const CANCEL_VUS = 1
+
+const RACE_BAND = 0
+const DUPLICATE_BAND = RACE_VUS
+const CANCEL_BAND = RACE_VUS + DUPLICATE_VUS
+const TIMEOUT_BAND = RACE_VUS + DUPLICATE_VUS + CANCEL_VUS
+
+/**
+ * How many customers the fixture must hold for the bands not to wrap onto each
+ * other. scripts/load-contention-run.sh refuses a shorter fixture.
+ */
+const CUSTOMERS_NEEDED = TIMEOUT_BAND + 1
+
 export const options = {
   scenarios: {
     same_driver: {
@@ -222,7 +269,7 @@ export const options = {
     duplicates: {
       executor: 'per-vu-iterations',
       exec: 'duplicateRequests',
-      vus: 6,
+      vus: DUPLICATE_VUS,
       iterations: 1,
       startTime: '3m',
       maxDuration: '2m',
@@ -246,7 +293,7 @@ export const options = {
     accept_vs_cancel: {
       executor: 'per-vu-iterations',
       exec: 'acceptVersusCancel',
-      vus: 1,
+      vus: CANCEL_VUS,
       iterations: 1,
       startTime: '5m',
       maxDuration: '2m',
@@ -418,6 +465,50 @@ function bookAgainst(token, companyId) {
   }
 }
 
+/**
+ * A customer reserved for one scenario, from the band set out above.
+ *
+ * The scenarios used to pick with arbitrary offsets -- `__VU`, `__VU + 100`,
+ * `__VU + 200` -- taken modulo the fixture length, and those bands overlap for
+ * any realistic fixture size. That is not a tidiness problem. A customer may
+ * hold only one active ride, so if accept_vs_cancel drew the customer that had
+ * just won the main race, its booking would be refused by the unique index, it
+ * would return having attempted nothing, and the gate would fail the whole run
+ * for a scenario that recorded no race. One virtual user means one chance.
+ *
+ * Bands are laid out from RACE_VUS so they cannot overlap whatever k6 chooses
+ * for __VU, which is numbered across the whole test and not per scenario:
+ *
+ *   race         [0, RACE_VUS)
+ *   duplicates   [RACE_VUS, RACE_VUS + DUPLICATE_VUS)
+ *   cancel       [RACE_VUS + DUPLICATE_VUS, ... + CANCEL_VUS)
+ *   timeout      after those, for when it is ever scheduled
+ *
+ * The fixture has to be long enough to hold them all; the runner refuses a
+ * shorter one rather than letting the bands wrap round onto each other.
+ */
+function reservedCustomer(bandStart, bandSize) {
+  /*
+   * The slot comes from exec.scenario.iterationInTest, NOT from __VU.
+   *
+   * __VU is numbered across the whole test and k6 does not hand a scenario a
+   * contiguous block of ids. Measured, not assumed: in an eight-user race
+   * beside two other scenarios, k6 gave the race __VU 1-7 and 9, and gave 8 to
+   * the cancel scenario. `(__VU - 1) % 8` then maps both 1 and 9 to slot 0, so
+   * two racing users would have drawn the same customer -- and a customer may
+   * hold only one active ride, so the second booking would be refused by the
+   * unique index from migration 017. That is one lost participant, which the
+   * gate rightly fails the whole run for.
+   *
+   * iterationInTest is scenario-local and contiguous: with one iteration per
+   * virtual user it runs 0..vus-1 within each scenario, whatever ids k6 chose.
+   * The modulo is kept only so a future run with more iterations per user
+   * stays inside its band rather than reaching into the next one's.
+   */
+  const slot = bandSize > 0 ? exec.scenario.iterationInTest % bandSize : 0
+  return users[(bandStart + slot) % users.length]
+}
+
 /** Waits until the shared instant, so a group of accepts arrives together. */
 function waitForBarrier(at) {
   const remaining = at - Date.now()
@@ -501,6 +592,32 @@ export function setup() {
   }
 
   /*
+   * The customer bands have to fit inside the fixture.
+   *
+   * Said here as well as in the runner's preconditions because this is the
+   * only place that knows how the bands are laid out, and a fixture too short
+   * makes them wrap onto each other -- at which point one scenario's active
+   * ride silently refuses another's booking. Reported rather than thrown,
+   * since k6's setup cannot fail a run cleanly; the shortfall shows up as a
+   * scenario with no attempts, which the gate refuses.
+   */
+  if (users.length < CUSTOMERS_NEEDED) {
+    console.log(
+      `contention WARNING: ${users.length} customers in the fixture but ` +
+        `${CUSTOMERS_NEEDED} are needed to keep the scenarios' customer bands ` +
+        'apart; they will overlap and bookings will be refused by the ' +
+        'one-active-ride-per-customer index',
+    )
+  } else {
+    console.log(
+      `contention: ${users.length} customers, ${CUSTOMERS_NEEDED} needed; ` +
+        `bands race[0,${RACE_VUS}) duplicates[${DUPLICATE_BAND},` +
+        `${DUPLICATE_BAND + DUPLICATE_VUS}) cancel[${CANCEL_BAND},` +
+        `${CANCEL_BAND + CANCEL_VUS})`,
+    )
+  }
+
+  /*
    * The instant every timing is measured from.
    *
    * Captured once here so each virtual user reports small positive numbers
@@ -547,7 +664,7 @@ export function sameDriverRace(data) {
   }
 
   const group = data.raceGroups[__VU % data.raceGroups.length]
-  const user = users[__VU % users.length]
+  const user = reservedCustomer(RACE_BAND, RACE_VUS)
 
   const token = customerToken(user)
   if (!token) {
@@ -676,7 +793,7 @@ export function duplicateRequests(data) {
   duplicateAttempts.add(1)
 
   const group = fleet[__VU % fleet.length]
-  const user = users[(__VU + 100) % users.length]
+  const user = reservedCustomer(DUPLICATE_BAND, DUPLICATE_VUS)
 
   const token = customerToken(user)
   if (!token) {
@@ -736,8 +853,36 @@ export function duplicateRequests(data) {
  *
  * The hazard is not which wins. It is a cancelled ride whose driver was left
  * BUSY, or an assigned ride whose request went back to SEARCHING — either
- * strands somebody. The SQL invariants decide this; the counter here only
- * proves the race was attempted.
+ * strands somebody. The SQL invariants decide that; the counters here say the
+ * race happened and which side took it.
+ *
+ * ONE virtual user, and therefore ONE race per run. What that is worth is
+ * worth being exact about, because a single sample is easy to over-read.
+ *
+ * WHAT IT ESTABLISHES
+ *   an accept and a cancel for the same ride were issued concurrently --
+ *     http.batch dispatches both in parallel, so this does not depend on a
+ *     barrier the way the main race does
+ *   the pair was decided, and the gate requires the outcomes to sum to the
+ *     number of races, so a race nobody classified fails the run
+ *   neither side answered 5xx
+ *   afterwards no driver holds two active rides, no customer does, no driver
+ *     is BUSY without one, and no assigned ride has a request back to
+ *     SEARCHING
+ *   any driver this leaves assigned is accounted for in the gate's bound on
+ *     assigned drivers, rather than being mistaken for a second race winner
+ *
+ * WHAT IT DOES NOT
+ *   which side ought to win -- both are legitimate and nothing asserts either
+ *   anything statistical: one interleaving is one interleaving, and correct
+ *     handling is indistinguishable from a lucky ordering at n=1. More races
+ *     need more cancel companies (seed RACE_DRIVERS + 1 + n and raise the VUs
+ *     to n), not more users against the one driver, which cannot work
+ *   overlap is not MEASURED here. The main race records the instant each
+ *     accept opened and closed; this records nothing of the kind, so the
+ *     concurrency rests on http.batch's semantics rather than on evidence
+ *   the cancel's own response is not classified -- only the accept's. A cancel
+ *     refused for an unexpected reason is invisible unless it is a 5xx
  */
 export function acceptVersusCancel(data) {
   /* Its own fleet, for the same reason as duplicateRequests above. */
@@ -751,7 +896,7 @@ export function acceptVersusCancel(data) {
   cancelAttempts.add(1)
 
   const group = fleet[__VU % fleet.length]
-  const user = users[(__VU + 200) % users.length]
+  const user = reservedCustomer(CANCEL_BAND, CANCEL_VUS)
 
   const token = customerToken(user)
   if (!token) {
@@ -791,6 +936,29 @@ export function acceptVersusCancel(data) {
 
   cancelRaces.add(1, { ride: String(rideId) })
 
+  /*
+   * Which side the race fell to, which until now was not recorded at all.
+   *
+   * It has to be, because this scenario can leave a driver holding a ride. The
+   * gate cross-checks the race's winners against the drivers the database
+   * actually assigned, and that check read every driver assigned during the
+   * run -- so an accept winning here would have added a second assigned driver
+   * to a race that expected one, and the gate would have reported a violation
+   * that had not happened. It never surfaced on the first real run only
+   * because this scenario was starved and recorded nothing.
+   *
+   * Either side winning is legitimate, so this is counted rather than judged.
+   * Only an outcome that is neither is a finding.
+   */
+  const outcome = classifyAccept(responses[0])
+
+  if (outcome === 'won') cancelAcceptWon.add(1)
+  else if (outcome === 'lost') cancelAcceptRefused.add(1)
+  else {
+    cancelAcceptUnexpected.add(1, { status: String(responses[0].status) })
+    track(responses[0], 'cancel_race')
+  }
+
   for (const response of responses) {
     if (response.status >= 500) track(response, 'cancel_race')
   }
@@ -822,7 +990,7 @@ export function acceptVersusTimeout(data) {
   }
 
   const group = fleet[__VU % fleet.length]
-  const user = users[(__VU + 300) % users.length]
+  const user = reservedCustomer(TIMEOUT_BAND, 1)
 
   const token = customerToken(user)
   if (!token) return

@@ -352,7 +352,7 @@ fi
 
 ASSIGNED_DRIVERS=$(count "drivers holding an active ride" "SELECT count(DISTINCT driver_id) FROM rides WHERE driver_id IS NOT NULL AND status IN ('DRIVER_ASSIGNED','DRIVER_ARRIVING','DRIVER_ARRIVED','IN_PROGRESS') ${SINCE_CLAUSE}")
 
-note "drivers holding an active ride ${ASSIGNED_DRIVERS:-?} (raced ${EXPECTED_WINNERS})"
+note "drivers holding an active ride ${ASSIGNED_DRIVERS:-?} — the race assigned ${EXPECTED_WINNERS}, and up to $(fact cancel_accept_won || echo 0) more may come from a cancel race whose accept won"
 note "drivers with two active rides ${DOUBLE_DRIVER:-?}, customers with two ${DOUBLE_CUSTOMER:-?}"
 note "drivers BUSY with no active ride ${BUSY_WITHOUT_RIDE:-?}, assigned rides whose request is SEARCHING ${ASSIGNED_SEARCHING:-?}"
 
@@ -362,8 +362,50 @@ note "drivers BUSY with no active ride ${BUSY_WITHOUT_RIDE:-?}, assigned rides w
 # The per-driver half of the winner check, taken from persisted state rather
 # than from k6's counters. Both have to agree: the counters say how many accepts
 # the API blessed, this says how many drivers actually hold a ride.
-if [ "${ASSIGNED_DRIVERS:-0}" -ne "$EXPECTED_WINNERS" ]; then
-  fail "${ASSIGNED_DRIVERS:-0} driver(s) hold an active ride but ${EXPECTED_WINNERS} were raced — the winners k6 counted and the drivers the database assigned do not agree"
+# The race's winners are not the only assignments a run can make.
+#
+# accept_vs_cancel accepts a ride too, on its own driver, and when that accept
+# beats the cancel it leaves that driver holding one. This check used to demand
+# exact equality with the race's winners, which would have failed the next run
+# outright: two drivers holding a ride against one raced. It never surfaced on
+# the first real run only because that scenario was starved and recorded
+# nothing, so the number it would have added was always zero.
+#
+# Bounded rather than exact, and the bound is measured, not assumed:
+#
+#   at least   the race's winners, or a driver the race assigned is missing
+#   at most    those plus one per cancel race whose ACCEPT won; a cancel that
+#              won leaves nobody assigned, and a cancel landing after a
+#              successful accept frees the driver again, so this is a ceiling
+#
+# With no cancel races the two collapse back to equality, which is what a
+# race-only run gets.
+CANCEL_ACCEPT_WON=$(fact cancel_accept_won)
+CANCEL_ACCEPT_REFUSED=$(fact cancel_accept_refused)
+CANCEL_ACCEPT_UNEXPECTED=$(fact cancel_accept_unexpected)
+
+ASSIGNED_CEILING=$(( EXPECTED_WINNERS + ${CANCEL_ACCEPT_WON:-0} ))
+
+if [ "${ASSIGNED_DRIVERS:-0}" -lt "$EXPECTED_WINNERS" ]; then
+  fail "${ASSIGNED_DRIVERS:-0} driver(s) hold an active ride but the race assigned ${EXPECTED_WINNERS} — the winners k6 counted and the drivers the database assigned do not agree"
+elif [ "${ASSIGNED_DRIVERS:-0}" -gt "$ASSIGNED_CEILING" ]; then
+  fail "${ASSIGNED_DRIVERS:-0} driver(s) hold an active ride from this run, which is more than the ${EXPECTED_WINNERS} the race assigned plus the ${CANCEL_ACCEPT_WON:-0} accept(s) that won a cancel race — something was assigned that nothing accounts for"
+fi
+
+# The cancel race's own arithmetic. Every race fell to one side or the other,
+# and an outcome that is neither is a finding rather than a tie.
+if [ -n "$CANCEL_RACES" ] && [ "${CANCEL_RACES:-0}" -gt 0 ]; then
+  CANCEL_DECIDED=$(( ${CANCEL_ACCEPT_WON:-0} + ${CANCEL_ACCEPT_REFUSED:-0} + ${CANCEL_ACCEPT_UNEXPECTED:-0} ))
+
+  note "cancel races ${CANCEL_RACES}: accept won ${CANCEL_ACCEPT_WON:-0}, accept refused ${CANCEL_ACCEPT_REFUSED:-0}"
+
+  if [ "$CANCEL_DECIDED" -ne "${CANCEL_RACES:-0}" ]; then
+    fail "${CANCEL_RACES} cancel race(s) ran but ${CANCEL_DECIDED} outcome(s) were recorded — a race whose result nobody classified cannot be reasoned about"
+  fi
+
+  if [ "${CANCEL_ACCEPT_UNEXPECTED:-0}" -gt 0 ]; then
+    fail "${CANCEL_ACCEPT_UNEXPECTED} accept(s) in a cancel race failed for an unclassified reason — read them before trusting the invariants below"
+  fi
 fi
 
 # The two states the accept-versus-cancel race can corrupt. A BUSY driver with
