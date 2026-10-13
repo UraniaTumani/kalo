@@ -54,7 +54,23 @@ export function CurrentRidePage() {
     enabled: noActiveRide && rememberedRideId !== null,
   })
 
-  const ride = currentQuery.data ?? (noActiveRide ? lastRideQuery.data : undefined)
+  /*
+   * F8: a 404 wins over whatever the query still holds.
+   *
+   * TanStack keeps the last successful `data` when a refetch fails, so after
+   * the ride ended -- cancelled, declined, completed -- /rides/current answered
+   * 404 while `currentQuery.data` still held the finished ride. Written as
+   * `currentQuery.data ?? ...` the retained ride won, and the screen went on
+   * showing REQUESTED and "Waiting for the company to respond" for a ride that
+   * no longer existed. The customer had cancelled it themselves.
+   *
+   * Reading the 404 FIRST is the whole fix: `noActiveRide` is specifically a
+   * 404, so a transient failure (a 500, a dropped connection) still falls
+   * through to the retained ride rather than blanking a screen somebody is
+   * watching. That distinction is the reason this is not simply
+   * `currentQuery.isError`.
+   */
+  const ride = noActiveRide ? lastRideQuery.data : currentQuery.data
 
   useEffect(() => {
     if (currentQuery.data) rememberRide(currentQuery.data.rideId)
@@ -67,6 +83,23 @@ export function CurrentRidePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ride'] })
     },
+    /*
+     * F7: the dialog closes whichever way the cancellation goes.
+     *
+     * It used to close from the per-call onSuccess alone, so a refused
+     * cancellation left it open over the ride -- and nothing else could clear
+     * it, because the dialog's visibility is local state and the five-second
+     * poll cannot reach it. The customer was left with a modal whose confirm
+     * button re-enabled the moment isPending cleared, inviting the same click
+     * that had just failed.
+     *
+     * Closing on settle does not hide the failure. The error is rendered in
+     * the page body, above the cancel control, so the dialog was COVERING it;
+     * closing is what reveals it. That is what the Guide asks for in so many
+     * words -- "the dialog closes on any settled outcome, success or failure,
+     * with the error shown behind it".
+     */
+    onSettled: () => setConfirmingCancel(false),
   })
 
   if (currentQuery.isLoading || (noActiveRide && lastRideQuery.isLoading)) {
@@ -257,11 +290,7 @@ export function CurrentRidePage() {
         cancelLabel={t('confirm.keep')}
         loading={cancelMutation.isPending}
         onCancel={() => setConfirmingCancel(false)}
-        onConfirm={() =>
-          cancelMutation.mutate(ride.rideId, {
-            onSuccess: () => setConfirmingCancel(false),
-          })
-        }
+        onConfirm={() => cancelMutation.mutate(ride.rideId)}
       />
     </>
   )
