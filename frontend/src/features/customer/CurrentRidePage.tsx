@@ -83,6 +83,23 @@ export function CurrentRidePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ride'] })
     },
+    /*
+     * F7: the dialog closes whichever way the cancellation goes.
+     *
+     * It used to close from the per-call onSuccess alone, so a refused
+     * cancellation left it open over the ride -- and nothing else could clear
+     * it, because the dialog's visibility is local state and the five-second
+     * poll cannot reach it. The customer was left with a modal whose confirm
+     * button re-enabled the moment isPending cleared, inviting the same click
+     * that had just failed.
+     *
+     * Closing on settle does not hide the failure. The error is rendered in
+     * the page body, above the cancel control, so the dialog was COVERING it;
+     * closing is what reveals it. That is what the Guide asks for in so many
+     * words -- "the dialog closes on any settled outcome, success or failure,
+     * with the error shown behind it".
+     */
+    onSettled: () => setConfirmingCancel(false),
   })
 
   if (currentQuery.isLoading || (noActiveRide && lastRideQuery.isLoading)) {
@@ -273,11 +290,7 @@ export function CurrentRidePage() {
         cancelLabel={t('confirm.keep')}
         loading={cancelMutation.isPending}
         onCancel={() => setConfirmingCancel(false)}
-        onConfirm={() =>
-          cancelMutation.mutate(ride.rideId, {
-            onSuccess: () => setConfirmingCancel(false),
-          })
-        }
+        onConfirm={() => cancelMutation.mutate(ride.rideId)}
       />
     </>
   )
