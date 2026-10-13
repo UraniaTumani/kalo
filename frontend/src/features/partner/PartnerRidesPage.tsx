@@ -327,6 +327,35 @@ function RideActions({ ride, onDone }: { ride: PartnerRideResponse; onDone: () =
   })
   const decline = useMutation({
     mutationFn: () => runAction(() => partnerApi.decline(ride.rideId)),
+    /*
+     * F24: the dialog closes whichever way the decline goes.
+     *
+     * It had no handler at all, so it stayed open over a ride that was already
+     * declined, with its confirm button re-enabling as soon as isPending
+     * cleared -- which is what invited the repeat clicks that sent three
+     * decline requests for one ride. The backend refused the repeats
+     * correctly; the dialog was the part asking for them.
+     *
+     * Closing on settle does not hide anything: the error is rendered in the
+     * card below, outside the dialog, so closing is what uncovers it.
+     */
+    onSettled: () => setConfirmingDecline(false),
+    /*
+     * DELIBERATELY NOT refetching the queue on failure, though that was the
+     * first thing written here.
+     *
+     * The appeal is obvious: a decline is usually refused because the ride has
+     * already moved on, so the row that caused it is stale. But the error is
+     * rendered inside this ride's own card, and the queue defaults to ACTIVE
+     * -- so refetching drops a declined ride out of the list, unmounts the
+     * card, and takes the explanation with it. The partner would watch the
+     * ride vanish with no reason given, which is a worse failure than the one
+     * being fixed.
+     *
+     * The list is not left stale either: this page already polls every ten
+     * seconds, so the row leaves on its own shortly after the partner has had
+     * a chance to read why.
+     */
   })
   const arriving = useMutation({
     mutationFn: () => runAction(() => partnerApi.driverArriving(ride.rideId)),
