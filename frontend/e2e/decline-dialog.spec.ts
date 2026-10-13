@@ -135,10 +135,8 @@ test.describe('Partner decline dialog', () => {
     })
 
     await page
-      .locator('div')
-      .filter({ hasText: surname })
+      .getByTestId(`partner-ride-${rideId}`)
       .getByRole('button', { name: 'Manage' })
-      .last()
       .click()
 
     /* Proof the right row was opened, not merely that something opened. */
