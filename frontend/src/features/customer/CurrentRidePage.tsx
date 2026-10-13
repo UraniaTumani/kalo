@@ -54,7 +54,23 @@ export function CurrentRidePage() {
     enabled: noActiveRide && rememberedRideId !== null,
   })
 
-  const ride = currentQuery.data ?? (noActiveRide ? lastRideQuery.data : undefined)
+  /*
+   * F8: a 404 wins over whatever the query still holds.
+   *
+   * TanStack keeps the last successful `data` when a refetch fails, so after
+   * the ride ended -- cancelled, declined, completed -- /rides/current answered
+   * 404 while `currentQuery.data` still held the finished ride. Written as
+   * `currentQuery.data ?? ...` the retained ride won, and the screen went on
+   * showing REQUESTED and "Waiting for the company to respond" for a ride that
+   * no longer existed. The customer had cancelled it themselves.
+   *
+   * Reading the 404 FIRST is the whole fix: `noActiveRide` is specifically a
+   * 404, so a transient failure (a 500, a dropped connection) still falls
+   * through to the retained ride rather than blanking a screen somebody is
+   * watching. That distinction is the reason this is not simply
+   * `currentQuery.isError`.
+   */
+  const ride = noActiveRide ? lastRideQuery.data : currentQuery.data
 
   useEffect(() => {
     if (currentQuery.data) rememberRide(currentQuery.data.rideId)
