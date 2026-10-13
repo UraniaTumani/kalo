@@ -161,6 +161,7 @@ export function PartnerRidesPage() {
                 return (
                   <div
                     key={ride.rideId}
+                    data-testid={`partner-ride-${ride.rideId}`}
                     className={cn(
                       'rounded-xl border p-3',
                       waiting
@@ -224,6 +225,7 @@ export function PartnerRidesPage() {
                     return (
                     <tr
                       key={ride.rideId}
+                      data-testid={`partner-ride-${ride.rideId}`}
                       className={cn(
                         waiting && 'bg-warn-50/40',
                         ride.rideId === selected?.rideId && 'bg-brand-50/60',
