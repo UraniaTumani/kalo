@@ -209,6 +209,23 @@ export interface PartnerRideResponse {
   requestedAt: string
 }
 
+export type PartnerReadinessBlocker =
+  | 'NOT_APPROVED'
+  | 'NOT_ACTIVE'
+  | 'COMPANY_LICENCE_MISSING'
+  | 'COMPANY_LICENCE_EXPIRED'
+  | 'BOOKINGS_DISABLED'
+  | 'PAYMENT_METHOD_MISSING'
+  | 'OUTSIDE_OPERATING_HOURS'
+  | 'NO_ELIGIBLE_TAXI'
+
+export interface PartnerReadinessResponse {
+  /** No known company-wide blocker at checkedAt; pickup-specific checks still apply. */
+  readyNow: boolean
+  checkedAt: string
+  blockers: PartnerReadinessBlocker[]
+}
+
 export interface PartnerProfileResponse {
   companyId: number
   legalName: string

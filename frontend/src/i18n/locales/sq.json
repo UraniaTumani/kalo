@@ -610,6 +610,21 @@
     "failed": "Vendndodhja juaj nuk u mor.",
     "searchFailed": "Adresat nuk mund të kërkohen tani."
   },
+  "readiness": {
+    "readyTitle": "Kompania është gati për rezervime",
+    "readyDetail": "Kontrollet e përgjithshme janë në rregull. Shfaqja në një kërkim varet ende nga distanca dhe zona e nisjes.",
+    "blockedTitle": "Kompania nuk është gati për rezervime",
+    "blockedDetail": "Këto kushte po pengojnë pranimin e rezervimeve tani:",
+    "fix": "Shiko",
+    "NOT_APPROVED": "Kompania nuk është miratuar ende.",
+    "NOT_ACTIVE": "Kompania nuk është aktive. Nëse është pezulluar, kontaktoni administratorin.",
+    "COMPANY_LICENCE_MISSING": "Mungon data e skadimit të licencës së kompanisë.",
+    "COMPANY_LICENCE_EXPIRED": "Licenca e kompanisë ka skaduar.",
+    "BOOKINGS_DISABLED": "Pranimi i rezervimeve është çaktivizuar.",
+    "PAYMENT_METHOD_MISSING": "Nuk është konfiguruar asnjë mënyrë pagese.",
+    "OUTSIDE_OPERATING_HOURS": "Kompania është jashtë orarit të konfiguruar të punës.",
+    "NO_ELIGIBLE_TAXI": "Nuk ka taksi të gatshme: kontrolloni shoferin aktiv/në linjë, automjetin e caktuar, licencën dhe GPS-in e përditësuar."
+  },
   "dashboard": {
     "drivers": "Shoferë",
     "onlineNow": "Në linjë tani",

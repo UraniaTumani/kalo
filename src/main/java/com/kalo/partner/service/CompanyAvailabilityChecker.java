@@ -146,7 +146,7 @@ public class CompanyAvailabilityChecker {
         return distanceKm <= radiusKm;
     }
 
-    private boolean isInsideOperatingHours(
+    public boolean isInsideOperatingHours(
             TaxiCompany company,
             Collection<CompanyOperatingHours> operatingHours,
             Instant now

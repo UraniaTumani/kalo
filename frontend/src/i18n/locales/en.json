@@ -610,6 +610,21 @@
     "failed": "Could not get your location.",
     "searchFailed": "Could not search addresses right now."
   },
+  "readiness": {
+    "readyTitle": "Company ready for bookings",
+    "readyDetail": "Company-wide checks pass. Appearance in a particular search still depends on pickup distance and service area.",
+    "blockedTitle": "Company not ready for bookings",
+    "blockedDetail": "These conditions currently prevent new bookings:",
+    "fix": "Review",
+    "NOT_APPROVED": "Your company has not been approved yet.",
+    "NOT_ACTIVE": "Your company is not active. Contact an administrator if it was suspended.",
+    "COMPANY_LICENCE_MISSING": "The company's taxi licence expiry date is missing.",
+    "COMPANY_LICENCE_EXPIRED": "The company's taxi licence has expired.",
+    "BOOKINGS_DISABLED": "Booking acceptance is switched off.",
+    "PAYMENT_METHOD_MISSING": "No payment method is configured.",
+    "OUTSIDE_OPERATING_HOURS": "The company is outside its configured operating hours.",
+    "NO_ELIGIBLE_TAXI": "No eligible taxi: check an active/online driver, an assigned active vehicle, valid licences and fresh GPS."
+  },
   "dashboard": {
     "drivers": "Drivers",
     "onlineNow": "Online now",

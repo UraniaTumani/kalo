@@ -8,6 +8,18 @@ import { ErrorMessage } from '@/components/ErrorMessage'
 import { Spinner } from '@/components/ui/Spinner'
 import { Bell, Car, CarFront, PowerOff, Radio } from 'lucide-react'
 import { Alert, Button, Card, CardBody, CardHeader, StatCard } from '@/components/ui'
+import type { PartnerReadinessBlocker } from '@/lib/api/types'
+
+const blockerLinks: Record<PartnerReadinessBlocker, string> = {
+  NOT_APPROVED: '/partner/documents',
+  NOT_ACTIVE: '/partner/documents',
+  COMPANY_LICENCE_MISSING: '/partner/settings',
+  COMPANY_LICENCE_EXPIRED: '/partner/settings',
+  BOOKINGS_DISABLED: '/partner/settings',
+  PAYMENT_METHOD_MISSING: '/partner/settings',
+  OUTSIDE_OPERATING_HOURS: '/partner/availability',
+  NO_ELIGIBLE_TAXI: '/partner/drivers',
+}
 
 export function PartnerDashboardPage() {
   const { t } = useTranslation()
@@ -45,6 +57,13 @@ export function PartnerDashboardPage() {
   const settingsQuery = useQuery({
     queryKey: ['partner', 'operational-settings'],
     queryFn: () => partnerApi.operationalSettings(),
+    retry: false,
+  })
+
+  const readinessQuery = useQuery({
+    queryKey: ['partner', 'readiness'],
+    queryFn: () => partnerApi.readiness(),
+    refetchInterval: 30_000,
     retry: false,
   })
 
@@ -120,6 +139,41 @@ export function PartnerDashboardPage() {
           <Alert tone="danger" title={t('dashboard.notActive')}>
             {t('dashboard.notActiveHint')}
           </Alert>
+        </div>
+      )}
+
+      {/* Company-wide readiness is an advisory snapshot, not a guarantee that
+          a taxi is near a particular passenger's pickup. */}
+      {readinessQuery.data && (
+        <div className="mb-4" data-testid="partner-readiness">
+          <Alert
+            tone={readinessQuery.data.readyNow ? 'success' : 'warning'}
+            title={t(readinessQuery.data.readyNow ? 'readiness.readyTitle' : 'readiness.blockedTitle')}
+          >
+            {readinessQuery.data.readyNow ? (
+              <p>{t('readiness.readyDetail')}</p>
+            ) : (
+              <>
+                <p>{t('readiness.blockedDetail')}</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {readinessQuery.data.blockers.map((blocker) => (
+                    <li key={blocker}>
+                      {t(`readiness.${blocker}`)}{' '}
+                      <Link to={blockerLinks[blocker]} className="font-medium underline">
+                        {t('readiness.fix')}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </Alert>
+        </div>
+      )}
+
+      {readinessQuery.error && (
+        <div className="mb-4">
+          <ErrorMessage error={readinessQuery.error} />
         </div>
       )}
 
