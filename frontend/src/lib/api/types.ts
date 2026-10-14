@@ -455,6 +455,16 @@ export interface AdminSupportRequestResponse extends SupportRequestResponse {
   role: UserRole
 }
 
+/* ------------------------------------------------------ partner notifications */
+export interface CompanyNotificationResponse {
+  id: number
+  type: 'RIDE_RATED'
+  rideId: number | null
+  message: string
+  read: boolean
+  createdAt: string
+}
+
 /* ------------------------------------------------------------ pagination */
 
 export interface Page<T> {

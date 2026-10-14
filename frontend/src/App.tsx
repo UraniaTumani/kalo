@@ -39,6 +39,11 @@ const PartnerDashboardPage = lazy(() =>
     default: m.PartnerDashboardPage,
   })),
 )
+const PartnerNotificationsPage = lazy(() =>
+  import('@/features/partner/PartnerNotificationsPage').then((m) => ({
+    default: m.PartnerNotificationsPage,
+  })),
+)
 const PartnerRidesPage = lazy(() =>
   import('@/features/partner/PartnerRidesPage').then((m) => ({ default: m.PartnerRidesPage })),
 )
@@ -160,6 +165,7 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route path="/partner" element={<PartnerDashboardPage />} />
           <Route path="/partner/rides" element={<PartnerRidesPage />} />
+          <Route path="/partner/notifications" element={<PartnerNotificationsPage />} />
           <Route path="/partner/drivers" element={<PartnerDriversPage />} />
           <Route path="/partner/vehicles" element={<PartnerVehiclesPage />} />
           <Route path="/partner/assignments" element={<PartnerAssignmentsPage />} />

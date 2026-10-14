@@ -1,7 +1,11 @@
 import { Logo } from '@/components/Logo'
+import { useQuery } from '@tanstack/react-query'
+import { partnerApi } from '@/lib/api/endpoints'
+import { partnerNotificationKeys } from '@/features/partner/notificationQueries'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
 import {
+  Bell,
   Building2,
   Car,
   ClipboardList,
@@ -43,6 +47,7 @@ const customerNav: NavItem[] = [
 const partnerNav: NavItem[] = [
   { to: '/partner', labelKey: 'nav.dashboard', icon: Gauge, end: true },
   { to: '/partner/rides', labelKey: 'nav.rides', icon: ClipboardList },
+  { to: '/partner/notifications', labelKey: 'nav.notifications', icon: Bell },
   { to: '/partner/drivers', labelKey: 'nav.drivers', icon: Users },
   { to: '/partner/vehicles', labelKey: 'nav.vehicles', icon: Car },
   { to: '/partner/assignments', labelKey: 'nav.assignments', icon: MapPin },
@@ -73,7 +78,22 @@ export function AppLayout() {
   const location = useLocation()
   const { t } = useTranslation()
 
+  // User-scoped cache: another partner signing in cannot inherit this badge.
+  const unreadQuery = useQuery({
+    queryKey: partnerNotificationKeys.unread(user?.id ?? 0),
+    queryFn: partnerApi.notificationUnreadCount,
+    enabled: role === 'PARTNER' && Boolean(user),
+    refetchInterval: 20_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+  })
+
   if (!user || !role) return null
+
+  const unread = role === 'PARTNER' ? (unreadQuery.data?.unread ?? 0) : 0
+  const unreadLabel = t('notifications.unreadCount', { count: unread })
+  const unreadDisplay = unread > 99 ? '99+' : String(unread)
 
   // Every role gets the profile entry, always last.
   const items: NavItem[] = [
@@ -136,6 +156,15 @@ export function AppLayout() {
                     aria-hidden
                   />
                   {t(labelKey)}
+                  {to === '/partner/notifications' && unread > 0 && (
+                    <span
+                      data-testid="partner-notifications-unread"
+                      aria-label={unreadLabel}
+                      className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-brand-400 px-1.5 py-0.5 text-[10px] font-bold text-ink-950"
+                    >
+                      {unreadDisplay}
+                    </span>
+                  )}
                 </>
               )}
             </NavLink>
@@ -175,6 +204,20 @@ export function AppLayout() {
             {user.firstName} {user.lastName}
           </p>
           <div className="flex items-center gap-1.5">
+            {role === 'PARTNER' && (
+              <NavLink
+                to="/partner/notifications"
+                aria-label={unread > 0 ? `${t('nav.notifications')}: ${unreadLabel}` : t('nav.notifications')}
+                className="relative inline-flex size-9 items-center justify-center rounded-xl text-ink-700 hover:bg-ink-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600"
+              >
+                <Bell className="size-4" aria-hidden />
+                {unread > 0 && (
+                  <span aria-hidden className="absolute -right-1 -top-1 rounded-full bg-brand-400 px-1 text-[10px] font-bold text-ink-950">
+                    {unreadDisplay}
+                  </span>
+                )}
+              </NavLink>
+            )}
             <LanguageSwitcher />
             <Button variant="ghost" size="sm" onClick={signOut}>
               <LogOut className="size-3.5" aria-hidden />

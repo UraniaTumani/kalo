@@ -7,6 +7,7 @@ import type {
   AdminSupportRequestResponse,
   AdminUserResponse,
   CompanyStatus,
+  CompanyNotificationResponse,
   DocumentResponse,
   DocumentType,
   DriverAvailabilityStatus,
@@ -180,6 +181,17 @@ export const partnerApi = {
   profile: () => api.get<PartnerProfileResponse>('/api/v1/partner/me'),
 
   readiness: () => api.get<PartnerReadinessResponse>('/api/v1/partner/readiness'),
+
+  notifications: (params?: PageParams) =>
+    api.get<Page<CompanyNotificationResponse>>('/api/v1/partner/notifications', params),
+
+  notificationUnreadCount: () =>
+    api.get<{ unread: number }>('/api/v1/partner/notifications/unread-count'),
+
+  markNotificationRead: (notificationId: number) =>
+    api.post<CompanyNotificationResponse>(
+      `/api/v1/partner/notifications/${notificationId}/read`,
+    ),
 
   updateProfile: (body: {
     legalName: string

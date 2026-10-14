@@ -47,6 +47,7 @@
     "profile": "Profile",
     "dashboard": "Dashboard",
     "rides": "Rides",
+    "notifications": "Notifications",
     "drivers": "Drivers",
     "vehicles": "Vehicles",
     "assignments": "Assignments",
@@ -222,6 +223,18 @@
     "activeRideTitle": "You already have a ride in progress",
     "goToCurrentRide": "Go to current ride",
     "searching": "Searching…"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Updates for your taxi company, including passenger ratings.",
+    "unreadCount": "{{count}} unread",
+    "empty": "No notifications yet",
+    "emptyHint": "Passenger ratings for completed rides will appear here.",
+    "markRead": "Mark as read",
+    "read": "Read",
+    "unread": "Unread",
+    "ride": "Ride #{{id}}",
+    "rating": "Ride rated"
   },
   "ride": {
     "currentTitle": "Current ride",
