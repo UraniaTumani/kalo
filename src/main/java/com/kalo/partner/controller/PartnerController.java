@@ -2,6 +2,8 @@ package com.kalo.partner.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.kalo.partner.dto.PartnerProfileResponse;
+import com.kalo.partner.dto.PartnerReadinessResponse;
+import com.kalo.partner.service.PartnerReadinessService;
 import com.kalo.partner.dto.UpdatePartnerProfileRequest;
 import com.kalo.partner.service.PartnerService;
 import jakarta.validation.Valid;
@@ -17,6 +19,7 @@ import com.kalo.partner.dto.PartnerVerificationResponse;
 public class PartnerController {
 
     private final PartnerService partnerService;
+    private final PartnerReadinessService readinessService;
 
     @GetMapping("/me")
     public ResponseEntity<PartnerProfileResponse> getMyProfile() {
@@ -24,6 +27,11 @@ public class PartnerController {
         return ResponseEntity.ok(
                 partnerService.getCurrentPartnerProfile()
         );
+    }
+
+    @GetMapping("/readiness")
+    public ResponseEntity<PartnerReadinessResponse> getReadiness() {
+        return ResponseEntity.ok(readinessService.current());
     }
 
     @PutMapping("/me")
