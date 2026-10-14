@@ -23,6 +23,7 @@ import type {
   FallbackResetAuditItem,
   IssuedResetCode,
   PartnerProfileResponse,
+  PartnerReadinessResponse,
   PartnerRegisterResponse,
   PartnerRideResponse,
   PartnerVerificationResponse,
@@ -177,6 +178,8 @@ export const supportApi = {
 
 export const partnerApi = {
   profile: () => api.get<PartnerProfileResponse>('/api/v1/partner/me'),
+
+  readiness: () => api.get<PartnerReadinessResponse>('/api/v1/partner/readiness'),
 
   updateProfile: (body: {
     legalName: string
