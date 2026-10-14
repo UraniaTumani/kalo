@@ -83,4 +83,36 @@ public interface TaxiSearchRepository
             @Param("today")
             LocalDate today
     );
+    /**
+     * The partner dashboard's location-independent counterpart to
+     * findAvailableTaxis. Keep the driver/vehicle/GPS/licence predicates in
+     * sync with the search query above. Does not claim a specific pickup is
+     * inside the service area or within the 10 km search radius.
+     */
+    @Query("""
+            SELECT CASE WHEN COUNT(a) > 0 THEN TRUE ELSE FALSE END
+            FROM DriverVehicleAssignment a
+            JOIN a.driver d
+            JOIN a.vehicle v
+            JOIN d.company c
+            JOIN DriverLocation dl ON dl.driver = d
+            WHERE a.active = true
+              AND c.id = :companyId
+              AND d.status = com.kalo.driver.enums.DriverStatus.ACTIVE
+              AND d.availabilityStatus = com.kalo.driver.enums.DriverAvailabilityStatus.ONLINE
+              AND v.status = com.kalo.vehicle.enums.VehicleStatus.ACTIVE
+              AND c.verificationStatus = com.kalo.partner.enums.VerificationStatus.APPROVED
+              AND c.status = com.kalo.partner.enums.CompanyStatus.ACTIVE
+              AND c.bookingEnabled = true
+              AND dl.locationUpdatedAt >= :minimumLocationTime
+              AND d.licenseExpiryDate >= :today
+              AND c.licenseExpiryDate IS NOT NULL
+              AND c.licenseExpiryDate >= :today
+            """)
+    boolean hasEligibleTaxiForCompany(
+            @Param("companyId") Long companyId,
+            @Param("minimumLocationTime") Instant minimumLocationTime,
+            @Param("today") LocalDate today
+    );
+
 }
