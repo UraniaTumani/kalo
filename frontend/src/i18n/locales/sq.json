@@ -47,6 +47,7 @@
     "profile": "Profili",
     "dashboard": "Paneli",
     "rides": "Udhëtimet",
+    "notifications": "Njoftimet",
     "drivers": "Shoferët",
     "vehicles": "Automjetet",
     "assignments": "Caktimet",
@@ -222,6 +223,18 @@
     "activeRideTitle": "Ju keni tashmë një udhëtim në vazhdim",
     "goToCurrentRide": "Shko te udhëtimi aktual",
     "searching": "Duke kërkuar…"
+  },
+  "notifications": {
+    "title": "Njoftimet",
+    "subtitle": "Përditësime për kompaninë tuaj, përfshirë vlerësimet e pasagjerëve.",
+    "unreadCount": "{{count}} të palexuara",
+    "empty": "Ende nuk ka njoftime",
+    "emptyHint": "Vlerësimet e pasagjerëve për udhëtimet e përfunduara do të shfaqen këtu.",
+    "markRead": "Shëno si të lexuar",
+    "read": "Lexuar",
+    "unread": "Pa lexuar",
+    "ride": "Udhëtimi #{{id}}",
+    "rating": "Udhëtim i vlerësuar"
   },
   "ride": {
     "currentTitle": "Udhëtimi aktual",
