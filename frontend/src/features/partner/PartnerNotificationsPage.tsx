@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell, Check } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -73,7 +74,9 @@ export function PartnerNotificationsPage() {
                   <div className="min-w-0 space-y-1.5">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-semibold text-ink-900">
-                        {t('notifications.rating')}
+                        {notification.type === 'RIDE_REQUESTED'
+                          ? t('notifications.booking')
+                          : t('notifications.rating')}
                         {notification.rideId !== null && (
                           <span className="font-normal text-ink-500">
                             {' · '}{t('notifications.ride', { id: notification.rideId })}
@@ -91,7 +94,19 @@ export function PartnerNotificationsPage() {
                     </div>
                     {/* The existing DTO has an English rendered message rather than
                         structured ratings. Show it unchanged until the API evolves. */}
-                    <p className="break-words text-sm text-ink-700">{notification.message}</p>
+                    <p className="break-words text-sm text-ink-700">
+                      {notification.type === 'RIDE_REQUESTED'
+                        ? t('notifications.bookingMessage')
+                        : notification.message}
+                    </p>
+                    {notification.type === 'RIDE_REQUESTED' && (
+                      <Link
+                        to="/partner/rides"
+                        className="inline-flex rounded-lg text-sm font-semibold text-ink-900 underline decoration-brand-500 underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600"
+                      >
+                        {t('notifications.viewRides')}
+                      </Link>
+                    )}
                     <time className="block text-xs text-ink-500" dateTime={notification.createdAt}>
                       {formatDateTime(notification.createdAt)}
                     </time>

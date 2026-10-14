@@ -226,15 +226,18 @@
   },
   "notifications": {
     "title": "Njoftimet",
-    "subtitle": "Përditësime për kompaninë tuaj, përfshirë vlerësimet e pasagjerëve.",
+    "subtitle": "Kërkesa për taksi dhe vlerësime të pasagjerëve për kompaninë tuaj.",
     "unreadCount": "{{count}} të palexuara",
     "empty": "Ende nuk ka njoftime",
-    "emptyHint": "Vlerësimet e pasagjerëve për udhëtimet e përfunduara do të shfaqen këtu.",
+    "emptyHint": "Kërkesat e reja për taksi dhe vlerësimet e pasagjerëve do të shfaqen këtu.",
     "markRead": "Shëno si të lexuar",
     "read": "Lexuar",
     "unread": "Pa lexuar",
     "ride": "Udhëtimi #{{id}}",
-    "rating": "Udhëtim i vlerësuar"
+    "rating": "Udhëtim i vlerësuar",
+    "booking": "Kërkesë e re për taksi",
+    "bookingMessage": "Një pasagjer zgjodhi kompaninë tuaj. Kontrolloni udhëtimet për statusin aktual; kërkesa mund të ketë skaduar ose të jetë anuluar.",
+    "viewRides": "Shiko udhëtimet"
   },
   "ride": {
     "currentTitle": "Udhëtimi aktual",

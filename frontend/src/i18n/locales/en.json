@@ -226,15 +226,18 @@
   },
   "notifications": {
     "title": "Notifications",
-    "subtitle": "Updates for your taxi company, including passenger ratings.",
+    "subtitle": "Booking requests and passenger ratings for your taxi company.",
     "unreadCount": "{{count}} unread",
     "empty": "No notifications yet",
-    "emptyHint": "Passenger ratings for completed rides will appear here.",
+    "emptyHint": "New booking requests and passenger ratings will appear here.",
     "markRead": "Mark as read",
     "read": "Read",
     "unread": "Unread",
     "ride": "Ride #{{id}}",
-    "rating": "Ride rated"
+    "rating": "Ride rated",
+    "booking": "New booking request",
+    "bookingMessage": "A passenger selected your taxi company. Check the Rides queue for the current status; the request may have expired or been cancelled.",
+    "viewRides": "View rides"
   },
   "ride": {
     "currentTitle": "Current ride",

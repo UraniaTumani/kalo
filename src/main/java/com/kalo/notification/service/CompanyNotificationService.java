@@ -21,6 +21,12 @@ public interface CompanyNotificationService {
             int companyRating
     );
 
+    /**
+     * Persist a new company booking in the same transaction as ride selection.
+     * Called only after a ride is successfully created (not on taxi search).
+     */
+    void rideRequested(TaxiCompany company, Long rideId);
+
     /** The signed-in partner's own notifications, newest first. */
     Page<CompanyNotificationResponse> getMyNotifications(
             Pageable pageable

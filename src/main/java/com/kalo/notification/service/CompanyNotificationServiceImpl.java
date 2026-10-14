@@ -56,6 +56,17 @@ public class CompanyNotificationServiceImpl implements CompanyNotificationServic
     }
 
     @Override
+    @Transactional
+    public void rideRequested(TaxiCompany company, Long rideId) {
+        CompanyNotification notification = new CompanyNotification();
+        notification.setCompany(company);
+        notification.setType(NotificationType.RIDE_REQUESTED);
+        notification.setRideId(rideId);
+        notification.setMessage("A passenger requested a taxi from your company for ride #" + rideId + ".");
+        notificationRepository.save(notification);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Page<CompanyNotificationResponse> getMyNotifications(
             Pageable pageable

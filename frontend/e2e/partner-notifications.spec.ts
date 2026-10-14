@@ -84,6 +84,35 @@ test('F1 · empty inbox and Albanian translation', async ({ page, context, guard
   await expect(page.getByTestId('partner-notifications-unread')).toHaveCount(0)
 })
 
+test('F22 · new booking notification links to the live rides queue', async ({ page, context, guards }) => {
+  void guards
+  const tokens = await apiLogin(page.request, SEEDED.partner.phone, SEEDED.partner.password)
+  await seedSession(context, tokens)
+  await context.route('**/api/v1/partner/notifications**', async (route) => {
+    const path = new URL(route.request().url()).pathname
+    if (path.endsWith('/unread-count')) {
+      await route.fulfill({ json: { unread: 1 } })
+    } else {
+      await route.fulfill({ json: {
+        content: [{
+          id: 201, type: 'RIDE_REQUESTED', rideId: 45,
+          message: 'A passenger requested a taxi from your company for ride #45.',
+          read: false, createdAt: '2026-10-14T12:00:00Z',
+        }],
+        totalElements: 1, totalPages: 1, number: 0, size: 20,
+        first: true, last: true, empty: false,
+      } })
+    }
+  })
+
+  await page.goto('/partner/notifications')
+  await expect(page.getByText('New booking request')).toBeVisible()
+  await expect(page.getByText('Ride #45')).toBeVisible()
+  await expect(page.getByTestId('partner-notifications-unread')).toHaveText('1')
+  await page.getByRole('link', { name: 'View rides' }).click()
+  await expect(page).toHaveURL(/\/partner\/rides$/)
+})
+
 test('F1 · customers never fetch or see partner notifications', async ({ page, context, guards }) => {
   void guards
   const tokens = await apiLogin(page.request, SEEDED.customerB.phone, SEEDED.customerB.password)
