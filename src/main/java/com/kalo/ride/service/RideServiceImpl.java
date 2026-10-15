@@ -11,6 +11,7 @@ import com.kalo.driver.enums.DriverAvailabilityStatus;
 import com.kalo.driver.enums.DriverStatus;
 import com.kalo.driver.repository.DriverRepository;
 import com.kalo.partner.entity.TaxiCompany;
+import com.kalo.notification.service.CompanyNotificationService;
 import com.kalo.partner.enums.CompanyStatus;
 import com.kalo.partner.enums.VerificationStatus;
 import com.kalo.partner.repository.TaxiCompanyRepository;
@@ -58,6 +59,7 @@ public class RideServiceImpl implements RideService {
     private final DriverRepository driverRepository;
     private final DriverVehicleAssignmentRepository assignmentRepository;
     private final CompanyAvailabilityChecker companyAvailabilityChecker;
+    private final CompanyNotificationService companyNotificationService;
 
     /*
      * Read-only here. Ratings are written by RideRatingService; this side only
@@ -222,6 +224,13 @@ public class RideServiceImpl implements RideService {
         rideRequestRepository.save(
                 rideRequest
         );
+
+        /*
+         * Record the event in this same transaction. A failed selection leaves
+         * no notification; a notification write failure rolls back the ride
+         * instead of silently losing a booking alert.
+         */
+        companyNotificationService.rideRequested(company, savedRide.getId());
 
         log.info(
                 "Ride offer selected: rideId={} rideRequestId={} customerId={} companyId={}",

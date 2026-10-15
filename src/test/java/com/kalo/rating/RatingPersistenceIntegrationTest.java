@@ -196,8 +196,8 @@ class RatingPersistenceIntegrationTest extends AbstractIntegrationTest {
         Scenario scenario = completedRide();
 
         assertThat(notificationRepository.countByCompanyIdAndReadAtIsNull(scenario.companyId))
-                .as("nothing to tell them before the rating")
-                .isZero();
+                .as("the booking request already notified the company")
+                .isEqualTo(1);
 
         mockMvc.perform(
                         post("/api/v1/rides/" + scenario.rideId + "/rating")
@@ -220,7 +220,8 @@ class RatingPersistenceIntegrationTest extends AbstractIntegrationTest {
         assertThat(rows).as("the notification must be a row, not an event").isEqualTo(1);
 
         assertThat(notificationRepository.countByCompanyIdAndReadAtIsNull(scenario.companyId))
-                .isEqualTo(1);
+                .as("booking and rating are two distinct unread notifications")
+                .isEqualTo(2);
     }
 
     @Test
@@ -242,7 +243,7 @@ class RatingPersistenceIntegrationTest extends AbstractIntegrationTest {
                                 .header("Authorization", bearer(scenario.partnerToken))
                 )
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalElements").value(2))
                 .andExpect(jsonPath("$.content[0].type").value("RIDE_RATED"))
                 .andExpect(jsonPath("$.content[0].rideId").value(scenario.rideId))
                 .andExpect(jsonPath("$.content[0].read").value(false))
@@ -253,7 +254,7 @@ class RatingPersistenceIntegrationTest extends AbstractIntegrationTest {
                                 .header("Authorization", bearer(scenario.partnerToken))
                 )
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.unread").value(1));
+                .andExpect(jsonPath("$.unread").value(2));
 
         long notificationId =
                 ((Number) JsonPath.read(body, "$.content[0].id")).longValue();
@@ -269,7 +270,7 @@ class RatingPersistenceIntegrationTest extends AbstractIntegrationTest {
                         get("/api/v1/partner/notifications/unread-count")
                                 .header("Authorization", bearer(scenario.partnerToken))
                 )
-                .andExpect(jsonPath("$.unread").value(0));
+                .andExpect(jsonPath("$.unread").value(1));
     }
 
     @Test
