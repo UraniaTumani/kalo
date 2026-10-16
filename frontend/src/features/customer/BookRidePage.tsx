@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowRight, Car, CreditCard, MapPin, Search, Star } from 'lucide-react'
 import { rideApi } from '@/lib/api/endpoints'
@@ -14,14 +14,24 @@ import { useStatusLabel } from '@/components/StatusBadge'
 import { Alert, Badge, Button, Card, CardBody, EmptyState } from '@/components/ui'
 import { formatDistance } from '@/lib/utils'
 import { rememberRide } from './rideMemory'
+import { recallRetryTrip, rememberRetryTrip } from './retryTrip'
 
 export function BookRidePage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useQueryClient()
 
-  const [pickup, setPickup] = useState<SelectedPlace | null>(null)
-  const [destination, setDestination] = useState<SelectedPlace | null>(null)
+  // The declined ride links back with its id, not coordinates in the URL.
+  // Only a matching, recently booked ride can restore a route.
+  const retryRideId = (location.state as { retryRideId?: unknown } | null)?.retryRideId
+  const retryTrip = typeof retryRideId === 'number' ? recallRetryTrip(retryRideId) : null
+  const autoRetryStarted = useRef(false)
+
+  const [pickup, setPickup] = useState<SelectedPlace | null>(() => retryTrip?.pickup ?? null)
+  const [destination, setDestination] = useState<SelectedPlace | null>(
+    () => retryTrip?.destination ?? null,
+  )
   const [search, setSearch] = useState<RideSearchResponse | null>(null)
 
   const searchMutation = useMutation({
@@ -59,10 +69,24 @@ export function BookRidePage() {
       rideApi.selectOffer(search!.rideRequestId, offer.offerId),
     onSuccess: (ride) => {
       rememberRide(ride.rideId)
+      if (pickup && destination) rememberRetryTrip(ride.rideId, pickup, destination)
       queryClient.invalidateQueries({ queryKey: ['ride', 'current'] })
       navigate('/ride/current')
     },
   })
+
+  /*
+   * F25: after a decline, restore both selected locations and search for fresh
+   * offers automatically. The old offer ids belong to an already-selected
+   * request and must never be reused. Consume the navigation state so browser
+   * back/forward and rerenders cannot submit the search twice.
+   */
+  useEffect(() => {
+    if (!retryTrip || autoRetryStarted.current) return
+    autoRetryStarted.current = true
+    navigate('/ride', { replace: true, state: null })
+    searchMutation.mutate()
+  }, [retryTrip, navigate, searchMutation])
 
   const canSearch = Boolean(pickup && destination) && !searchMutation.isPending
 
