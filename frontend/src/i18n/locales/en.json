@@ -406,7 +406,12 @@
     "editVehicle": "Edit {{plate}}",
     "reactivateVehicle": "Reactivate",
     "reactivateVehicleTitle": "Reactivate {{plate}}?",
-    "reactivateVehicleHint": "The vehicle will become available for assignments again. Its paperwork must be valid; drivers remain offline until you assign them and bring them online."
+    "reactivateVehicleHint": "The vehicle will become available for assignments again. Its paperwork must be valid; drivers remain offline until you assign them and bring them online.",
+    "documentUploadHint": "Upload a PDF, JPG or PNG document (up to 5 MB). Local storage is for DEV testing only.",
+    "uploadFile": "Choose document (PDF/photo)",
+    "uploadFileRequired": "Select a file before continuing.",
+    "uploadFileTooLarge": "The file must be at most 5 MB.",
+    "downloadDocument": "Download document"
   },
   "availability": {
     "title": "Availability",

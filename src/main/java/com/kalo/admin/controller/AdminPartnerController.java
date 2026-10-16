@@ -15,6 +15,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ContentDisposition;
+import com.kalo.document.service.DocumentService;
+import com.kalo.document.service.LocalDocumentStorage;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Admin")
@@ -24,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdminPartnerController {
 
     private final AdminPartnerService adminPartnerService;
+    private final DocumentService documentService;
 
     @GetMapping
     public ResponseEntity<Page<AdminPartnerResponse>>
@@ -62,6 +68,23 @@ public class AdminPartnerController {
                 adminPartnerService
                         .getPartnerById(companyId)
         );
+    }
+
+    @GetMapping("/{companyId}/documents/{documentId}/file")
+    public ResponseEntity<byte[]> downloadCompanyDocument(
+            @PathVariable Long companyId, @PathVariable Long documentId
+    ) {
+        LocalDocumentStorage.StoredDocument stored =
+                documentService.getCompanyDocumentFileForAdmin(companyId, documentId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(stored.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment()
+                                .filename("document-" + documentId + "." + stored.extension())
+                                .build().toString())
+                .header("X-Content-Type-Options", "nosniff")
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .body(stored.bytes());
     }
 
     @PostMapping("/{companyId}/approve")

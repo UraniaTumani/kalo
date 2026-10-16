@@ -406,7 +406,12 @@
     "editVehicle": "Ndrysho {{plate}}",
     "reactivateVehicle": "Riaktivizo",
     "reactivateVehicleTitle": "Të riaktivizohet {{plate}}?",
-    "reactivateVehicleHint": "Automjeti do të jetë sërish i disponueshëm për caktim. Dokumentet duhet të jenë të vlefshme; shoferët mbeten jashtë linje derisa t'i caktoni dhe t'i aktivizoni."
+    "reactivateVehicleHint": "Automjeti do të jetë sërish i disponueshëm për caktim. Dokumentet duhet të jenë të vlefshme; shoferët mbeten jashtë linje derisa t'i caktoni dhe t'i aktivizoni.",
+    "documentUploadHint": "Ngarko dokument PDF, JPG ose PNG (maksimumi 5 MB). Ruajtja lokale është vetëm për testimin DEV.",
+    "uploadFile": "Zgjidh dokumentin (PDF/foto)",
+    "uploadFileRequired": "Zgjidh një skedar përpara se të vazhdosh.",
+    "uploadFileTooLarge": "Skedari duhet të jetë maksimumi 5 MB.",
+    "downloadDocument": "Shkarko dokumentin"
   },
   "availability": {
     "title": "Disponueshmëria",

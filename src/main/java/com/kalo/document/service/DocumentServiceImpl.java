@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.time.LocalDate;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +29,7 @@ public class DocumentServiceImpl
 
     private final DocumentRepository documentRepository;
     private final TaxiCompanyRepository taxiCompanyRepository;
+    private final LocalDocumentStorage localDocumentStorage;
 
     @Override
     @Transactional
@@ -112,6 +115,75 @@ public class DocumentServiceImpl
                 documentRepository.save(document);
 
         return mapToResponse(saved);
+    }
+
+    /**
+     * Uploads a new company document. The existing URL-based API is kept for
+     * legacy records; this is the preferred path for newly attached files.
+     */
+    @Override
+    @Transactional
+    public DocumentResponse uploadCompanyDocument(
+            DocumentType documentType,
+            String documentNumber,
+            LocalDate issuedAt,
+            LocalDate expiresAt,
+            MultipartFile file
+    ) {
+        TaxiCompany company = getCurrentCompany();
+        if (company.getVerificationStatus() == VerificationStatus.PENDING) {
+            throw new InvalidOperationException(
+                    "Documents cannot be modified while company verification is pending"
+            );
+        }
+        if (documentType == null) {
+            throw new InvalidOperationException("Document type is required");
+        }
+        validateCompanyDocumentType(documentType);
+        if (issuedAt != null && expiresAt != null && expiresAt.isBefore(issuedAt)) {
+            throw new InvalidOperationException("Document expiry date cannot be before issue date");
+        }
+        if (documentNumber != null && documentNumber.length() > 100) {
+            throw new InvalidOperationException("Document number is too long");
+        }
+        if (documentRepository.existsByOwnerTypeAndOwnerIdAndDocumentType(
+                DocumentOwnerType.COMPANY, company.getId(), documentType)) {
+            throw new ConflictException("Document of type " + documentType + " already exists");
+        }
+
+        // Files are written only after permissions and duplicate checks.
+        String storedReference = localDocumentStorage.store(file);
+        Document document = new Document();
+        document.setOwnerType(DocumentOwnerType.COMPANY);
+        document.setOwnerId(company.getId());
+        document.setDocumentType(documentType);
+        document.setDocumentNumber(normalize(documentNumber));
+        document.setFileUrl(storedReference);
+        document.setIssuedAt(issuedAt);
+        document.setExpiresAt(expiresAt);
+        document.setVerificationStatus(DocumentVerificationStatus.DRAFT);
+        return mapToResponse(documentRepository.save(document));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LocalDocumentStorage.StoredDocument getCurrentCompanyDocumentFile(Long documentId) {
+        TaxiCompany company = getCurrentCompany();
+        Document document = documentRepository.findByIdAndOwnerTypeAndOwnerId(
+                documentId, DocumentOwnerType.COMPANY, company.getId()
+        ).orElseThrow(() -> new ResourceNotFoundException("Document not found"));
+        return localDocumentStorage.read(document.getFileUrl());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LocalDocumentStorage.StoredDocument getCompanyDocumentFileForAdmin(
+            Long companyId, Long documentId
+    ) {
+        Document document = documentRepository.findByIdAndOwnerTypeAndOwnerId(
+                documentId, DocumentOwnerType.COMPANY, companyId
+        ).orElseThrow(() -> new ResourceNotFoundException("Document not found"));
+        return localDocumentStorage.read(document.getFileUrl());
     }
 
     @Override

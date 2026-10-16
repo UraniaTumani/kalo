@@ -216,6 +216,12 @@ export const partnerApi = {
     expiresAt?: string | null
   }) => api.post<DocumentResponse>('/api/v1/partner/documents', body),
 
+  uploadDocument: (body: FormData) =>
+    api.upload<DocumentResponse>('/api/v1/partner/documents/upload', body),
+
+  downloadDocument: (documentId: number) =>
+    api.download(`/api/v1/partner/documents/${documentId}/file`),
+
   deleteDocument: (documentId: number) =>
     api.delete<void>(`/api/v1/partner/documents/${documentId}`),
 
@@ -403,6 +409,9 @@ export const adminApi = {
 
   partner: (companyId: number) =>
     api.get<AdminPartnerDetailResponse>(`/api/v1/admin/partners/${companyId}`),
+
+  downloadPartnerDocument: (companyId: number, documentId: number) =>
+    api.download(`/api/v1/admin/partners/${companyId}/documents/${documentId}/file`),
 
   approvePartner: (companyId: number) =>
     api.post<PartnerDecisionResponse>(`/api/v1/admin/partners/${companyId}/approve`),
