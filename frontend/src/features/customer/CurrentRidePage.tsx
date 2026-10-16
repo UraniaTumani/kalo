@@ -15,6 +15,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Alert, Button, Card, CardBody, CardHeader, EmptyState } from '@/components/ui'
 import { cn, formatCurrency, formatTime } from '@/lib/utils'
 import { recallRide, rememberRide } from './rideMemory'
+import { recallRetryTrip } from './retryTrip'
 import { RatingForm } from './RatingForm'
 
 /** The happy path, in the order the partner drives it. */
@@ -153,7 +154,10 @@ export function CurrentRidePage() {
               : t('ride.noResponseTitle')
           }>
             <div className="mt-2">
-              <Link to="/ride">
+              <Link
+                to="/ride"
+                state={recallRetryTrip(ride.rideId) ? { retryRideId: ride.rideId } : undefined}
+              >
                 <Button size="sm" variant="secondary">
                   {t('ride.chooseAnother')}
                 </Button>
