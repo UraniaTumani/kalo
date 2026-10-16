@@ -59,8 +59,8 @@ test('F19 · partner edits an inactive vehicle and reactivates it', async ({
   // Editing the inactive vehicle must not silently change its status.
   await row.getByRole('button', { name: `Edit ${plate}` }).click()
   await expect(page.getByText(`Edit ${plate}`)).toBeVisible()
-  await page.getByLabel('Model', { exact: true }).fill('Superb')
-  await page.getByLabel('Seats', { exact: true }).last().fill('5')
+  await page.getByLabel(/^Model/).last().fill('Superb')
+  await page.getByLabel(/^Seats/).last().fill('5')
 
   const updatedResponse = page.waitForResponse(
     (r) => r.url().endsWith(`/api/v1/partner/vehicles/${vehicle.id}`) && r.request().method() === 'PUT',
