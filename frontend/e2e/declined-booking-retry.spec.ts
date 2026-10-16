@@ -72,7 +72,7 @@ test('F25 · declining a ride preserves both addresses and automatically searche
       /\/api\/v1\/rides\/requests\/\d+\/select$/.test(response.url()) &&
       response.request().method() === 'POST',
   )
-  await page.getByRole('button', { name: /choose company/i }).nth(index).click()
+  await page.getByRole('button', { name: /choose (this )?company/i }).nth(index).click()
   const selected = await selectedResponse
   expect(selected.status(), await selected.text()).toBe(201)
   const ride = await selected.json()
@@ -110,7 +110,7 @@ test('F25 · declining a ride preserves both addresses and automatically searche
   )
 
   if (fresh.taxiOptions.length > 0) {
-    await expect(page.getByRole('button', { name: /choose company/i }).first()).toBeVisible({
+    await expect(page.getByRole('button', { name: /choose (this )?company/i }).first()).toBeVisible({
       timeout: RENDER_TIMEOUT,
     })
   } else {
