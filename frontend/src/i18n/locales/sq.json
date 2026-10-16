@@ -402,7 +402,11 @@
     "noVehicleAssigned": "Pa automjet",
     "activeAssignment": "Aktiv",
     "endedAssignment": "Përfunduar",
-    "activeRides": "Udhëtimet aktive"
+    "activeRides": "Udhëtimet aktive",
+    "editVehicle": "Ndrysho {{plate}}",
+    "reactivateVehicle": "Riaktivizo",
+    "reactivateVehicleTitle": "Të riaktivizohet {{plate}}?",
+    "reactivateVehicleHint": "Automjeti do të jetë sërish i disponueshëm për caktim. Dokumentet duhet të jenë të vlefshme; shoferët mbeten jashtë linje derisa t'i caktoni dhe t'i aktivizoni."
   },
   "availability": {
     "title": "Disponueshmëria",
@@ -692,7 +696,7 @@
     },
     "deactivateVehicle": {
       "title": "Të çaktivizohet {{plate}}?",
-      "body": "Automjeti nxirret jashtë shërbimit dhe shoferi i caktuar në të lirohet e kalon jashtë linje. Kjo nuk kthehet mbrapsht nga aplikacioni — do t’ju duhet ta shtoni automjetin nga e para.",
+      "body": "Automjeti nxirret jashtë shërbimit dhe shoferi i caktuar lirohet e kalon jashtë linje. Mund ta riaktivizoni automjetin më vonë nga faqja Automjetet.",
       "action": "Çaktivizo automjetin"
     },
     "removeAssignment": {
