@@ -13,7 +13,6 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Pagination } from '@/components/Pagination'
 import { readPage } from '@/lib/api/page'
 import { Spinner } from '@/components/ui/Spinner'
-import { CarFront } from 'lucide-react'
 import { ExpiryPill, PaperworkSummary } from './ExpiryPill'
 import { useIsCompact } from '@/lib/useIsCompact'
 import {
@@ -292,12 +291,10 @@ export function PartnerVehiclesPage() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="text-ink-400 hover:bg-bad-50 hover:text-bad-600"
-                                  title={t('partner.deactivate')}
-                                  aria-label={t('partner.deactivate')}
+                                  className="text-bad-600 hover:bg-bad-50"
                                   onClick={() => setPendingDeactivate(vehicle)}
                                 >
-                                  <CarFront className="size-4" aria-hidden />
+                                  {t('partner.deactivate')}
                                 </Button>
                               )}
                             </RowActions>
