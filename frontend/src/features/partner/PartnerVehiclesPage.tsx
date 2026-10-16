@@ -98,10 +98,26 @@ export function PartnerVehiclesPage() {
 
   /* Held while the partner confirms; null means no dialog is open. */
   const [pendingDeactivate, setPendingDeactivate] = useState<VehicleResponse | null>(null)
+  const [pendingReactivate, setPendingReactivate] = useState<VehicleResponse | null>(null)
+  const [editingVehicle, setEditingVehicle] = useState<VehicleResponse | null>(null)
 
   const deactivateMutation = useMutation({
     mutationFn: (vehicleId: number) => partnerApi.deactivateVehicle(vehicleId),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate()
+      setEditingVehicle(null)
+      setPendingDeactivate(null)
+    },
+  })
+
+  const reactivateMutation = useMutation({
+    mutationFn: (vehicle: VehicleResponse) =>
+      partnerApi.updateVehicle(vehicle.id, { ...vehicle, status: 'ACTIVE' }),
+    onSuccess: () => {
+      invalidate()
+      setEditingVehicle(null)
+      setPendingReactivate(null)
+    },
   })
 
   return (
@@ -111,6 +127,7 @@ export function PartnerVehiclesPage() {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-4">
           {deactivateMutation.error && <ErrorMessage error={deactivateMutation.error} />}
+          {reactivateMutation.error && <ErrorMessage error={reactivateMutation.error} />}
 
           <Card>
             {vehiclesQuery.isLoading && (
@@ -169,8 +186,16 @@ export function PartnerVehiclesPage() {
                         />
                       </div>
 
-                      {vehicle.status === 'ACTIVE' && (
-                        <div className="mt-3 flex justify-end">
+                      <div className="mt-3 flex flex-wrap justify-end gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => setEditingVehicle(vehicle)}>
+                          {t('common.edit')}
+                        </Button>
+                        {vehicle.status === 'INACTIVE' && (
+                          <Button size="sm" variant="secondary" onClick={() => setPendingReactivate(vehicle)}>
+                            {t('partner.reactivateVehicle')}
+                          </Button>
+                        )}
+                        {vehicle.status === 'ACTIVE' && (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -179,8 +204,8 @@ export function PartnerVehiclesPage() {
                           >
                             {t('partner.deactivate')}
                           </Button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -234,6 +259,24 @@ export function PartnerVehiclesPage() {
                           </Td>
                           <Td>
                             <RowActions>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                aria-label={t('partner.editVehicle', { plate: vehicle.plateNumber })}
+                                title={t('common.edit')}
+                                onClick={() => setEditingVehicle(vehicle)}
+                              >
+                                {t('common.edit')}
+                              </Button>
+                              {vehicle.status === 'INACTIVE' && (
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => setPendingReactivate(vehicle)}
+                                >
+                                  {t('partner.reactivateVehicle')}
+                                </Button>
+                              )}
                               {vehicle.status === 'ACTIVE' && (
                                 <Button
                                   size="sm"
@@ -261,6 +304,17 @@ export function PartnerVehiclesPage() {
           </Card>
         </div>
 
+        {editingVehicle ? (
+          <VehicleEditCard
+            key={editingVehicle.id}
+            vehicle={editingVehicle}
+            onClose={() => setEditingVehicle(null)}
+            onSaved={() => {
+              invalidate()
+              setEditingVehicle(null)
+            }}
+          />
+        ) : (
         <Card>
           <CardHeader title={t('partner.addVehicle')} />
           <CardBody>
@@ -316,6 +370,7 @@ export function PartnerVehiclesPage() {
             </form>
           </CardBody>
         </Card>
+        )}
       </div>
 
       <ConfirmDialog
@@ -327,12 +382,115 @@ export function PartnerVehiclesPage() {
         loading={deactivateMutation.isPending}
         onCancel={() => setPendingDeactivate(null)}
         onConfirm={() =>
-          pendingDeactivate &&
-          deactivateMutation.mutate(pendingDeactivate.id, {
-            onSuccess: () => setPendingDeactivate(null),
-          })
+          pendingDeactivate && deactivateMutation.mutate(pendingDeactivate.id)
         }
       />
+      <ConfirmDialog
+        open={pendingReactivate !== null}
+        title={t('partner.reactivateVehicleTitle', { plate: pendingReactivate?.plateNumber })}
+        description={t('partner.reactivateVehicleHint')}
+        confirmLabel={t('partner.reactivateVehicle')}
+        cancelLabel={t('confirm.keep')}
+        loading={reactivateMutation.isPending}
+        onCancel={() => setPendingReactivate(null)}
+        onConfirm={() => pendingReactivate && reactivateMutation.mutate(pendingReactivate)}
+      />
     </>
+  )
+}
+
+function VehicleEditCard({
+  vehicle,
+  onClose,
+  onSaved,
+}: {
+  vehicle: VehicleResponse
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const { t } = useTranslation()
+  const label = useStatusLabel()
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<VehicleValues>({
+    resolver: zodResolver(vehicleSchema),
+    defaultValues: {
+      plateNumber: vehicle.plateNumber,
+      brand: vehicle.brand,
+      model: vehicle.model,
+      manufactureYear: vehicle.manufactureYear,
+      seats: vehicle.seats,
+      vehicleType: vehicle.vehicleType,
+      registrationExpiryDate: vehicle.registrationExpiryDate ?? '',
+      insuranceExpiryDate: vehicle.insuranceExpiryDate ?? '',
+      technicalInspectionExpiryDate: vehicle.technicalInspectionExpiryDate ?? '',
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: (values: VehicleValues) =>
+      partnerApi.updateVehicle(vehicle.id, {
+        ...values,
+        registrationExpiryDate: values.registrationExpiryDate || null,
+        insuranceExpiryDate: values.insuranceExpiryDate || null,
+        technicalInspectionExpiryDate: values.technicalInspectionExpiryDate || null,
+        // Editing an inactive vehicle must never reactivate it by accident.
+        status: vehicle.status,
+      }),
+    onSuccess: onSaved,
+  })
+
+  return (
+    <Card>
+      <CardHeader title={t('partner.editVehicle', { plate: vehicle.plateNumber })} />
+      <CardBody>
+        <form className="space-y-3" noValidate onSubmit={handleSubmit((values) => updateMutation.mutate(values))}>
+          {updateMutation.error && <ErrorMessage error={updateMutation.error} />}
+          <Field label={t('partner.plate')} error={errors.plateNumber ? t(errors.plateNumber.message!) : undefined} required>
+            <Input {...register('plateNumber')} />
+          </Field>
+          <Field label={t('partner.brand')} error={errors.brand ? t(errors.brand.message!) : undefined} required>
+            <Input {...register('brand')} />
+          </Field>
+          <Field label={t('partner.model')} error={errors.model ? t(errors.model.message!) : undefined} required>
+            <Input {...register('model')} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t('partner.year')} error={errors.manufactureYear ? t(errors.manufactureYear.message!) : undefined} required>
+              <Input {...register('manufactureYear', { valueAsNumber: true })} type="number" />
+            </Field>
+            <Field label={t('partner.seats')} error={errors.seats ? t(errors.seats.message!) : undefined} required>
+              <Input {...register('seats', { valueAsNumber: true })} type="number" />
+            </Field>
+          </div>
+          <Field label={t('partner.type')} error={errors.vehicleType ? t(errors.vehicleType.message!) : undefined} required>
+            <Select {...register('vehicleType')}>
+              {VEHICLE_TYPES.map((type) => (
+                <option key={type} value={type}>{label('vehicleType', type)}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label={t('partner.registrationExpiry')} error={errors.registrationExpiryDate ? t(errors.registrationExpiryDate.message!) : undefined}>
+            <Input {...register('registrationExpiryDate')} type="date" />
+          </Field>
+          <Field label={t('partner.insuranceExpiry')} error={errors.insuranceExpiryDate ? t(errors.insuranceExpiryDate.message!) : undefined}>
+            <Input {...register('insuranceExpiryDate')} type="date" />
+          </Field>
+          <Field label={t('partner.inspectionExpiry')} error={errors.technicalInspectionExpiryDate ? t(errors.technicalInspectionExpiryDate.message!) : undefined}>
+            <Input {...register('technicalInspectionExpiryDate')} type="date" />
+          </Field>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" className="flex-1" onClick={onClose} disabled={updateMutation.isPending}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" className="flex-1" loading={updateMutation.isPending}>
+              {t('common.save')}
+            </Button>
+          </div>
+        </form>
+      </CardBody>
+    </Card>
   )
 }
