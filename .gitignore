@@ -50,3 +50,6 @@ load/.data/
 # and customers a preserved run used. Worth copying aside before re-seeding,
 # and not worth committing.
 load/.data-*
+
+# F12: private local document uploads (never commit identity documents)
+.local/
