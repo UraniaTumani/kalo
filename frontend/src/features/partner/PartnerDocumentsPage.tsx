@@ -32,7 +32,6 @@ const COMPANY_DOCUMENT_TYPES: DocumentType[] = ['BUSINESS_REGISTRATION', 'TAXI_L
 const documentSchema = z.object({
   documentType: z.enum(['BUSINESS_REGISTRATION', 'TAXI_LICENSE']),
   documentNumber: z.string().trim().max(100).optional(),
-  fileUrl: z.url('validation.urlInvalid').max(1000),
   issuedAt: z.string().optional(),
   expiresAt: z.string().optional(),
 })
@@ -43,6 +42,9 @@ export function PartnerDocumentsPage() {
   const { t } = useTranslation()
   const label = useStatusLabel()
   const queryClient = useQueryClient()
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
+  const [fileInputKey, setFileInputKey] = useState(0)
 
   const profileQuery = useQuery({
     queryKey: ['partner', 'profile'],
@@ -67,18 +69,46 @@ export function PartnerDocumentsPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: (values: DocumentValues) =>
-      partnerApi.addDocument({
-        ...values,
-        documentNumber: values.documentNumber || null,
-        issuedAt: values.issuedAt || null,
-        expiresAt: values.expiresAt || null,
-      }),
+    mutationFn: ({ values, file }: { values: DocumentValues; file: File }) => {
+      const body = new FormData()
+      body.append('file', file)
+      body.append('documentType', values.documentType)
+      if (values.documentNumber) body.append('documentNumber', values.documentNumber)
+      if (values.issuedAt) body.append('issuedAt', values.issuedAt)
+      if (values.expiresAt) body.append('expiresAt', values.expiresAt)
+      return partnerApi.uploadDocument(body)
+    },
     onSuccess: () => {
       invalidate()
       reset()
+      setSelectedFile(null)
+      setFileError(null)
+      setFileInputKey((key) => key + 1)
     },
   })
+
+  const downloadMutation = useMutation({
+    mutationFn: (documentId: number) => partnerApi.downloadDocument(documentId),
+    onSuccess: (blob, documentId) => {
+      const url = URL.createObjectURL(blob)
+      const extension = blob.type === 'application/pdf' ? 'pdf' : blob.type === 'image/png' ? 'png' : 'jpg'
+      const anchor = window.document.createElement('a')
+      anchor.href = url
+      anchor.download = `document-${documentId}.${extension}`
+      window.document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    },
+  })
+
+  const onSubmit = (values: DocumentValues) => {
+    if (!selectedFile) {
+      setFileError(t('partner.uploadFileRequired'))
+      return
+    }
+    createMutation.mutate({ values, file: selectedFile })
+  }
 
   /* Held while the partner confirms; null means no dialog is open. */
   const [pendingDelete, setPendingDelete] = useState<DocumentResponse | null>(null)
@@ -214,14 +244,25 @@ export function PartnerDocumentsPage() {
                   <tr key={document.id}>
                     <Td>
                       <span className="font-medium">{label('documentType', document.documentType)}</span>
-                      <a
-                        href={document.fileUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block truncate text-xs text-brand-700 hover:underline"
-                      >
-                        {document.fileUrl}
-                      </a>
+                      {document.fileUrl.startsWith('local:') ? (
+                        <button
+                          type="button"
+                          className="block text-left text-xs text-brand-700 hover:underline"
+                          onClick={() => downloadMutation.mutate(document.id)}
+                          disabled={downloadMutation.isPending}
+                        >
+                          {t('partner.downloadDocument')}
+                        </button>
+                      ) : (
+                        <a
+                          href={document.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block truncate text-xs text-brand-700 hover:underline"
+                        >
+                          {document.fileUrl}
+                        </a>
+                      )}
                     </Td>
                     <Td className="text-xs">{document.documentNumber ?? '—'}</Td>
                     <Td>
@@ -252,14 +293,15 @@ export function PartnerDocumentsPage() {
         </Card>
 
         <Card>
-          <CardHeader title={t('partner.addDocument')} description={t('partner.documentUrlHint')} />
+          <CardHeader title={t('partner.addDocument')} description={t('partner.documentUploadHint')} />
           <CardBody>
             <form
               className="space-y-3"
-              onSubmit={handleSubmit((values) => createMutation.mutate(values))}
+              onSubmit={handleSubmit(onSubmit)}
               noValidate
             >
               {createMutation.error && <ErrorMessage error={createMutation.error} />}
+              {downloadMutation.error && <ErrorMessage error={downloadMutation.error} />}
               {deleteMutation.error && <ErrorMessage error={deleteMutation.error} />}
 
               <Field label={t('partner.type')} error={errors.documentType ? t(errors.documentType.message!) : undefined} required>
@@ -272,8 +314,23 @@ export function PartnerDocumentsPage() {
                 </Select>
               </Field>
 
-              <Field label={t('partner.fileUrl')} error={errors.fileUrl ? t(errors.fileUrl.message!) : undefined} required>
-                <Input {...register('fileUrl')} placeholder="https://example.com/licence.pdf" />
+              <Field label={t('partner.uploadFile')} error={fileError ?? undefined} required>
+                <input
+                  key={fileInputKey}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                  className="block w-full rounded-lg border border-ink-200 p-2 text-sm"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null
+                    if (file && file.size > 5 * 1024 * 1024) {
+                      setSelectedFile(null)
+                      setFileError(t('partner.uploadFileTooLarge'))
+                    } else {
+                      setSelectedFile(file)
+                      setFileError(null)
+                    }
+                  }}
+                />
               </Field>
 
               <Field label={t('partner.documentNumber')} error={errors.documentNumber ? t(errors.documentNumber.message!) : undefined}>
