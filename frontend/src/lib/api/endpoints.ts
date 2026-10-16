@@ -410,6 +410,9 @@ export const adminApi = {
   partner: (companyId: number) =>
     api.get<AdminPartnerDetailResponse>(`/api/v1/admin/partners/${companyId}`),
 
+  downloadPartnerDocument: (companyId: number, documentId: number) =>
+    api.download(`/api/v1/admin/partners/${companyId}/documents/${documentId}/file`),
+
   approvePartner: (companyId: number) =>
     api.post<PartnerDecisionResponse>(`/api/v1/admin/partners/${companyId}/approve`),
 
