@@ -177,6 +177,17 @@ public class DocumentServiceImpl
 
     @Override
     @Transactional(readOnly = true)
+    public LocalDocumentStorage.StoredDocument getCompanyDocumentFileForAdmin(
+            Long companyId, Long documentId
+    ) {
+        Document document = documentRepository.findByIdAndOwnerTypeAndOwnerId(
+                documentId, DocumentOwnerType.COMPANY, companyId
+        ).orElseThrow(() -> new ResourceNotFoundException("Document not found"));
+        return localDocumentStorage.read(document.getFileUrl());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<DocumentResponse>
     getCurrentCompanyDocuments() {
 
