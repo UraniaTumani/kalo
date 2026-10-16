@@ -112,7 +112,18 @@ export function PartnerVehiclesPage() {
 
   const reactivateMutation = useMutation({
     mutationFn: (vehicle: VehicleResponse) =>
-      partnerApi.updateVehicle(vehicle.id, { ...vehicle, status: 'ACTIVE' }),
+      partnerApi.updateVehicle(vehicle.id, {
+        plateNumber: vehicle.plateNumber,
+        brand: vehicle.brand,
+        model: vehicle.model,
+        manufactureYear: vehicle.manufactureYear,
+        seats: vehicle.seats,
+        vehicleType: vehicle.vehicleType,
+        registrationExpiryDate: vehicle.registrationExpiryDate,
+        insuranceExpiryDate: vehicle.insuranceExpiryDate,
+        technicalInspectionExpiryDate: vehicle.technicalInspectionExpiryDate,
+        status: 'ACTIVE',
+      }),
     onSuccess: () => {
       invalidate()
       setEditingVehicle(null)
