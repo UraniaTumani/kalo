@@ -102,6 +102,7 @@ export type QueryParams = object
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
+  responseType?: 'blob'
   params?: QueryParams
   /** Set for the login/register calls, which must not trigger a session drop. */
   skipAuthRedirect?: boolean
@@ -154,14 +155,14 @@ async function performRequest<T>(path: string, options: RequestOptions = {}): Pr
     headers.Authorization = `Bearer ${token}`
   }
 
-  if (body !== undefined) {
+  if (body !== undefined && !(body instanceof FormData)) {
     headers['Content-Type'] = 'application/json'
   }
 
   const response = await fetch(buildUrl(path, params), {
     method,
     headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
   })
 
   if (response.status === 204) {
@@ -197,6 +198,10 @@ async function performRequest<T>(path: string, options: RequestOptions = {}): Pr
    * Reading the text first covers every empty-bodied status rather than the
    * two anybody has hit so far.
    */
+  if (options.responseType === 'blob') {
+    return (await response.blob()) as T
+  }
+
   const text = await response.text()
 
   return (text ? JSON.parse(text) : undefined) as T
@@ -252,4 +257,8 @@ export const api = {
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: 'PATCH', body }),
 
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+
+  upload: <T>(path: string, body: FormData) => request<T>(path, { method: 'POST', body }),
+
+  download: (path: string) => request<Blob>(path, { method: 'GET', responseType: 'blob' }),
 }
