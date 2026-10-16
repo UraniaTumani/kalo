@@ -19,6 +19,8 @@ public interface DocumentService {
 
     LocalDocumentStorage.StoredDocument getCurrentCompanyDocumentFile(Long documentId);
 
+    LocalDocumentStorage.StoredDocument getCompanyDocumentFileForAdmin(Long companyId, Long documentId);
+
     List<DocumentResponse> getCurrentCompanyDocuments();
 
     void deleteCurrentCompanyDocument(Long documentId);
