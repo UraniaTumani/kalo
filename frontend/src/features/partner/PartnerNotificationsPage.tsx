@@ -13,6 +13,7 @@ import { partnerApi } from '@/lib/api/endpoints'
 import { readPage } from '@/lib/api/page'
 import { formatDateTime, cn } from '@/lib/utils'
 import { partnerNotificationKeys } from './notificationQueries'
+import { PARTNER_LIVE_REFRESH_MS } from './liveRefresh'
 
 /**
  * F1: the backend already creates and scopes RIDE_RATED notifications.
@@ -29,9 +30,9 @@ export function PartnerNotificationsPage() {
     queryKey: partnerNotificationKeys.list(userId, page),
     queryFn: () => partnerApi.notifications({ page, size: 20 }),
     enabled: Boolean(user),
-    refetchInterval: 20_000,
+    refetchInterval: PARTNER_LIVE_REFRESH_MS,
     refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: 'always',
     staleTime: 0,
   })
 

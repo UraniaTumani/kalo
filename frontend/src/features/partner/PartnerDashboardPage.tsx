@@ -9,6 +9,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Bell, Car, CarFront, PowerOff, Radio } from 'lucide-react'
 import { Alert, Button, Card, CardBody, CardHeader, StatCard } from '@/components/ui'
 import type { PartnerReadinessBlocker } from '@/lib/api/types'
+import { PARTNER_LIVE_REFRESH_MS } from './liveRefresh'
 
 const blockerLinks: Record<PartnerReadinessBlocker, string> = {
   NOT_APPROVED: '/partner/documents',
@@ -68,9 +69,13 @@ export function PartnerDashboardPage() {
   })
 
   const openRidesQuery = useQuery({
-    queryKey: ['partner', 'rides', 'REQUESTED', 0],
+    // Separate the count cache (size 1) from the queue cache (size 10).
+    queryKey: ['partner', 'rides', 'count', 'REQUESTED'],
     queryFn: () => partnerApi.rides({ status: 'REQUESTED', page: 0, size: 1 }),
-    refetchInterval: 10_000,
+    refetchInterval: PARTNER_LIVE_REFRESH_MS,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: 'always',
+    staleTime: 0,
     retry: false,
   })
 
