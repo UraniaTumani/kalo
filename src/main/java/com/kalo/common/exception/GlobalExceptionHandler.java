@@ -17,6 +17,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
@@ -132,6 +133,18 @@ public class GlobalExceptionHandler {
                 message.isBlank()
                         ? "Request validation failed"
                         : message,
+                request
+        );
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleFileTooLarge(
+            MaxUploadSizeExceededException exception,
+            HttpServletRequest request
+    ) {
+        return build(
+                HttpStatus.PAYLOAD_TOO_LARGE,
+                "Document exceeds the 5 MB upload limit",
                 request
         );
     }
