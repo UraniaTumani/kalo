@@ -176,6 +176,21 @@ function ReviewPanel({ companyId, onDone }: { companyId: number; onDone: () => v
     onSuccess: invalidate,
   })
 
+  const downloadMutation = useMutation({
+    mutationFn: (documentId: number) => adminApi.downloadPartnerDocument(companyId, documentId),
+    onSuccess: (blob, documentId) => {
+      const url = URL.createObjectURL(blob)
+      const extension = blob.type === 'application/pdf' ? 'pdf' : blob.type === 'image/png' ? 'png' : 'jpg'
+      const anchor = window.document.createElement('a')
+      anchor.href = url
+      anchor.download = `document-${documentId}.${extension}`
+      window.document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    },
+  })
+
   const [confirmingReject, setConfirmingReject] = useState(false)
 
   const rejectMutation = useMutation({
@@ -244,20 +259,32 @@ function ReviewPanel({ companyId, onDone }: { companyId: number; onDone: () => v
                       </span>
                       <StatusBadge status={document.verificationStatus} namespace="documentStatus" />
                     </div>
-                    <a
-                      href={document.fileUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-0.5 block truncate text-xs text-brand-700 hover:underline"
-                    >
-                      {document.fileUrl}
-                    </a>
+                    {document.fileUrl.startsWith('local:') ? (
+                      <button
+                        type="button"
+                        className="mt-0.5 block text-left text-xs text-brand-700 hover:underline"
+                        disabled={downloadMutation.isPending}
+                        onClick={() => downloadMutation.mutate(document.id)}
+                      >
+                        {t('partner.downloadDocument')}
+                      </button>
+                    ) : (
+                      <a
+                        href={document.fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-0.5 block truncate text-xs text-brand-700 hover:underline"
+                      >
+                        {document.fileUrl}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
             )}
           </div>
 
+          {downloadMutation.error && <ErrorMessage error={downloadMutation.error} />}
           {(approveMutation.error || rejectMutation.error) && (
             <ErrorMessage error={approveMutation.error ?? rejectMutation.error} />
           )}
