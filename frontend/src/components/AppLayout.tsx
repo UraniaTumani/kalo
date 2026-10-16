@@ -2,6 +2,7 @@ import { Logo } from '@/components/Logo'
 import { useQuery } from '@tanstack/react-query'
 import { partnerApi } from '@/lib/api/endpoints'
 import { partnerNotificationKeys } from '@/features/partner/notificationQueries'
+import { PARTNER_LIVE_REFRESH_MS } from '@/features/partner/liveRefresh'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -83,9 +84,9 @@ export function AppLayout() {
     queryKey: partnerNotificationKeys.unread(user?.id ?? 0),
     queryFn: partnerApi.notificationUnreadCount,
     enabled: role === 'PARTNER' && Boolean(user),
-    refetchInterval: 20_000,
+    refetchInterval: PARTNER_LIVE_REFRESH_MS,
     refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: 'always',
     staleTime: 0,
   })
 

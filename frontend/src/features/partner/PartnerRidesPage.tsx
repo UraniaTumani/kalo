@@ -28,6 +28,7 @@ import {
   Th,
 } from '@/components/ui'
 import { cn, formatQueueTime } from '@/lib/utils'
+import { PARTNER_LIVE_REFRESH_MS } from './liveRefresh'
 
 /**
  * What a dispatcher can narrow the queue to.
@@ -84,9 +85,12 @@ export function PartnerRidesPage() {
         status: status === 'ALL' || status === 'ACTIVE' ? undefined : status,
         active: status === 'ACTIVE' ? true : undefined,
       }),
-    // New ride requests arrive without any push channel, and REQUESTED rides
-    // time out server-side, so the queue is polled.
-    refetchInterval: 10_000,
+    // Keep the visible dispatcher queue current without a manual F5.
+    // Hidden tabs stay quiet and refetch immediately on return.
+    refetchInterval: PARTNER_LIVE_REFRESH_MS,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: 'always',
+    staleTime: 0,
   })
 
   const active = selected
