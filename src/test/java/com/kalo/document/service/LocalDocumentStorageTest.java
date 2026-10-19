@@ -64,6 +64,52 @@ class LocalDocumentStorageTest {
                 () -> storage.read("https://example.com/old.pdf"));
     }
 
+
+    @Test
+    void savesPngUsingDetectedContentRatherThanSuppliedFilenameOrMime() {
+        LocalDocumentStorage storage = store("dev");
+        byte[] png = new byte[] {
+                (byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10, 0, 0, 0, 0
+        };
+        String reference = storage.store(new MockMultipartFile(
+                "file", "../../invoice.jpg", "application/pdf", png
+        ));
+        assertTrue(reference.matches("local:[a-f0-9-]{36}\\.png"));
+        var result = storage.read(reference);
+        assertArrayEquals(png, result.bytes());
+        assertEquals("image/png", result.contentType());
+        assertEquals("png", result.extension());
+    }
+
+    @Test
+    void savesJpegUsingDetectedContentRatherThanSuppliedFilenameOrMime() {
+        LocalDocumentStorage storage = store("dev");
+        byte[] jpeg = new byte[] {
+                (byte) 0xff, (byte) 0xd8, (byte) 0xff, (byte) 0xe0, 0, 0, 0, 0
+        };
+        String reference = storage.store(new MockMultipartFile(
+                "file", "wrong.png", "image/png", jpeg
+        ));
+        assertTrue(reference.matches("local:[a-f0-9-]{36}\\.jpg"));
+        var result = storage.read(reference);
+        assertArrayEquals(jpeg, result.bytes());
+        assertEquals("image/jpeg", result.contentType());
+        assertEquals("jpg", result.extension());
+    }
+
+    @Test
+    void rejectsTruncatedPngAndJpegSignatures() {
+        LocalDocumentStorage storage = store("dev");
+        assertThrows(InvalidOperationException.class, () -> storage.store(
+                new MockMultipartFile("file", "image.png", "image/png",
+                        new byte[] {(byte) 0x89, 'P', 'N', 'G'})
+        ));
+        assertThrows(InvalidOperationException.class, () -> storage.store(
+                new MockMultipartFile("file", "image.jpg", "image/jpeg",
+                        new byte[] {(byte) 0xff, (byte) 0xd8})
+        ));
+    }
+
     @Test
     void productionCannotUseEphemeralLocalStorage() {
         LocalDocumentStorage storage = store("prod");
