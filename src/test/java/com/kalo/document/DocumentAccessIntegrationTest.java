@@ -25,7 +25,7 @@ class DocumentAccessIntegrationTest extends AbstractIntegrationTest {
     private MockMultipartFile pdf() {
         return new MockMultipartFile(
                 "file", "licence.pdf", "application/pdf",
-                "%PDF-1.7\\nprivate".getBytes(StandardCharsets.UTF_8)
+                "%PDF-1.7\nprivate".getBytes(StandardCharsets.UTF_8)
         );
     }
 
