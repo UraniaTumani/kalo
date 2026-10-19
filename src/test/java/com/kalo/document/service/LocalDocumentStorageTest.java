@@ -127,6 +127,22 @@ class LocalDocumentStorageTest {
     }
 
     @Test
+    void discardRemovesOnlyTheGeneratedFile() {
+        LocalDocumentStorage storage = store("dev");
+        String reference = storage.store(new MockMultipartFile(
+                "file", "proof.pdf", "application/pdf",
+                "%PDF-1.7\\nproof".getBytes(StandardCharsets.UTF_8)
+        ));
+        assertNotNull(storage.read(reference));
+        storage.discard(reference);
+        assertThrows(ResourceNotFoundException.class, () -> storage.read(reference));
+        // A nonexistent generated key is safe to discard as well.
+        storage.discard(reference);
+        assertThrows(ResourceNotFoundException.class,
+                () -> storage.discard("local:../../outside.pdf"));
+    }
+
+    @Test
     void productionCannotUseEphemeralLocalStorage() {
         LocalDocumentStorage storage = store("prod");
         assertThrows(InvalidOperationException.class, () -> storage.store(
