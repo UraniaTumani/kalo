@@ -101,6 +101,26 @@ public class LocalDocumentStorage {
         }
     }
 
+    /**
+     * Best-effort cleanup for an upload that never committed its database row.
+     * Only generated opaque keys in the private directory are accepted.
+     */
+    public void discard(String reference) {
+        if (!isLocalReference(reference)) {
+            return;
+        }
+        String key = checkedKey(reference);
+        Path path = root.resolve(key).normalize();
+        if (!path.getParent().equals(root)) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(path);
+        } catch (IOException ignored) {
+            // Do not mask the original database failure.
+        }
+    }
+
     public boolean isLocalReference(String reference) {
         return reference != null && reference.startsWith(PREFIX);
     }
