@@ -17,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.time.LocalDate;
@@ -153,6 +155,17 @@ public class DocumentServiceImpl
 
         // Files are written only after permissions and duplicate checks.
         String storedReference = localDocumentStorage.store(file);
+        // Writing the file is not part of the JPA transaction. If the row
+        // cannot commit (including late constraint failures), remove the
+        // orphan rather than leave private documents without an owner.
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != TransactionSynchronization.STATUS_COMMITTED) {
+                    localDocumentStorage.discard(storedReference);
+                }
+            }
+        });
         Document document = new Document();
         document.setOwnerType(DocumentOwnerType.COMPANY);
         document.setOwnerId(company.getId());
