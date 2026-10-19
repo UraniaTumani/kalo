@@ -131,7 +131,7 @@ class LocalDocumentStorageTest {
         LocalDocumentStorage storage = store("dev");
         String reference = storage.store(new MockMultipartFile(
                 "file", "proof.pdf", "application/pdf",
-                "%PDF-1.7\\nproof".getBytes(StandardCharsets.UTF_8)
+                "%PDF-1.7\nproof".getBytes(StandardCharsets.UTF_8)
         ));
         assertNotNull(storage.read(reference));
         storage.discard(reference);
