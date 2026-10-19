@@ -111,6 +111,22 @@ class LocalDocumentStorageTest {
     }
 
     @Test
+    void rejectsEmptyUpload() {
+        LocalDocumentStorage storage = store("dev");
+        assertThrows(InvalidOperationException.class, () -> storage.store(
+                new MockMultipartFile("file", "empty.pdf", "application/pdf", new byte[0])
+        ));
+    }
+
+    @Test
+    void missingLocalFileCannotBeDownloaded() {
+        LocalDocumentStorage storage = store("test");
+        assertThrows(ResourceNotFoundException.class, () -> storage.read(
+                "local:00000000-0000-0000-0000-000000000000.pdf"
+        ));
+    }
+
+    @Test
     void productionCannotUseEphemeralLocalStorage() {
         LocalDocumentStorage storage = store("prod");
         assertThrows(InvalidOperationException.class, () -> storage.store(
