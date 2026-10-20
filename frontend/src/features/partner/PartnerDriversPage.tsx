@@ -1,3 +1,4 @@
+import { useLocation, useNavigate } from 'react-router-dom'
 import { FleetDocumentsCard } from './FleetDocumentsCard'
 import { useTranslation } from 'react-i18next'
 import { useEffect, useState } from 'react'
@@ -56,6 +57,17 @@ export function PartnerDriversPage() {
   const [locationFor, setLocationFor] = useState<DriverResponse | null>(null)
 
   const [documentsFor, setDocumentsFor] = useState<DriverResponse | null>(null)
+
+  const location = useLocation()
+  const navigate = useNavigate()
+  useEffect(() => {
+    const target = (location.state as { expiryDocumentOwner?: { kind: string; owner: DriverResponse } } | null)?.expiryDocumentOwner
+    if (target?.kind !== 'driver' || typeof target.owner?.id !== 'number') return
+    setDocumentsFor(target.owner)
+    // Clear the navigation payload so reopening this route does not reopen the panel.
+    navigate(location.pathname, { replace: true, state: null })
+  }, [location.state, location.pathname, navigate])
+
 
   const [page, setPage] = useState(0)
 

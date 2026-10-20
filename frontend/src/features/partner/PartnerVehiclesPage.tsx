@@ -1,3 +1,4 @@
+import { useLocation, useNavigate } from 'react-router-dom'
 import { FleetDocumentsCard } from './FleetDocumentsCard'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -5,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { partnerApi } from '@/lib/api/endpoints'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { VehicleResponse, VehicleType } from '@/lib/api/types'
 import { PageHeader } from '@/components/AppLayout'
 import { StatusBadge, useStatusLabel } from '@/components/StatusBadge'
@@ -62,6 +63,17 @@ export function PartnerVehiclesPage() {
   const queryClient = useQueryClient()
 
   const [documentsFor, setDocumentsFor] = useState<VehicleResponse | null>(null)
+
+  const location = useLocation()
+  const navigate = useNavigate()
+  useEffect(() => {
+    const target = (location.state as { expiryDocumentOwner?: { kind: string; owner: VehicleResponse } } | null)?.expiryDocumentOwner
+    if (target?.kind !== 'vehicle' || typeof target.owner?.id !== 'number') return
+    setDocumentsFor(target.owner)
+    // Clear the navigation payload so reopening this route does not reopen the panel.
+    navigate(location.pathname, { replace: true, state: null })
+  }, [location.state, location.pathname, navigate])
+
 
   const [page, setPage] = useState(0)
 

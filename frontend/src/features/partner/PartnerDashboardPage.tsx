@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { DocumentExpiryDashboard } from './DocumentExpiryDashboard'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { partnerApi } from '@/lib/api/endpoints'
@@ -218,6 +219,8 @@ export function PartnerDashboardPage() {
           icon={<CarFront className="size-4" aria-hidden />}
         />
       </div>
+
+      <div className="mt-4"><DocumentExpiryDashboard /></div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>

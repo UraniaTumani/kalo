@@ -823,5 +823,17 @@
     "retry": "Provo përsëri",
     "duplicate": "Një dokument i këtij lloji ekziston tashmë për këtë shofer ose automjet.",
     "invalidFile": "Zgjidh një skedar PDF, JPG ose PNG që nuk është bosh."
+  },
+  "expiryDashboard": {
+    "title": "Dokumentet që kërkojnë vëmendje",
+    "clear": "Nuk ka dokumente me afat skadimi brenda 30 ditëve.",
+    "count": "{{count}} afate që kërkojnë vëmendje",
+    "companyLicence": "Licenca e kompanisë",
+    "driverLicence": "Patenta e shoferit: {{name}}",
+    "vehicleField": "Automjeti: {{label}}",
+    "expired": "I skaduar",
+    "urgent": "Skadon brenda 7 ditëve",
+    "soon": "Skadon brenda 30 ditëve",
+    "review": "Shiko dokumentet"
   }
 }
