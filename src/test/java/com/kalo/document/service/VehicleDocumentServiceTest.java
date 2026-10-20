@@ -93,6 +93,65 @@ class VehicleDocumentServiceTest {
         verifyNoInteractions(documentRepository, localDocumentStorage);
     }
 
+
+    private void ownedVehicle(Long vehicleId) {
+        TaxiCompany company = new TaxiCompany();
+        ReflectionTestUtils.setField(company, "id", COMPANY_ID);
+        when(taxiCompanyRepository.findByOwnerPhone("+355690000000"))
+                .thenReturn(Optional.of(company));
+        when(vehicleRepository.findByIdAndCompanyId(vehicleId, COMPANY_ID))
+                .thenReturn(Optional.of(new com.kalo.vehicle.entity.Vehicle()));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(
+            value = DocumentType.class,
+            names = {"VEHICLE_REGISTRATION", "INSURANCE", "PASSENGER_INSURANCE",
+                    "TECHNICAL_INSPECTION", "TAXIMETER_VERIFICATION"})
+    void uploadsSupportedVehicleDocumentForOwnedVehicle(DocumentType documentType) {
+        Long vehicleId = 17L;
+        ownedVehicle(vehicleId);
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "vehicle.pdf", "application/pdf",
+                "%PDF-1.7\\nproof".getBytes(StandardCharsets.UTF_8));
+        String reference = "local:00000000-0000-0000-0000-000000000002.pdf";
+
+        when(localDocumentStorage.store(file)).thenReturn(reference);
+        when(documentRepository.save(any(com.kalo.document.entity.Document.class)))
+                .thenAnswer(invocation -> {
+                    com.kalo.document.entity.Document document = invocation.getArgument(0);
+                    ReflectionTestUtils.setField(document, "id", 25L);
+                    return document;
+                });
+
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        try {
+            var result = service.upload(vehicleId, documentType, " VEH-123 ",
+                    java.time.LocalDate.of(2025, 1, 1),
+                    java.time.LocalDate.of(2028, 1, 1), file);
+
+            org.junit.jupiter.api.Assertions.assertEquals(documentType, result.documentType());
+            org.junit.jupiter.api.Assertions.assertEquals("VEH-123", result.documentNumber());
+            org.junit.jupiter.api.Assertions.assertEquals(reference, result.fileUrl());
+
+            var captor = org.mockito.ArgumentCaptor.forClass(com.kalo.document.entity.Document.class);
+            verify(documentRepository).save(captor.capture());
+            org.junit.jupiter.api.Assertions.assertEquals(
+                    com.kalo.document.enums.DocumentOwnerType.VEHICLE, captor.getValue().getOwnerType());
+            org.junit.jupiter.api.Assertions.assertEquals(vehicleId, captor.getValue().getOwnerId());
+            org.junit.jupiter.api.Assertions.assertEquals(
+                    com.kalo.document.enums.DocumentVerificationStatus.DRAFT,
+                    captor.getValue().getVerificationStatus());
+
+            org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(s -> s.afterCompletion(
+                            org.springframework.transaction.support.TransactionSynchronization.STATUS_COMMITTED));
+            verify(localDocumentStorage, never()).discard(anyString());
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
     @Test
     void unauthenticatedAccessCannotDownloadVehicleDocuments() {
         SecurityContextHolder.clearContext();
