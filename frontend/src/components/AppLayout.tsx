@@ -1,12 +1,18 @@
 import { Logo } from '@/components/Logo'
 import { useQuery } from '@tanstack/react-query'
-import { partnerApi } from '@/lib/api/endpoints'
+import { useEffect, useRef, useState } from 'react'
+import { partnerApi, rideApi } from '@/lib/api/endpoints'
+import { ApiError } from '@/lib/api/client'
+import type { RideStatus } from '@/lib/api/types'
+import { isActiveRide } from '@/lib/api/types'
+import { recallRide, rememberRide } from '@/features/customer/rideMemory'
 import { partnerNotificationKeys } from '@/features/partner/notificationQueries'
 import { PARTNER_LIVE_REFRESH_MS } from '@/features/partner/liveRefresh'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
 import {
   Bell,
+  X,
   Building2,
   Car,
   ClipboardList,
@@ -235,11 +241,81 @@ export function AppLayout() {
           Capped at 5xl rather than 6xl — a table stretched across a 27-inch
           monitor is harder to read, not easier.
         */}
+        {role === 'CUSTOMER' && <CustomerRideStatusPopup />}
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 lg:py-8">
           <ErrorBoundary resetKey={location.pathname}>
             <Outlet />
           </ErrorBoundary>
         </main>
+      </div>
+    </div>
+  )
+}
+
+
+function CustomerRideStatusPopup() {
+  const { t } = useTranslation()
+  const [notice, setNotice] = useState<{ rideId: number; status: RideStatus } | null>(null)
+  const lastSeen = useRef<{ rideId: number; status: RideStatus } | null>(null)
+  const remembered = recallRide()
+  const current = useQuery({
+    queryKey: ['ride', 'current'],
+    queryFn: rideApi.current,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: 'always',
+    retry: (count, error) => error instanceof ApiError && error.status === 404 ? false : count < 2,
+  })
+  const missing = current.error instanceof ApiError && current.error.status === 404
+  const previous = useQuery({
+    queryKey: ['ride', remembered],
+    queryFn: () => rideApi.byId(remembered!),
+    enabled: missing && remembered !== null,
+    refetchInterval: missing ? 5000 : false,
+    refetchIntervalInBackground: false,
+  })
+  const ride = missing ? previous.data : current.data
+  useEffect(() => {
+    if (!ride) return
+    if (isActiveRide(ride.status)) rememberRide(ride.rideId)
+    const next = { rideId: ride.rideId, status: ride.status }
+    const last = lastSeen.current
+    lastSeen.current = next
+    if (last?.rideId === next.rideId && last.status !== next.status && next.status !== 'REQUESTED') setNotice(next)
+    else if (last?.rideId !== next.rideId) setNotice(null)
+  }, [ride?.rideId, ride?.status])
+  useEffect(() => {
+    if (!notice) return
+    const id = window.setTimeout(() => setNotice(null), 5000)
+    return () => window.clearTimeout(id)
+  }, [notice])
+  if (!notice) return null
+  const labelKeys: Partial<Record<RideStatus, string>> = {
+    DRIVER_ASSIGNED: 'ride.steps.assigned',
+    DRIVER_ARRIVING: 'ride.steps.arriving',
+    DRIVER_ARRIVED: 'ride.steps.arrived',
+    IN_PROGRESS: 'ride.steps.started',
+    COMPLETED: 'ride.steps.completed',
+    DECLINED: 'ride.declinedTitle',
+    NO_RESPONSE: 'ride.noResponseTitle',
+    CANCELLED: 'ridePopup.cancelled',
+  }
+  const key = labelKeys[notice.status]
+  if (!key) return null
+  return (
+    <div role="status" aria-live="polite" data-testid="customer-ride-popup" className="pointer-events-none fixed right-4 top-4 z-50 w-[calc(100vw-2rem)] max-w-sm sm:right-6 sm:top-6">
+      <div className="pointer-events-auto rounded-2xl border border-ink-200 bg-white p-4 shadow-xl">
+        <div className="flex items-start gap-3">
+          <Bell className="mt-0.5 size-5 shrink-0 text-brand-700" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-ink-900">{t('common.appName')} · #{notice.rideId}</p>
+            <p className="mt-1 text-sm text-ink-700">{t(key)}</p>
+            <NavLink to="/ride/current" className="mt-2 inline-block text-sm font-semibold text-brand-800 underline underline-offset-4" onClick={() => setNotice(null)}>{t('ridePopup.viewRide')}</NavLink>
+          </div>
+          <button type="button" className="rounded-lg p-1 text-ink-600 hover:bg-ink-100" aria-label={t('common.close')} onClick={() => setNotice(null)}>
+            <X className="size-4" aria-hidden />
+          </button>
+        </div>
       </div>
     </div>
   )

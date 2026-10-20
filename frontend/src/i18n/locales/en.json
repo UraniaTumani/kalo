@@ -239,6 +239,10 @@
     "bookingMessage": "A passenger selected your taxi company. Check the Rides queue for the current status; the request may have expired or been cancelled.",
     "viewRides": "View rides"
   },
+  "ridePopup": {
+    "viewRide": "View ride",
+    "cancelled": "Ride cancelled"
+  },
   "ride": {
     "currentTitle": "Current ride",
     "lastRide": "Your last ride",

@@ -239,6 +239,10 @@
     "bookingMessage": "Një pasagjer zgjodhi kompaninë tuaj. Kontrolloni udhëtimet për statusin aktual; kërkesa mund të ketë skaduar ose të jetë anuluar.",
     "viewRides": "Shiko udhëtimet"
   },
+  "ridePopup": {
+    "viewRide": "Shiko udhëtimin",
+    "cancelled": "Udhëtimi u anulua"
+  },
   "ride": {
     "currentTitle": "Udhëtimi aktual",
     "lastRide": "Udhëtimi juaj i fundit",
