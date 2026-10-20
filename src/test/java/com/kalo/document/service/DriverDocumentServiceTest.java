@@ -89,6 +89,68 @@ class DriverDocumentServiceTest {
         verifyNoInteractions(documentRepository, localDocumentStorage);
     }
 
+
+    private void ownedDriver(Long driverId) {
+        TaxiCompany company = new TaxiCompany();
+        ReflectionTestUtils.setField(company, "id", COMPANY_ID);
+        when(taxiCompanyRepository.findByOwnerPhone("+355690000000"))
+                .thenReturn(Optional.of(company));
+        when(driverRepository.findByIdAndCompanyId(driverId, COMPANY_ID))
+                .thenReturn(Optional.of(new com.kalo.driver.entity.Driver()));
+    }
+
+    @Test
+    void uploadsDrivingLicenseForOwnedDriver() {
+        verifiesSuccessfulUpload(com.kalo.document.enums.DocumentType.DRIVING_LICENSE);
+    }
+
+    @Test
+    void uploadsProfessionalCertificateForOwnedDriver() {
+        verifiesSuccessfulUpload(com.kalo.document.enums.DocumentType.PROFESSIONAL_CERTIFICATE);
+    }
+
+    private void verifiesSuccessfulUpload(com.kalo.document.enums.DocumentType documentType) {
+        Long driverId = 17L;
+        ownedDriver(driverId);
+        byte[] bytes = "%PDF-1.7\nproof".getBytes(StandardCharsets.UTF_8);
+        MockMultipartFile file = new MockMultipartFile("file", "proof.pdf", "application/pdf", bytes);
+        String reference = "local:00000000-0000-0000-0000-000000000001.pdf";
+
+        when(localDocumentStorage.store(file)).thenReturn(reference);
+        when(documentRepository.save(any(com.kalo.document.entity.Document.class)))
+                .thenAnswer(invocation -> {
+                    com.kalo.document.entity.Document document = invocation.getArgument(0);
+                    ReflectionTestUtils.setField(document, "id", 24L);
+                    return document;
+                });
+
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        try {
+            var result = service.upload(driverId, documentType, " CERT-123 ",
+                    java.time.LocalDate.of(2025, 1, 1),
+                    java.time.LocalDate.of(2028, 1, 1), file);
+
+            org.junit.jupiter.api.Assertions.assertEquals(documentType, result.documentType());
+            org.junit.jupiter.api.Assertions.assertEquals("CERT-123", result.documentNumber());
+            org.junit.jupiter.api.Assertions.assertEquals(reference, result.fileUrl());
+
+            var captor = org.mockito.ArgumentCaptor.forClass(com.kalo.document.entity.Document.class);
+            verify(documentRepository).save(captor.capture());
+            org.junit.jupiter.api.Assertions.assertEquals(DocumentOwnerType.DRIVER, captor.getValue().getOwnerType());
+            org.junit.jupiter.api.Assertions.assertEquals(driverId, captor.getValue().getOwnerId());
+            org.junit.jupiter.api.Assertions.assertEquals(
+                    com.kalo.document.enums.DocumentVerificationStatus.DRAFT,
+                    captor.getValue().getVerificationStatus());
+
+            org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(s -> s.afterCompletion(
+                            org.springframework.transaction.support.TransactionSynchronization.STATUS_COMMITTED));
+            verify(localDocumentStorage, never()).discard(anyString());
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
     @Test
     void unauthenticatedAccessCannotReadDocuments() {
         SecurityContextHolder.clearContext();
