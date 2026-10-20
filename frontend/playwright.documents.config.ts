@@ -5,7 +5,7 @@ export default defineConfig({
   testDir: './tests',
   testMatch: 'fleet-documents.spec.ts',
   outputDir: './e2e/.results/documents',
-  use: { baseURL: 'http://localhost:5175' },
+  use: { baseURL: 'http://localhost:5175', channel: 'chrome' },
   webServer: {
     command: 'npm run dev -- --port 5175 --strictPort',
     url: 'http://localhost:5175',
