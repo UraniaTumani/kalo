@@ -814,5 +814,10 @@
         "a": "Change your password from your Profile straight away. That signs out every other device. Then write to us so we can check the account."
       }
     }
+  },
+  "fleetDocuments": {
+    "retry": "Retry",
+    "duplicate": "A document of this type already exists for this owner.",
+    "invalidFile": "Choose a non-empty PDF, JPG or PNG file."
   }
 }

@@ -126,7 +126,8 @@ public class LocalDocumentStorage {
     }
 
     private void requireDevStorage() {
-        if (!environment.acceptsProfiles(Profiles.of("dev", "test"))) {
+        if (environment.acceptsProfiles(Profiles.of("prod"))
+                || !environment.acceptsProfiles(Profiles.of("dev", "test"))) {
             throw new InvalidOperationException(
                     "Direct uploads require configured durable storage outside development"
             );

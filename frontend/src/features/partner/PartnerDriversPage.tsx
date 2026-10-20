@@ -1,3 +1,4 @@
+import { FleetDocumentsCard } from './FleetDocumentsCard'
 import { useTranslation } from 'react-i18next'
 import { useEffect, useState } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -53,6 +54,8 @@ export function PartnerDriversPage() {
   const queryClient = useQueryClient()
   const compact = useIsCompact()
   const [locationFor, setLocationFor] = useState<DriverResponse | null>(null)
+
+  const [documentsFor, setDocumentsFor] = useState<DriverResponse | null>(null)
 
   const [page, setPage] = useState(0)
 
@@ -251,6 +254,9 @@ export function PartnerDriversPage() {
                     </p>
 
                     <div className="mt-3 flex flex-wrap justify-end gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => setDocumentsFor(driver)}>
+                        {t('partner.documentsTitle')}
+                      </Button>
                       {driver.status === 'ACTIVE' && driver.availabilityStatus !== 'BUSY' && (
                         <Button
                           size="sm"
@@ -324,6 +330,9 @@ export function PartnerDriversPage() {
                       </Td>
                       <Td>
                         <RowActions>
+                          <Button size="sm" variant="secondary" onClick={() => setDocumentsFor(driver)}>
+                            {t('partner.documentsTitle')}
+                          </Button>
                           {driver.status === 'ACTIVE' && driver.availabilityStatus !== 'BUSY' && (
                             <Button
                               size="sm"
@@ -374,6 +383,11 @@ export function PartnerDriversPage() {
 
             <Pagination page={pageData} onPageChange={setPage} />
           </Card>
+
+          {documentsFor && (
+            <FleetDocumentsCard key={documentsFor.id} owner="driver" ownerId={documentsFor.id}
+              name={`${documentsFor.firstName} ${documentsFor.lastName}`} onClose={() => setDocumentsFor(null)} />
+          )}
 
           {locationFor && (
             <DriverLocationCard driver={locationFor} onClose={() => setLocationFor(null)} />

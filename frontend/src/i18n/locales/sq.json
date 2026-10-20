@@ -814,5 +814,10 @@
         "a": "Ndryshoni menjëherë fjalëkalimin nga Profili juaj. Kjo ju nxjerr nga të gjitha pajisjet e tjera. Pastaj na shkruani që ta kontrollojmë llogarinë."
       }
     }
+  },
+  "fleetDocuments": {
+    "retry": "Provo përsëri",
+    "duplicate": "Një dokument i këtij lloji ekziston tashmë për këtë shofer ose automjet.",
+    "invalidFile": "Zgjidh një skedar PDF, JPG ose PNG që nuk është bosh."
   }
 }

@@ -143,6 +143,19 @@ class LocalDocumentStorageTest {
     }
 
     @Test
+    void productionCannotBeOverriddenByDevelopmentProfile() {
+        MockEnvironment environment = new MockEnvironment();
+        environment.setActiveProfiles("prod", "dev");
+        LocalDocumentStorage storage = new LocalDocumentStorage(tempDir.toString(), environment);
+        assertThrows(InvalidOperationException.class, () -> storage.store(
+                new MockMultipartFile("file", "safe.pdf", "application/pdf",
+                        "%PDF-1.7".getBytes(StandardCharsets.UTF_8))
+        ));
+        assertThrows(InvalidOperationException.class,
+                () -> storage.read("local:00000000-0000-0000-0000-000000000000.pdf"));
+    }
+
+    @Test
     void productionCannotUseEphemeralLocalStorage() {
         LocalDocumentStorage storage = store("prod");
         assertThrows(InvalidOperationException.class, () -> storage.store(
