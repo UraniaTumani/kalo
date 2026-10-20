@@ -8,7 +8,7 @@ import { Card, CardBody, CardHeader } from '@/components/ui'
 import { ErrorMessage } from '@/components/ErrorMessage'
 
 type Severity = 'expired' | 'urgent' | 'soon'
-type Warning = { key: string; title: string; date: string; severity: Severity; href: string }
+type Warning = { key: string; title: string; date: string; severity: Severity; href: string; owner?: DriverResponse | VehicleResponse; ownerKind?: 'driver' | 'vehicle' }
 
 function severityOf(value: string | null | undefined, today: string): Severity | null {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
@@ -41,34 +41,34 @@ async function expiryWarnings(): Promise<Warning[]> {
   ])
   const today = new Date().toISOString().slice(0, 10)
   const warnings: Warning[] = []
-  const add = (key: string, title: string, date: string | null | undefined, href: string) => {
+  const add = (key: string, title: string, date: string | null | undefined, href: string, ownerKind?: 'driver' | 'vehicle', owner?: DriverResponse | VehicleResponse) => {
     const severity = severityOf(date, today)
-    if (date && severity) warnings.push({ key, title, date, severity, href })
+    if (date && severity) warnings.push({ key, title, date, severity, href, ownerKind, owner })
   }
   add('company-licence', 'companyLicence', profile.licenseExpiryDate, '/partner/settings')
-  const addDocs = (docs: DocumentResponse[], owner: string, href: string) => {
-    for (const doc of docs) add(`${owner}-doc-${doc.id}`, `document.${doc.documentType}`, doc.expiresAt, href)
+  const addDocs = (docs: DocumentResponse[], owner: string, href: string, ownerKind?: 'driver' | 'vehicle', ownerData?: DriverResponse | VehicleResponse) => {
+    for (const doc of docs) add(`${owner}-doc-${doc.id}`, `document.${doc.documentType}`, doc.expiresAt, href, ownerKind, ownerData)
   }
   addDocs(companyDocs, 'company', '/partner/documents')
   for (const driver of drivers) {
-    add(`driver-${driver.id}-licence`, `driver:${driver.firstName} ${driver.lastName}`, driver.licenseExpiryDate, '/partner/drivers')
+    add(`driver-${driver.id}-licence`, `driver:${driver.firstName} ${driver.lastName}`, driver.licenseExpiryDate, '/partner/drivers', 'driver', driver)
   }
   for (const vehicle of vehicles) {
     const href = '/partner/vehicles'
-    add(`vehicle-${vehicle.id}-registration`, `vehicle:${vehicle.plateNumber}:registration`, vehicle.registrationExpiryDate, href)
-    add(`vehicle-${vehicle.id}-insurance`, `vehicle:${vehicle.plateNumber}:insurance`, vehicle.insuranceExpiryDate, href)
-    add(`vehicle-${vehicle.id}-inspection`, `vehicle:${vehicle.plateNumber}:inspection`, vehicle.technicalInspectionExpiryDate, href)
+    add(`vehicle-${vehicle.id}-registration`, `vehicle:${vehicle.plateNumber}:registration`, vehicle.registrationExpiryDate, href, 'vehicle', vehicle)
+    add(`vehicle-${vehicle.id}-insurance`, `vehicle:${vehicle.plateNumber}:insurance`, vehicle.insuranceExpiryDate, href, 'vehicle', vehicle)
+    add(`vehicle-${vehicle.id}-inspection`, `vehicle:${vehicle.plateNumber}:inspection`, vehicle.technicalInspectionExpiryDate, href, 'vehicle', vehicle)
   }
   // Documents have their own expiry dates; metadata fields are not automatically synced.
   // Limit concurrent calls to avoid overwhelming the backend for larger fleets.
-  const owners: { key: string; href: string; load: () => Promise<DocumentResponse[]> }[] = [
-    ...drivers.map((driver: DriverResponse) => ({ key: `driver-${driver.id}`, href: '/partner/drivers', load: () => partnerApi.driverDocuments(driver.id) })),
-    ...vehicles.map((vehicle: VehicleResponse) => ({ key: `vehicle-${vehicle.id}`, href: '/partner/vehicles', load: () => partnerApi.vehicleDocuments(vehicle.id) })),
+  const owners: { key: string; href: string; ownerKind: 'driver' | 'vehicle'; ownerData: DriverResponse | VehicleResponse; load: () => Promise<DocumentResponse[]> }[] = [
+    ...drivers.map((driver: DriverResponse) => ({ key: `driver-${driver.id}`, href: '/partner/drivers', ownerKind: 'driver' as const, ownerData: driver, load: () => partnerApi.driverDocuments(driver.id) })),
+    ...vehicles.map((vehicle: VehicleResponse) => ({ key: `vehicle-${vehicle.id}`, href: '/partner/vehicles', ownerKind: 'vehicle' as const, ownerData: vehicle, load: () => partnerApi.vehicleDocuments(vehicle.id) })),
   ]
   for (let i = 0; i < owners.length; i += 8) {
     const batch = owners.slice(i, i + 8)
     const docs = await Promise.all(batch.map(owner => owner.load()))
-    docs.forEach((items, index) => addDocs(items, batch[index].key, batch[index].href))
+    docs.forEach((items, index) => addDocs(items, batch[index].key, batch[index].href, batch[index].ownerKind, batch[index].ownerData))
   }
   const order: Record<Severity, number> = { expired: 0, urgent: 1, soon: 2 }
   return warnings.sort((a, b) => order[a.severity] - order[b.severity] || a.date.localeCompare(b.date))
@@ -110,7 +110,7 @@ export function DocumentExpiryDashboard() {
                       </p>
                     </div>
                   </div>
-                  <Link to={item.href} className="text-sm font-semibold text-brand-800 underline underline-offset-4">{t('expiryDashboard.review')}</Link>
+                  <Link to={item.href} state={item.ownerKind && item.owner ? { expiryDocumentOwner: { kind: item.ownerKind, owner: item.owner } } : undefined} className="text-sm font-semibold text-brand-800 underline underline-offset-4">{t('expiryDashboard.review')}</Link>
                 </li>
               ))}
             </ul>
