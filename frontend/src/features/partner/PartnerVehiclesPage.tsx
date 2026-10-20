@@ -1,3 +1,4 @@
+import { FleetDocumentsCard } from './FleetDocumentsCard'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -59,6 +60,8 @@ export function PartnerVehiclesPage() {
   const label = useStatusLabel()
   const compact = useIsCompact()
   const queryClient = useQueryClient()
+
+  const [documentsFor, setDocumentsFor] = useState<VehicleResponse | null>(null)
 
   const [page, setPage] = useState(0)
 
@@ -197,6 +200,9 @@ export function PartnerVehiclesPage() {
                       </div>
 
                       <div className="mt-3 flex flex-wrap justify-end gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => setDocumentsFor(vehicle)}>
+                          {t('partner.documentsTitle')}
+                        </Button>
                         <Button size="sm" variant="secondary" onClick={() => setEditingVehicle(vehicle)}>
                           {t('common.edit')}
                         </Button>
@@ -269,6 +275,9 @@ export function PartnerVehiclesPage() {
                           </Td>
                           <Td>
                             <RowActions>
+                              <Button size="sm" variant="secondary" onClick={() => setDocumentsFor(vehicle)}>
+                                {t('partner.documentsTitle')}
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -310,6 +319,10 @@ export function PartnerVehiclesPage() {
 
             <Pagination page={pageData} onPageChange={setPage} />
           </Card>
+          {documentsFor && (
+            <FleetDocumentsCard key={documentsFor.id} owner="vehicle" ownerId={documentsFor.id}
+              name={documentsFor.plateNumber} onClose={() => setDocumentsFor(null)} />
+          )}
         </div>
 
         {editingVehicle ? (
