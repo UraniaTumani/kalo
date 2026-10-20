@@ -42,7 +42,7 @@ class DriverDocumentServiceTest {
         service = new DriverDocumentService(
                 documentRepository, driverRepository, taxiCompanyRepository, localDocumentStorage);
         SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken("+355690000000", null));
+                new UsernamePasswordAuthenticationToken("+355690000000", null, java.util.List.of()));
     }
 
     @AfterEach
