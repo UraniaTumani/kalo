@@ -823,5 +823,17 @@
     "retry": "Retry",
     "duplicate": "A document of this type already exists for this owner.",
     "invalidFile": "Choose a non-empty PDF, JPG or PNG file."
+  },
+  "expiryDashboard": {
+    "title": "Documents needing attention",
+    "clear": "No recorded document expiry dates within the next 30 days.",
+    "count": "{{count}} expiry dates need attention",
+    "companyLicence": "Company taxi licence",
+    "driverLicence": "Driver licence: {{name}}",
+    "vehicleField": "Vehicle: {{label}}",
+    "expired": "Expired",
+    "urgent": "Expires within 7 days",
+    "soon": "Expires within 30 days",
+    "review": "Review documents"
   }
 }
