@@ -253,6 +253,26 @@ export const partnerApi = {
       { hours },
     ),
 
+  /* F12: driver and vehicle document files (private partner endpoints) */
+
+  driverDocuments: (driverId: number) =>
+    api.get<DocumentResponse[]>(`/api/v1/partner/drivers/${driverId}/documents`),
+
+  uploadDriverDocument: (driverId: number, body: FormData) =>
+    api.upload<DocumentResponse>(`/api/v1/partner/drivers/${driverId}/documents/upload`, body),
+
+  downloadDriverDocument: (driverId: number, documentId: number) =>
+    api.download(`/api/v1/partner/drivers/${driverId}/documents/${documentId}/file`),
+
+  vehicleDocuments: (vehicleId: number) =>
+    api.get<DocumentResponse[]>(`/api/v1/partner/vehicles/${vehicleId}/documents`),
+
+  uploadVehicleDocument: (vehicleId: number, body: FormData) =>
+    api.upload<DocumentResponse>(`/api/v1/partner/vehicles/${vehicleId}/documents/upload`, body),
+
+  downloadVehicleDocument: (vehicleId: number, documentId: number) =>
+    api.download(`/api/v1/partner/vehicles/${vehicleId}/documents/${documentId}/file`),
+
   /* fleet */
 
   /**
