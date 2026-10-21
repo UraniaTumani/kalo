@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 025-company-notification-deduplication
+      author: kalo
+      comment: >
+        Optional per-event idempotency key for future scheduled document-expiry
+        notifications. Existing ride notifications remain untouched, and their
+        null keys remain allowed. Unique keys make retries and concurrent
+        instances safe without deleting or rewriting existing records.
+      changes:
+        - addColumn:
+            tableName: company_notifications
+            columns:
+              - column:
+                  name: notification_key
+                  type: VARCHAR(180)
+                  constraints:
+                    nullable: true
+        - createIndex:
+            tableName: company_notifications
+            indexName: uq_company_notifications_key
+            unique: true
+            columns:
+              - column:
+                  name: notification_key
