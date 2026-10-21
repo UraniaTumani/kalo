@@ -237,7 +237,9 @@
     "rating": "Udhëtim i vlerësuar",
     "booking": "Kërkesë e re për taksi",
     "bookingMessage": "Një pasagjer zgjodhi kompaninë tuaj. Kontrolloni udhëtimet për statusin aktual; kërkesa mund të ketë skaduar ose të jetë anuluar.",
-    "viewRides": "Shiko udhëtimet"
+    "viewRides": "Shiko udhëtimet",
+    "documentExpiry": "Skadimi i dokumentit",
+    "viewExpiryDashboard": "Shiko dokumentet në Dashboard"
   },
   "ridePopup": {
     "viewRide": "Shiko udhëtimin",

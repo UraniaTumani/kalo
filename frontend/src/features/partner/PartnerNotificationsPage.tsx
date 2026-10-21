@@ -77,7 +77,9 @@ export function PartnerNotificationsPage() {
                       <p className="text-sm font-semibold text-ink-900">
                         {notification.type === 'RIDE_REQUESTED'
                           ? t('notifications.booking')
-                          : t('notifications.rating')}
+                          : notification.type === 'DOCUMENT_EXPIRY'
+                            ? t('notifications.documentExpiry')
+                            : t('notifications.rating')}
                         {notification.rideId !== null && (
                           <span className="font-normal text-ink-500">
                             {' · '}{t('notifications.ride', { id: notification.rideId })}
@@ -100,6 +102,9 @@ export function PartnerNotificationsPage() {
                         ? t('notifications.bookingMessage')
                         : notification.message}
                     </p>
+                    {notification.type === 'DOCUMENT_EXPIRY' && (
+                      <Link to="/partner" className="inline-flex rounded-lg text-sm font-semibold text-ink-900 underline decoration-brand-500 underline-offset-4">{t('notifications.viewExpiryDashboard')}</Link>
+                    )}
                     {notification.type === 'RIDE_REQUESTED' && (
                       <Link
                         to="/partner/rides"

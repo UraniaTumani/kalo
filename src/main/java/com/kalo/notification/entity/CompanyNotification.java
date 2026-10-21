@@ -59,6 +59,10 @@ public class CompanyNotification extends BaseEntity {
     @Column(nullable = false, length = 500)
     private String message;
 
+    /** Optional unique event key for scheduled, idempotent alerts. */
+    @Column(name = "notification_key", length = 180, unique = true)
+    private String notificationKey;
+
     /** Null until the company has seen it. */
     @Column(name = "read_at")
     private Instant readAt;

@@ -458,7 +458,7 @@ export interface AdminSupportRequestResponse extends SupportRequestResponse {
 /* ------------------------------------------------------ partner notifications */
 export interface CompanyNotificationResponse {
   id: number
-  type: 'RIDE_RATED' | 'RIDE_REQUESTED'
+  type: 'RIDE_RATED' | 'RIDE_REQUESTED' | 'DOCUMENT_EXPIRY'
   rideId: number | null
   message: string
   read: boolean
