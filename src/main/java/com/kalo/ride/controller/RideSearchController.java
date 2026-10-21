@@ -1,6 +1,7 @@
 package com.kalo.ride.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.kalo.location.dto.DriverLocationResponse;
 import com.kalo.ride.dto.CreateRideRequest;
 import com.kalo.ride.dto.RideSearchResponse;
 import com.kalo.ride.service.RideSearchService;
@@ -75,6 +76,13 @@ public class RideSearchController {
         return ResponseEntity.ok(
                 rideService.getCurrentRide()
         );
+    }
+
+    @GetMapping("/{rideId}/driver-location")
+    public ResponseEntity<DriverLocationResponse> getDriverLocation(
+            @PathVariable Long rideId
+    ) {
+        return ResponseEntity.ok(rideService.getDriverLocation(rideId));
     }
 
     @GetMapping("/history")
