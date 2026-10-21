@@ -56,3 +56,5 @@ databaseChangeLog:
       file: db/changelog/changes/023-create-password-reset-requests.yaml
   - include:
       file: db/changelog/changes/024-password-reset-otp.yaml
+  - include:
+      file: db/changelog/changes/025-company-notification-deduplication.yaml
