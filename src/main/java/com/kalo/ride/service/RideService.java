@@ -1,5 +1,6 @@
 package com.kalo.ride.service;
 
+import com.kalo.location.dto.DriverLocationResponse;
 import com.kalo.ride.dto.AcceptRideRequest;
 import com.kalo.ride.dto.CompleteRideRequest;
 import com.kalo.ride.dto.PartnerRideResponse;
@@ -59,6 +60,8 @@ public interface RideService {
     );
 
     RideResponse getCurrentRide();
+
+    DriverLocationResponse getDriverLocation(Long rideId);
 
     Page<RideResponse> getRideHistory(
             Pageable pageable
