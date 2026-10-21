@@ -237,7 +237,9 @@
     "rating": "Ride rated",
     "booking": "New booking request",
     "bookingMessage": "A passenger selected your taxi company. Check the Rides queue for the current status; the request may have expired or been cancelled.",
-    "viewRides": "View rides"
+    "viewRides": "View rides",
+    "documentExpiry": "Document expiry",
+    "viewExpiryDashboard": "Review documents on dashboard"
   },
   "ridePopup": {
     "viewRide": "View ride",
