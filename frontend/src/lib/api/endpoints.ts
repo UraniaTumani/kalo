@@ -149,6 +149,9 @@ export const rideApi = {
 
   current: () => api.get<RideResponse>('/api/v1/rides/current'),
 
+  driverLocation: (rideId: number) =>
+    api.get<DriverLocationResponse>(`/api/v1/rides/${rideId}/driver-location`),
+
   byId: (rideId: number) => api.get<RideResponse>(`/api/v1/rides/${rideId}`),
 
   history: (params?: PageParams) => api.get<Page<RideResponse>>('/api/v1/rides/history', params),
