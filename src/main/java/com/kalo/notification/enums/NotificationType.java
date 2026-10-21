@@ -6,5 +6,6 @@ package com.kalo.notification.enums;
  */
 public enum NotificationType {
     RIDE_RATED,
-    RIDE_REQUESTED
+    RIDE_REQUESTED,
+    DOCUMENT_EXPIRY
 }
