@@ -66,6 +66,40 @@ class DocumentExpiryNotificationSweepIntegrationTest extends AbstractIntegration
         assertThat(keys(other.getId())).isEmpty();
     }
 
+
+    @Test
+    void unchangedExpiryProgressesThroughThirtySevenAndExpiredStagesOnceEach() {
+        var company = fixtures.bookableCompany().company();
+        long companyId = company.getId();
+        LocalDate due = LocalDate.of(2026, 12, 15);
+        setCompanyExpiry(companyId, due);
+
+        service.createDueNotifications(due.minusDays(31));
+        assertThat(keys(companyId)).isEmpty();
+
+        service.createDueNotifications(due.minusDays(30));
+        service.createDueNotifications(due.minusDays(30));
+        assertThat(keys(companyId)).containsExactly(
+                "company-license:" + companyId + ":" + due + ":D30"
+        );
+
+        service.createDueNotifications(due.minusDays(7));
+        service.createDueNotifications(due.minusDays(1));
+        service.createDueNotifications(due);
+        assertThat(keys(companyId)).hasSize(2)
+                .contains(
+                        "company-license:" + companyId + ":" + due + ":D30",
+                        "company-license:" + companyId + ":" + due + ":D7"
+                );
+
+        service.createDueNotifications(due.plusDays(1));
+        service.createDueNotifications(due.plusDays(60));
+        assertThat(keys(companyId)).hasSize(3)
+                .contains(
+                        "company-license:" + companyId + ":" + due + ":EXPIRED"
+                );
+    }
+
     private void setCompanyExpiry(Long companyId, LocalDate date) {
         jdbcTemplate.update(
                 "UPDATE taxi_companies SET license_expiry_date = ? WHERE id = ?",
