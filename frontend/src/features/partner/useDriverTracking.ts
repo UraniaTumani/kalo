@@ -4,6 +4,9 @@ import { watchPosition, type Position } from '@/lib/geolocation'
 
 /** Taxi search ignores positions older than two minutes, so stay well inside it. */
 const UPLOAD_INTERVAL_MS = 25_000
+// Never re-label an old browser fix as fresh by uploading it again.
+const MAX_FIX_AGE_MS = 30_000
+const MAX_FUTURE_SKEW_MS = 5_000
 
 interface TrackingState {
   lastSentAt: number | null
@@ -56,6 +59,16 @@ export function useDriverTracking() {
     async function upload() {
       const position = latestPosition.current
       if (!position) return
+
+      const age = Date.now() - position.timestamp
+      if (!Number.isFinite(position.timestamp) ||
+          age > MAX_FIX_AGE_MS || age < -MAX_FUTURE_SKEW_MS) {
+        setState((previous) => ({
+          ...previous,
+          error: 'GPS position is outdated. Waiting for a new device location.',
+        }))
+        return
+      }
 
       const results = await Promise.allSettled(
         trackedRef.current.map((driverId) =>
