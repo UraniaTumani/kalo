@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
@@ -32,6 +33,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * No database or Testcontainers are started.
  */
 @WebMvcTest(RideSearchController.class)
+// Do not load KaloBackendApplication: @EnableJpaAuditing needs a JPA metamodel.
+// This MVC slice intentionally has no persistence configuration or database.
+@ContextConfiguration(classes = {
+        RideSearchController.class,
+        SecurityConfig.class,
+        JwtAuthenticationFilter.class,
+        JwtAuthenticationEntryPoint.class,
+        RestAccessDeniedHandler.class,
+        ErrorResponseWriter.class
+})
 @Import({
         SecurityConfig.class,
         JwtAuthenticationFilter.class,
