@@ -10,6 +10,9 @@ import com.kalo.driver.entity.Driver;
 import com.kalo.driver.enums.DriverAvailabilityStatus;
 import com.kalo.driver.enums.DriverStatus;
 import com.kalo.driver.repository.DriverRepository;
+import com.kalo.location.dto.DriverLocationResponse;
+import com.kalo.location.entity.DriverLocation;
+import com.kalo.location.repository.DriverLocationRepository;
 import com.kalo.partner.entity.TaxiCompany;
 import com.kalo.notification.service.CompanyNotificationService;
 import com.kalo.partner.enums.CompanyStatus;
@@ -54,6 +57,7 @@ public class RideServiceImpl implements RideService {
     private final RideRequestRepository rideRequestRepository;
     private final RideOfferRepository rideOfferRepository;
     private final RideRepository rideRepository;
+    private final DriverLocationRepository driverLocationRepository;
     private final UserRepository userRepository;
     private final TaxiCompanyRepository taxiCompanyRepository;
     private final DriverRepository driverRepository;
@@ -747,6 +751,42 @@ public class RideServiceImpl implements RideService {
      * CUSTOMER CURRENT RIDE
      * =========================================================
      */
+
+    /** Customer-scoped, active-ride-only GPS lookup. Never expose stale fixes. */
+    @Override
+    @Transactional(readOnly = true)
+    public DriverLocationResponse getDriverLocation(Long rideId) {
+        User customer = getCurrentCustomer();
+
+        Ride ride = rideRepository
+                .findByIdAndCustomerId(rideId, customer.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Ride not found"));
+
+        if (!RideStatus.ACTIVE_STATUSES.contains(ride.getStatus())
+                || ride.getDriver() == null) {
+            throw new ResourceNotFoundException("Driver location not available");
+        }
+
+        Long driverId = ride.getDriver().getId();
+        Long companyId = ride.getCompany().getId();
+        DriverLocation location = driverLocationRepository
+                .findByDriverIdAndDriverCompanyId(driverId, companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver location not available"));
+
+        Instant updatedAt = location.getLocationUpdatedAt();
+        Instant now = Instant.now();
+        if (updatedAt == null || updatedAt.isBefore(now.minusSeconds(120))
+                || updatedAt.isAfter(now.plusSeconds(30))) {
+            throw new ResourceNotFoundException("Driver location not available");
+        }
+
+        return new DriverLocationResponse(
+                driverId,
+                location.getLatitude(),
+                location.getLongitude(),
+                updatedAt
+        );
+    }
 
     @Override
     @Transactional(readOnly = true)

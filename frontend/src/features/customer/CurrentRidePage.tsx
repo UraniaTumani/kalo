@@ -12,6 +12,7 @@ import { RideStatusBadge } from '@/components/StatusBadge'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Spinner } from '@/components/ui/Spinner'
+import { MapView } from '@/components/MapPicker'
 import { Alert, Button, Card, CardBody, CardHeader, EmptyState } from '@/components/ui'
 import { cn, formatCurrency, formatTime } from '@/lib/utils'
 import { recallRide, rememberRide } from './rideMemory'
@@ -76,6 +77,25 @@ export function CurrentRidePage() {
   useEffect(() => {
     if (currentQuery.data) rememberRide(currentQuery.data.rideId)
   }, [currentQuery.data])
+
+  // Never use retained GPS data after a 404/error or when the ride ends.
+  const trackingRideId = ride && !noActiveRide && isActiveRide(ride.status) && ride.driverId !== null
+    ? ride.rideId
+    : null
+  const driverGpsQuery = useQuery({
+    queryKey: ['ride', 'driver-location', trackingRideId],
+    queryFn: () => rideApi.driverLocation(trackingRideId!),
+    enabled: trackingRideId !== null,
+    refetchInterval: 5000,
+    retry: (failureCount, error) =>
+      error instanceof ApiError && error.status === 404 ? false : failureCount < 2,
+  })
+  const gps = driverGpsQuery.isSuccess ? driverGpsQuery.data : null
+  const gpsAge = gps ? Date.now() - new Date(gps.locationUpdatedAt).getTime() : Infinity
+  const freshGps = trackingRideId !== null && gps &&
+    Number.isFinite(gps.latitude) && Number.isFinite(gps.longitude) &&
+    gps.latitude >= -90 && gps.latitude <= 90 && gps.longitude >= -180 && gps.longitude <= 180 &&
+    gpsAge >= -30000 && gpsAge <= 120000 ? gps : null
 
   const [confirmingCancel, setConfirmingCancel] = useState(false)
 
@@ -265,6 +285,26 @@ export function CurrentRidePage() {
         </Card>
 
         <div className="space-y-4">
+          {trackingRideId !== null && (
+            <Card>
+              <CardHeader title="Driver location" />
+              <CardBody>
+                {freshGps ? (
+                  <MapView
+                    markers={[{
+                      position: { lat: freshGps.latitude, lng: freshGps.longitude },
+                      tone: 'driver',
+                      label: 'Your driver',
+                    }]}
+                    center={{ lat: freshGps.latitude, lng: freshGps.longitude }}
+                    className="h-64 w-full rounded-lg"
+                  />
+                ) : (
+                  <p className="text-sm text-ink-500">Live driver location is currently unavailable.</p>
+                )}
+              </CardBody>
+            </Card>
+          )}
           <Card>
             <CardHeader title={t('ride.trip')} />
             <CardBody className="space-y-2 text-sm">
