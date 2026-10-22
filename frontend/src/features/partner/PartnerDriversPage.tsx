@@ -285,6 +285,15 @@ export function PartnerDriversPage() {
                             : t('partner.goOnline')}
                         </Button>
                       )}
+                      {import.meta.env.DEV && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setLocationFor(driver)}
+                        >
+                          {t('partner.devPositionTool')}
+                        </Button>
+                      )}
                       {driver.status === 'ACTIVE' && (
                         /* Spelled out here: no hover on a phone to reveal a title. */
                         <Button
