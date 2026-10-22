@@ -307,6 +307,15 @@ export function PartnerDriversPage() {
                         </Button>
                       )}
                     </div>
+                    {locationFor?.id === driver.id && (
+                      <div className="mt-3 min-w-0">
+                        <DriverLocationCard
+                          key={driver.id}
+                          driver={driver}
+                          onClose={() => setLocationFor(null)}
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -410,7 +419,7 @@ export function PartnerDriversPage() {
               name={`${documentsFor.firstName} ${documentsFor.lastName}`} onClose={() => setDocumentsFor(null)} />
           )}
 
-          {locationFor && (
+          {locationFor && !compact && (
             <DriverLocationCard driver={locationFor} onClose={() => setLocationFor(null)} />
           )}
         </div>
