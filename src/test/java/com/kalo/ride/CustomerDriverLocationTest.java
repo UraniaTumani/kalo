@@ -137,4 +137,41 @@ class CustomerDriverLocationTest {
         assertThatThrownBy(() -> service.getDriverLocation(21L))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
+    @Test
+    void cancelledRideCannotExposeGps() {
+        Ride ride = activeRide();
+        ride.setStatus(RideStatus.CANCELLED);
+        when(rideRepository.findByIdAndCustomerId(21L, 4L)).thenReturn(Optional.of(ride));
+
+        assertThatThrownBy(() -> service.getDriverLocation(21L))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verifyNoInteractions(driverLocationRepository);
+    }
+
+    @Test
+    void futureDatedPositionCannotExposeGps() {
+        when(rideRepository.findByIdAndCustomerId(21L, 4L))
+                .thenReturn(Optional.of(activeRide()));
+        DriverLocation location = new DriverLocation();
+        location.setLocationUpdatedAt(Instant.now().plusSeconds(90));
+        when(driverLocationRepository.findByDriverIdAndDriverCompanyId(17L, 8L))
+                .thenReturn(Optional.of(location));
+
+        assertThatThrownBy(() -> service.getDriverLocation(21L))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void wrongCompanyDriverLocationCannotExposeGps() {
+        when(rideRepository.findByIdAndCustomerId(21L, 4L))
+                .thenReturn(Optional.of(activeRide()));
+        when(driverLocationRepository.findByDriverIdAndDriverCompanyId(17L, 8L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getDriverLocation(21L))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verify(driverLocationRepository).findByDriverIdAndDriverCompanyId(17L, 8L);
+        verify(driverLocationRepository, never()).findByDriverId(anyLong());
+    }
+
 }
