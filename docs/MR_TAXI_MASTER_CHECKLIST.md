@@ -30,6 +30,12 @@ Një item shënohet `[x]` **vetëm kur**: (1) kërkesa dhe edge cases janë të 
 - **Parim:** Company, Driver dhe Vehicle kanë eligibility të ndara; statusi ONLINE nuk provon GPS aktiv/fresh.
 - **Nuk premtojmë** ETA rrugore nga Haversine, vendndodhje GPS të pandërprerë nga OS ose pagesa të arkëtuara pa integrim real.
 
+## Prioriteti i publikimit live (vendosur 2026-10-23)
+
+**Synimi:** aplikacion real për klientë/kompani/ shoferë, jo vetëm demo. **Go-live nuk është miratuar ende**; kalimi i testeve lokalisht nuk barazohet me gatishmëri production. Përpara pilotit me klientë realë duhen përmbushur së paku: security/tenant isolation dhe Driver Identity e testuar, private durable document storage, secrets prod + TLS + rate limits, backup/restore dhe migrime rollback të testuara, monitoring/alerts, privacy/terms dhe kontrolle ligjore lokale, teste fizike iOS/Android për location/permissions dhe një pilot i kufizuar. Shih MRT-09 dhe MRT-12; asnjë task nuk shënohet `[x]` pa evidencë.
+
+**Driver membership:** maksimumi një kompani aktive në një moment, transferim historik i ardhshëm pa rishkruar ownership e rides; dokumentuar te `docs/MR_TAXI_DRIVER_IDENTITY_DESIGN.md` dhe ADR-003.
+
 ## A. Baseline e verifikuar — evidencë historike, jo certifikim production
 
 - [x] **V-01** Repository monorepo ekziston me Spring Boot modular monolith dhe frontend React.  
