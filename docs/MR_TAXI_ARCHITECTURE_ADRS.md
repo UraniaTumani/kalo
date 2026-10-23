@@ -1,6 +1,6 @@
 # MR TAXI — Architecture Decision Records (ADR)
 
-**Status i dokumentit:** PROPOSED / për review, jo vendime të miratuara  
+**Status i dokumentit:** i përzier — ADR-001 i pranuar në nivel drejtimi, ADR-002 me drejtim produkti të pranuar dhe framework në provë; ADR-003..006 mbeten PROPOSED  
 **Data:** 2026-10-23  
 **Branch bazë:** `feature/f42-real-gps-freshness`  
 **Lidhje:** `docs/MR_TAXI_PRD.md` (draft), `docs/MR_TAXI_MASTER_CHECKLIST.md` (MRT-00-07), `docs/MR_TAXI_TECHNICAL_INVENTORY.md`.  
@@ -10,7 +10,7 @@
 
 ## ADR-001 — Mbajmë Spring Boot modular monolith si backend-in e vetëm
 
-**Status:** PROPOSED  
+**Status:** ACCEPTED — drejtimi arkitekturor i miratuar në bisedë, 2026-10-23; implementimet konkrete vazhdojnë të kërkojnë review/testim  
 **Referenca:** PRD BR-01, BR-02; MRT-00-07, MRT-07-01
 
 ### Konteksti
@@ -41,7 +41,7 @@ Kodi ekzistues ka modulet `auth`, `user`, `partner`, `driver`, `vehicle`, `assig
 
 ## ADR-002 — Dy aplikacione native mobile, React Native si kandidat për feasibility
 
-**Status:** PROPOSED, **framework jo i miratuar përfundimisht**  
+**Status:** ACCEPTED për ndarjen Customer App / Driver App; React Native mbetet **PROPOSED, i kushtëzuar nga PoC iOS/Android**, jo i miratuar teknikisht si implementim final (dakordësim drejtimi, 2026-10-23)  
 **Referenca:** PRD DEC-07, CUS/DRV; MRT-05-01, MRT-06-01, MRT-12-04
 
 ### Konteksti
@@ -206,4 +206,4 @@ Komision 1 herë për ride eligible, zero për ineligible, retry idempotent, cha
 - Pastaj planifikojmë migrimet/DTO/API të Driver Identity, PoC native location, matrix të ride transitions dhe finance data model.
 - Për secilin ndryshim: acceptance tests, impact analysis, backward compatibility, rollbacks, QA/security review. Mos ndryshoni `main` automatikisht.
 
-**MRT-00-07 qëndron `[ ]` deri te miratimi formal i ADR-ve.**
+**MRT-00-07 qëndron `[ ]`: ADR-001 është pranuar si drejtim; ADR-002 ka miratim të ndarjes së produkteve, por React Native pret PoC; ADR-003..006 dhe vendimet DEC-01..08 mbeten për review.**
