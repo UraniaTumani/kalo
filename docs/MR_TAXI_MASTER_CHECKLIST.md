@@ -124,6 +124,7 @@ Një item shënohet `[x]` **vetëm kur**: (1) kërkesa dhe edge cases janë të 
   **Pranimi:** Regression dhe autorizimi partner testohen.
 - [ ] **MRT-03-02 · P0** — Ndërtojmë login individual të shoferit, lidhur me `Driver` ekzistues.  
   **Pranimi:** Driver futet pa përdorur llogarinë e kompanisë.
+  **Projektim i përgatitur (2026-10-23):** `docs/MR_TAXI_DRIVER_IDENTITY_DESIGN.md` (commit `875e2e3`) përshkruan lidhjen opsionale User–Driver, Liquibase 026 si propozim, invitation flow, endpoints additive, autorizim objekt-level dhe testet. **Mbetet `[ ]`: nuk ka kod/migrim të implementuar; ADR-003 kërkon review dhe vendim për shoferin që ndryshon/shërben te më shumë se një kompani.**
 - [ ] **MRT-03-03 · P0** — Autorizojmë update GPS dhe statuse vetëm për shoferin/udhëtimin e tij.  
   **Pranimi:** Teste negative për id të huaj dhe kompani tjetër.
 - [ ] **MRT-03-04 · P0** — Dokumente shoferi: patentë + certifikatë profesionale, me status verifikimi.  
