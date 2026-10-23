@@ -132,6 +132,27 @@ export function PartnerDriversPage() {
     },
   })
 
+  // A refresh clears this device's tracking state without changing ONLINE in the backend.
+  // Require a deliberate tap to start sharing this device's location again.
+  const resumeGpsMutation = useMutation({
+    mutationFn: async (driverId: number) => {
+      const position = await getCurrentPosition()
+
+      await partnerApi.updateDriverLocation(driverId, {
+        latitude: position.lat,
+        longitude: position.lng,
+      })
+
+      tracking.startTracking(driverId)
+    },
+    onMutate: () => setLocationError(null),
+    onError: (error) => {
+      if (error instanceof GeolocationError) {
+        setLocationError(error.message)
+      }
+    },
+  })
+
   /*
    * A driver taken offline elsewhere (a completed ride, another device) must
    * not keep this device uploading positions for them.
@@ -285,6 +306,18 @@ export function PartnerDriversPage() {
                             : t('partner.goOnline')}
                         </Button>
                       )}
+                      {driver.status === 'ACTIVE' &&
+                        driver.availabilityStatus === 'ONLINE' &&
+                        !tracking.trackedDriverIds.includes(driver.id) && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={resumeGpsMutation.isPending}
+                            onClick={() => resumeGpsMutation.mutate(driver.id)}
+                          >
+                            {t('partner.resumeGps', { defaultValue: 'Rifillo GPS' })}
+                          </Button>
+                        )}
                       {import.meta.env.DEV && (
                         <Button
                           size="sm"
@@ -377,6 +410,18 @@ export function PartnerDriversPage() {
                               {driver.availabilityStatus === 'ONLINE' ? t('partner.goOffline') : t('partner.goOnline')}
                             </Button>
                           )}
+                          {driver.status === 'ACTIVE' &&
+                            driver.availabilityStatus === 'ONLINE' &&
+                            !tracking.trackedDriverIds.includes(driver.id) && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                disabled={resumeGpsMutation.isPending}
+                                onClick={() => resumeGpsMutation.mutate(driver.id)}
+                              >
+                                {t('partner.resumeGps', { defaultValue: 'Rifillo GPS' })}
+                              </Button>
+                            )}
                           {/*
                             Manual positioning is a debug aid only: production
                             positions come from the device GPS when a driver
