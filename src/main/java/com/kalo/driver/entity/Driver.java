@@ -4,6 +4,7 @@ import com.kalo.common.entity.BaseEntity;
 import com.kalo.driver.enums.DriverAvailabilityStatus;
 import com.kalo.driver.enums.DriverStatus;
 import com.kalo.partner.entity.TaxiCompany;
+import com.kalo.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -47,6 +48,18 @@ public class Driver extends BaseEntity {
             )
     )
     private TaxiCompany company;
+
+    /**
+     * Optional authentication identity. Legacy drivers do not yet have login
+     * accounts; no automatic linking by phone number is permitted.
+     */
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "user_id",
+            unique = true,
+            foreignKey = @ForeignKey(name = "fk_drivers_user")
+    )
+    private User user;
 
     @Column(
             name = "first_name",
