@@ -316,3 +316,36 @@ Kjo është evidencë e **kontrollit partner/tenant në këtë shërbim**, jo pr
 4. **Njoftimet partner nuk janë push notifications native të shoferit**; kërkohet model pajisjeje/token-i sipas sistemit operativ.
 5. **MRT-00-04 nuk mbyllet ende:** mbeten kontratat e plota DTO, auth objekt-level dhe kontrolli i migrimeve/testeve.
 
+
+
+## 14. Auditimi i autorizimit të objekteve dhe i testeve të sigurisë — faza 5 (2026-10-23)
+
+**Burimi:** `RideServiceImpl.java`, `RideSearchServiceImpl.java`, `DriverLocationServiceImpl.java`, `DriverDocumentService.java`, `VehicleDocumentService.java`, `DocumentAccessIntegrationTest.java`, `DriverLocationIntegrationTest.java` dhe `CustomerDriverLocationSecurityTest.java`. Kontroll statik, pa ekzekutim të testeve në këtë fazë.
+
+### 14.1 Konfirmime nga kodi dhe testet
+
+| Kufiri i aksesit | Evidencë konkrete | Çfarë provohet / çfarë nuk provohet |
+|---|---|---|
+| Customer → Ride | `RideServiceImpl` përdor `getCurrentCustomer()`, `findByIdAndCustomerId`, `findForUpdateByIdAndCustomerId` | Ka kufizim pronësie në metoda specifike; kërkohet mbulim për çdo metodë |
+| Partner → Ride | `RideServiceImpl` përdor `getCurrentPartnerCompany()` dhe `findForUpdateByIdAndCompanyId` | Ka kufizim për kompani në metoda operative; edge cases nuk quhen të testuara pa suite |
+| Partner → GPS | `DriverLocationServiceImpl` kërkon shoferin sipas `id + companyId` | Kompania nuk duhet të shkruajë GPS për shoferin e një kompanie tjetër |
+| Partner → Driver document | `DriverDocumentService.requireOwnedDriver()` dhe lookup sipas `id + ownerType + ownerId` | Ka kontroll të pronësisë për dokumentet e shoferit |
+| Partner → Vehicle document | `VehicleDocumentService.requireOwnedVehicle()` dhe lookup sipas `id + ownerType + ownerId` | Ka kontroll të pronësisë për dokumentet e automjetit |
+| Partner → Company document | `DocumentAccessIntegrationTest.uploadsOnlyForOwningCompany` | Test ekzistues pret që partneri tjetër të marrë 404 dhe akses admin të respektojë rolet |
+| Customer/partner/admin → Customer GPS | `CustomerDriverLocationSecurityTest` | Teste ekzistuese presin 401 për anonim, 403 për partner/admin; customer arrin te shërbimi me kontroll pronësie |
+| Partner → GPS other company | `DriverLocationIntegrationTest.locationIsScopedToTheCompany` | Test ekzistues për përpjekje cross-tenant |
+| Customer → Partner GPS | `DriverLocationIntegrationTest.customersAreRefused` | Test ekzistues pret 403 |
+| GPS input invalid | `DriverLocationIntegrationTest.impossibleCoordinatesAreRefused` | Test ekzistues pret 400 |
+| Status GPS != availability | `DriverLocationIntegrationTest.positionDoesNotImplyAvailability` | Testi kontrollon që dërgimi i pozicionit nuk aktivizon automatikisht shoferin |
+
+**Kufizim metodologjik:** ekzistenca e testit dhe assertion-it nuk tregon që kalon në commit-in aktual. `MRT-00-05` kërkon ekzekutim të plotë të test-suite.
+
+### 14.2 Rreziqet dhe puna e nevojshme
+
+1. **Driver App — autorizim individual**: sot API-të `partner/**` përdorin rolin `PARTNER`; shoferi duhet të identifikohet nga JWT e vet dhe `Driver` i lidhur, jo nga `driverId` arbitrar në path. Kërkesa `MRT-03-02`/`MRT-03-03`.
+2. **Dokumentet polimorfike**: `ownerType+ownerId` është kontrolle në nivel shërbimi; çdo endpoint i ri për dokumente duhet të ruajë `requireOwnedDriver/Vehicle` dhe testin cross-tenant.
+3. **Kontratat mobile**: duhet kontrolluar detajisht që `RideResponse` nuk nxjerr PII të klientëve apo të dhëna GPS jashtë udhëtimeve aktive.
+4. **Support dhe Geocoding**: rrugët nën `authenticated()` në konfigurim kërkojnë kontroll eksplicit të objektit/rolit në logjikën e shërbimeve.
+5. **Testet**: duhet të ekzekutohen `DocumentAccessIntegrationTest`, `DriverLocationIntegrationTest`, `CustomerDriverLocationSecurityTest`, `RideLifecycleIntegrationTest`, dhe suite e plotë përpara se të shënohet auditimi i sigurisë i mbyllur.
+
+**Statusi i detyrës:** `MRT-00-04` mbetet `[ ]`; kjo fazë pasuron inventarin me evidencën e kontrolleve dhe testet që ekzistojnë. Asnjë kod funksional nuk u ndryshua.
