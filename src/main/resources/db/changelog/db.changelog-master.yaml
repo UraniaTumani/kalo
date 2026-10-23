@@ -58,3 +58,6 @@ databaseChangeLog:
       file: db/changelog/changes/024-password-reset-otp.yaml
   - include:
       file: db/changelog/changes/025-company-notification-deduplication.yaml
+
+  - include:
+      file: db/changelog/changes/026-link-drivers-to-users.yaml
