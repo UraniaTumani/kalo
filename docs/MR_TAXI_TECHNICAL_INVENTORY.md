@@ -139,3 +139,85 @@ Controller-at janë numëruar sipas skedarëve. Rrugët e API-ve duhet të verif
 - [ ] Miratimi i pronarit për dokumentin final.
 
 **Status:** `MRT-00-04` mbetet `[ ]`. Ky dokument është provë për punën e nisur, jo deklarim përfundimi.
+
+
+## 11. Auditimi i API-ve dhe kontrolli i roleve — faza 2 (2026-10-23)
+
+**Burimi:** skedarët Java realë në branch-in `feature/f42-real-gps-freshness`. Konstatimet janë statike, **jo** test ekzekutimi i endpoint-eve.
+
+### 11.1 Matrica aktuale e aksesit HTTP nga `SecurityConfig.java`
+
+| Prefix | Kontrolli HTTP | Kuptimi praktik |
+|---|---|---|
+| `/api/v1/auth/**` | `permitAll` | Login, regjistrim, refresh etj.; kontrollet e brendshme të shërbimit duhen shqyrtuar veç |
+| `/api/v1/public/**` | `permitAll` | Endpoint-e publike, dokumentohen si read-only |
+| `/api/v1/partner/**` | `hasRole("PARTNER")` | Partneri menaxhon flotën dhe gjendjen e udhëtimeve |
+| `/api/v1/admin/**` | `hasRole("ADMIN")` | Administrimi |
+| `/api/v1/rides/**` | `hasRole("CUSTOMER")` | Rezervimet, historiku dhe vendndodhja e shoferit për klientin |
+| `/actuator/**` | `hasRole("ADMIN")`, përjashto `/health` | Health publik, metrikat të kufizuara |
+| Rrugët e tjera | `authenticated()` | Kërkojnë autentikim, por duhen audituar në nivel shërbimi/objekti |
+
+**Gjetje e verifikuar:** në `SecurityConfig.java` **nuk ka ende** `/api/v1/driver/**` dhe `hasRole("DRIVER")`. Driver App duhet të marrë API dhe identitetin e vet; **nuk duhet** të përdorë JWT të kompanisë. Kjo mbështet `MRT-03-02` dhe `MRT-03-03`.
+
+**Kujdes:** kontrolli i prefix-it nuk provon vetvetiu autorizimin e nivelit të objektit. Duhet të verifikohet që përdoruesi lexon/ndryshon vetëm ride, kompani, shoferë dhe dokumente për të cilat ka të drejtë.
+
+### 11.2 Endpoint-e kryesore të konfirmuara
+
+| HTTP | Endpoint | Roli aktual sipas SecurityConfig | DTO / rezultat |
+|---|---|---|---|
+| POST | `/api/v1/auth/login` | Publik | Login DTO / token |
+| POST | `/api/v1/auth/register/customer` | Publik | Regjistrim klienti |
+| POST | `/api/v1/auth/register/partner` | Publik | Regjistrim kompanie |
+| POST | `/api/v1/auth/refresh` | Publik në nivel HTTP | Refresh i token-it; logjika e shërbimit duhet kontrolluar |
+| POST | `/api/v1/rides/search` | CUSTOMER | `CreateRideRequest` → `RideSearchResponse` |
+| POST | `/api/v1/rides/requests/{rideRequestId}/select` | CUSTOMER | `SelectTaxiOfferRequest` → `RideResponse` |
+| GET | `/api/v1/rides/current` | CUSTOMER | `RideResponse` |
+| GET | `/api/v1/rides/{rideId}/driver-location` | CUSTOMER | `DriverLocationResponse` |
+| GET | `/api/v1/rides/history` | CUSTOMER | `Page<RideResponse>` |
+| GET | `/api/v1/rides/{rideId}` | CUSTOMER | `RideResponse` |
+| POST | `/api/v1/rides/{rideId}/cancel` | CUSTOMER | `RideResponse` |
+| GET | `/api/v1/partner/rides` | PARTNER | `Page<PartnerRideResponse>`, filter `status` / `active` |
+| POST | `/api/v1/partner/rides/{rideId}/accept` | PARTNER | `AcceptRideRequest` → `RideResponse` |
+| POST | `/api/v1/partner/rides/{rideId}/decline` | PARTNER | `RideResponse` |
+| POST | `/api/v1/partner/rides/{rideId}/driver-arriving` | PARTNER | `RideResponse` |
+| POST | `/api/v1/partner/rides/{rideId}/driver-arrived` | PARTNER | `RideResponse` |
+| POST | `/api/v1/partner/rides/{rideId}/start` | PARTNER | `RideResponse` |
+| POST | `/api/v1/partner/rides/{rideId}/complete` | PARTNER | `CompleteRideRequest` → `RideResponse` |
+| PUT | `/api/v1/partner/drivers/{driverId}/location` | PARTNER | `UpdateDriverLocationRequest` → `DriverLocationResponse` |
+| GET | `/api/v1/partner/drivers/{driverId}/location` | PARTNER | `DriverLocationResponse` |
+| POST | `/api/v1/partner/drivers/{driverId}/documents/upload` | PARTNER | Multipart upload |
+| GET | `/api/v1/partner/drivers/{driverId}/documents/{documentId}/file` | PARTNER | Download dokumenti |
+
+Ky është **subset i verifikuar**, jo lista e plotë e 24 controller-ave.
+
+### 11.3 DTO e pagesës në `CompleteRideRequest.java`
+
+Endpoint-i ekzistues i përfundimit të udhëtimit kërkon **vetëm** `finalAmount: BigDecimal`:
+- `@NotNull` — shuma kërkohet;
+- `@DecimalMin(value="0.0", inclusive=false)` — mbi zero;
+- `@Digits(integer=10, fraction=2)` — maksimumi dy shifra pas presjes.
+
+**Nuk ka** `paymentMethod` ose `paymentStatus` në këtë DTO. Futja e shumës së taksimetrit ekziston, por deklarimi/konfirmimi i pagesës është **punë e ardhshme**, jo veçori tashmë e përfunduar. Kjo lidhet me `MRT-06-09` dhe `MRT-08-*`.
+
+### 11.4 DTO e GPS në `UpdateDriverLocationRequest.java`
+
+Endpoint-i merr **vetëm** `latitude` dhe `longitude`, me kufij `[-90,90]` dhe `[-180,180]`. Nuk merr ende `deviceTimestamp`, `accuracy`, sequence/dedupe ID apo source. Kjo shpjegon pse zgjerimi i kontratës native GPS duhet projektuar dhe testuar, jo thjesht të përdorë pa ndryshim payload-in e browser-it.
+
+### 11.5 Kontrolli i pronësisë në Location Service
+
+`DriverLocationServiceImpl`:
+- identifikon kompaninë nga përdoruesi i autentikuar;
+- kontrollon që kompania të jetë `APPROVED` dhe `ACTIVE`;
+- kërkon shoferin me `findByIdAndCompanyId(driverId, companyId)`;
+- kontrollon statusin `ACTIVE` të shoferit;
+- për lexim e kufizon sipas `driverId + driverCompanyId`.
+
+Kjo është evidencë e **kontrollit partner/tenant në këtë shërbim**, jo provë e sigurisë së çdo endpoint-i. Versioni për Driver App duhet të lidhë JWT individual me identitetin e shoferit dhe ta kufizojë te profili i vet.
+
+### 11.6 Vendimi i auditimit
+
+- **Ruajmë** `RideService`/state machine, ofertat, `DriverLocationService` dhe API-të ekzistuese për Partner dhe Customer.
+- **Nuk rihapim** strukturën bazë të databazës pa verifikuar lidhjet e tanishme.
+- **Projektojmë** API-të specifike për Driver mbi të njëjtat shërbime, me autorizim objekti.
+- **Projektojmë** recording të pagesës ndaras nga statusi `COMPLETED`, komisionet dhe audit.
+- **MRT-00-04 mbetet i hapur**: controller-at e tjerë, entitetet e plota, DTO-të dhe testet e sigurisë ende kërkojnë inventar.
