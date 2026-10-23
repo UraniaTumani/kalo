@@ -75,7 +75,8 @@ class SchemaInvariantsIntegrationTest extends AbstractIntegrationTest {
                             "017-one-active-ride-per-customer",
                             "017-one-active-ride-per-driver",
                             "020-create-refresh-tokens",
-                            "021-create-support-requests"
+                            "021-create-support-requests",
+                            "026-link-drivers-to-users"
                     );
         }
 
@@ -104,6 +105,52 @@ class SchemaInvariantsIntegrationTest extends AbstractIntegrationTest {
         void schemaValidates() {
 
             assertThat(jdbc.queryForObject("SELECT 1", Integer.class)).isEqualTo(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("Driver authentication link (migration 026)")
+    class DriverUserLink {
+
+        @Test
+        @DisplayName("legacy driver records stay unlinked by default")
+        void existingDriversRemainUnlinked() {
+            Fixture f = fixture();
+
+            Long linkedUser = jdbc.queryForObject(
+                    "SELECT user_id FROM drivers WHERE id = ?",
+                    Long.class, f.driverId
+            );
+
+            assertThat(linkedUser).isNull();
+            assertThat(constraintExists("fk_drivers_user")).isTrue();
+            assertThat(constraintExists("uk_drivers_user_id")
+                    || indexExists("uk_drivers_user_id")).isTrue();
+        }
+
+        @Test
+        @DisplayName("one account cannot be linked to two driver records")
+        void userCanOnlyLinkOneDriver() {
+            Fixture f = fixture();
+
+            jdbc.update("UPDATE drivers SET user_id = ? WHERE id = ?",
+                    f.ownerId, f.driverId);
+
+            assertThatThrownBy(() -> jdbc.update(
+                    "UPDATE drivers SET user_id = ? WHERE id = ?",
+                    f.ownerId, f.secondDriverId
+            )).isInstanceOf(DataIntegrityViolationException.class);
+        }
+
+        @Test
+        @DisplayName("a driver cannot link to a non-existent user")
+        void linkedUserMustExist() {
+            Fixture f = fixture();
+
+            assertThatThrownBy(() -> jdbc.update(
+                    "UPDATE drivers SET user_id = ? WHERE id = ?",
+                    Long.MAX_VALUE, f.driverId
+            )).isInstanceOf(DataIntegrityViolationException.class);
         }
     }
 
