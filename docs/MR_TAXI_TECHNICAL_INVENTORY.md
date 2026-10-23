@@ -269,3 +269,50 @@ Kjo është evidencë e **kontrollit partner/tenant në këtë shërbim**, jo pr
 - Miratimi i inventarit final.
 
 **Status:** `MRT-00-04` mbetet `[ ]`, megjithëse fazat 1–3 janë dokumentuar.
+
+
+## 13. Auditimi i controller-ave të mbetur — faza 4 (2026-10-23)
+
+**Burimi:** 16 controller-a Java të shqyrtuar në degën `feature/f42-real-gps-freshness`, përveç controller-ave Auth/Ride/Driver/Vehicle/Location tashmë të kataloguar në seksionin 11. Shënimet `@RequestMapping`/metodat janë kontrolluar në burim; DTO-të janë identifikuar nga importet. **Nuk ka ekzekutim live API**.
+
+| Fusha | Bazë API / kontroll | Operacionet e vërejtura |
+|---|---|---|
+| Admin partner | `/api/v1/admin/partners` | Listim, detaje, dokument privat, approve/reject/suspend/reactivate |
+| Admin rides | `/api/v1/admin/rides` | Listim dhe detaje |
+| Admin users | `/api/v1/admin/users` | Listim, detaje, krijim admin, suspend/reactivate |
+| Admin password reset | `/api/v1/admin/password-resets` | `POST /fallback`, `GET /fallback-log` |
+| Partner assignments | `PartnerDriverVehicleAssignmentController` | POST krijim, GET listim, DELETE sipas `assignmentId` |
+| Company documents | `PartnerDocumentController` | Krijim metadata, upload multipart, private file download, listim, fshirje |
+| Vehicle documents | `/api/v1/partner/vehicles/{vehicleId}/documents` | Upload, listim, private file download |
+| Geocoding | `/api/v1/geocoding` | `GET /search`, `GET /reverse` |
+| Partner notifications | `/api/v1/partner/notifications` | Listim, unread-count, mark-read |
+| Partner service area/hours | `PartnerAvailabilitySettingsController` | GET/PUT service-area dhe operating-hours |
+| Partner operational settings | `PartnerOperationalSettingsController` | GET/PUT settings |
+| Ride ratings | `/api/v1/rides/{rideId}/rating` | POST rating i klientit |
+| Guest availability | `/api/v1/public/taxi-availability` | POST publik read-only sipas sjelljes së dokumentuar |
+| Admin support | `/api/v1/admin/support/requests` | Listim, PATCH status |
+| User support | `/api/v1/support/requests` | POST kërkesë, GET listim |
+| User profile | `/api/v1` | GET/PUT `/me`, POST `/me/password` |
+
+**Verifikim shtesë i nevojshëm:** Disa `@RequestMapping` janë shumë-rreshtorë; kërkohet nxjerrja e path-it të plotë para publikimit të një kontrate API për mobile. Endpoint-et e support dhe geocoding, që nuk bien nën prefix-et `partner/admin/rides`, marrin parimisht `authenticated()` nga `SecurityConfig`; kufizimet e pronësisë dhe roleve duhen verifikuar në shërbime.
+
+### 13.1 DTO-të e identifikuara për zgjerimin e API-ve
+
+- Admin: `AdminPartnerDetailResponse`, `AdminPartnerResponse`, `PartnerDecisionResponse`, `RejectPartnerRequest`, `AdminRideDetailResponse`, `AdminRideResponse`, `AdminUserResponse`, `CreateAdminRequest`.
+- Dokumente: `CreateCompanyDocumentRequest`, `DocumentResponse`.
+- Assignment: `CreateDriverVehicleAssignmentRequest`, `DriverVehicleAssignmentResponse`.
+- Partner: `OperationalSettingsResponse`, `UpdateOperationalSettingsRequest`; shërbimi i service-area/orareve përdor DTO të paketës `partner.dto`.
+- Rating/guest: `CreateRideRatingRequest`, `RideRatingResponse`, `GuestAvailabilityRequest`, `GuestAvailabilityResponse`.
+- Support: `CreateSupportRequestRequest`, `SupportRequestResponse`, `AdminSupportRequestResponse`, `UpdateSupportStatusRequest`.
+- User: `UpdateProfileRequest`, `ChangePasswordRequest`.
+
+**Statusi:** Ekzistenca e këtyre DTO-ve në controller nuk provon që janë të gjitha të dokumentuara apo të përshtatshme për mobile. Ende duhen kontrolluar fushat, constraints dhe edge-cases.
+
+### 13.2 Konkluzione për MR TAXI
+
+1. **Nuk shtojmë platformë të dytë për admin/partner.** Controller-at për dokumente, verifikim, flotë, njoftime dhe support janë tashmë në backend.
+2. **Driver App ka nevojë për një API surface të vetën dhe politikë autorizimi**, jo ekspozimin e `/api/v1/partner/**` te shoferi.
+3. **Customer App ripërdor** kërkimin, rezervimin, historikun, rating, profilin dhe support; duhet auditimi i kontratave dhe sjelljeve të gabimit.
+4. **Njoftimet partner nuk janë push notifications native të shoferit**; kërkohet model pajisjeje/token-i sipas sistemit operativ.
+5. **MRT-00-04 nuk mbyllet ende:** mbeten kontratat e plota DTO, auth objekt-level dhe kontrolli i migrimeve/testeve.
+
