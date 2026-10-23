@@ -73,7 +73,7 @@ Web SPA aktuale është React 19/TypeScript dhe mbulon Partner/Admin dhe custome
 
 ## ADR-003 — Identiteti individual i shoferit dhe autorizimi sipas objektit
 
-**Status:** PROPOSED  
+**Status:** PROPOSED për implementimin; **ACCEPTED (rregull biznesi, 2026-10-23): një shofer = maksimumi një kompani aktive, transferim historik i mundshëm**  
 **Referenca:** PRD BR-02, SEC-01..SEC-03; MRT-03-02, MRT-03-03, MRT-09-02
 
 ### Konteksti
@@ -81,6 +81,8 @@ Web SPA aktuale është React 19/TypeScript dhe mbulon Partner/Admin dhe custome
 `Driver` është sot rekord i flotës me `company_id`, pa lidhje me `User`. `SecurityConfig` lejon `/api/v1/partner/**` vetëm për PARTNER, dhe ride state modifikohet nga Partner; `/api/v1/rides/**` është CUSTOMER.
 
 ### Propozimi
+
+**Rregull biznesi i miratuar:** Shoferi mund të jetë operativ vetëm te një kompani në një moment të caktuar. Transferimi më vonë duhet të ruajë lidhjet/udhëtimet historike dhe të revokojë të drejtat e kompanisë së mëparshme; **nuk** kryhet duke rishkruar verbërisht `drivers.company_id`. Transferimi kërkon model historik të membership dhe nuk është pjesë e implementimit të parë të login-it.
 
 1. Projektim additive i lidhjes `User ↔ Driver` (marrëdhënie dhe rregulla unike të miratohen në migration design). Shoferi merr `DRIVER` role dhe credentials të veçanta; kompani kontrollon onboarding/aktivizim.
 2. API të reja `/api/v1/driver/me`, `/api/v1/driver/shift`, `/api/v1/driver/location`, `/api/v1/driver/rides/current` dhe operacione të autorizuara ride — **emrat janë propozime, jo endpoint-e ekzistuese**.
