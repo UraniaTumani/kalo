@@ -329,9 +329,15 @@ Integration tests use **Testcontainers PostgreSQL**, so Docker must be running.
 H2 is deliberately not used: it would not exercise the Liquibase migrations or
 the PostgreSQL partial unique indexes the concurrency invariants depend on.
 
-> **Status:** the Testcontainers dependencies and build wiring are in place; the
-> integration test suite itself is still to be written. See
-> *Known limitations* below.
+> **Verified 2026-10-23:** 443 backend tests passed (0 failures/errors/skipped) against
+> isolated PostgreSQL 17 Testcontainers; Liquibase applied 31 changesets.
+> See `docs/MR_TAXI_MASTER_CHECKLIST.md` (`MRT-00-05`) for evidence.
+
+---
+
+The React frontend has `npm run build`, `npm run lint`, and `npm run test:e2e`;
+its E2E runner starts its own Docker Compose stack and tears it down afterward.
+The browser suite does not certify native mobile apps.
 
 ---
 
@@ -527,15 +533,19 @@ Stack traces, SQL and internal details are never returned to clients.
 
 Known and intentional for this milestone:
 
-- **No integration test suite yet.** Build wiring for Testcontainers is in
-  place; the tests are the next task.
+- **Integration and E2E test suites exist.** On 2026-10-23, 443 Maven backend
+  tests and 124 Playwright Chrome E2E tests passed. The Playwright suite runs
+  with its own `kalo-e2e` Docker/PostgreSQL stack.
 - **No routed ETA.** Search distance is straight-line only.
 - **No online payments.** The customer pays the driver directly, in cash or by
   card in the car, and the final price is the taximeter amount.
 - **No realtime transport.** No WebSockets or push notifications; clients poll
   `GET /api/v1/rides/current`.
 - **No Redis or caching layer.** Search hits PostgreSQL directly.
-- **No file storage.** Documents are stored as URLs; uploading is out of scope.
+- **Development document upload exists.** Company, driver and vehicle documents
+  support upload and private download, with ownership checks. `LocalDocumentStorage`
+  is for development/testing; durable production private object storage still
+  requires implementation/hardening.
 - **No phone verification.** `phoneVerified` exists but nothing sets it, and
   because the phone number is the login identifier, `PUT /api/v1/me` does not
   allow changing it. Worth being precise about what this costs now that recovery
@@ -556,8 +566,9 @@ Known and intentional for this milestone:
   before exposing the API to the internet.
 - **No advanced vehicle filtering** (vehicle class, seats, luggage, child
   seats), no passenger count, no promotions, no chat.
-- **Driver has no login.** The taxi company drives the ride lifecycle on the
-  driver's behalf.
+- **Driver has no individual login or native app.** The taxi company drives the
+  ride lifecycle on the driver's behalf. Partner browser-based location reporting
+  has been tested on an iPhone, but is not native/background tracking.
 - **Ratings are one-way.** Customers rate companies and drivers, not the
   reverse.
 
@@ -566,7 +577,7 @@ Known and intentional for this milestone:
 Routed distance/ETA via a routing provider, PostGIS for geospatial queries once
 the driver population grows, Redis for hot search state, WebSockets for live
 ride updates, online payments and payouts, driver mobile app with its own
-authentication, file upload for documents, and phone verification at signup —
+authentication, production private document storage, and phone verification at signup —
 which becomes cheap once an SMS provider is behind `SmsSender`, since it is the
 same code, the same table and the same five-minute window as recovery already
 uses.
