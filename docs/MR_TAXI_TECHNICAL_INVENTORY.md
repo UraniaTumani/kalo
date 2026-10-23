@@ -221,3 +221,51 @@ Kjo është evidencë e **kontrollit partner/tenant në këtë shërbim**, jo pr
 - **Projektojmë** API-të specifike për Driver mbi të njëjtat shërbime, me autorizim objekti.
 - **Projektojmë** recording të pagesës ndaras nga statusi `COMPLETED`, komisionet dhe audit.
 - **MRT-00-04 mbetet i hapur**: controller-at e tjerë, entitetet e plota, DTO-të dhe testet e sigurisë ende kërkojnë inventar.
+
+
+## 12. Auditimi i entiteteve dhe kufizimeve DB — faza 3 (2026-10-23)
+
+**Burimi:** 8 klasa JPA (`Driver`, `Vehicle`, `TaxiCompany`, `User`, `Ride`, `DriverLocation`, `Document`, `DriverVehicleAssignment`) dhe 5 migrime Liquibase (`004`, `005`, `008`, `013`, `017`).
+
+### 12.1 Marrëdhëniet e verifikuara
+
+- `User` ka `role`, `status`, `phone`, `email`, `passwordHash`, `phoneVerified`; autentikimi lidhet me këtë entitet.
+- `TaxiCompany` ka `owner` si `@OneToOne User`, fushat ligjore, licencën, gjendjen e verifikimit, pagesat e lejuara dhe zonën.
+- `Driver` ka `@ManyToOne TaxiCompany`, të dhënat e patentës, gjendjen `status` dhe `availabilityStatus`. **Nuk ka ende `User` relation** — kjo është pengesa strukturore për login individual.
+- `Vehicle` ka `@ManyToOne TaxiCompany`, targë unike, brand/model/vit/vende/tip, datat e skadimit, status.
+- `DriverVehicleAssignment` ka lidhje `@ManyToOne Driver` dhe `Vehicle`, `active`, `assignedFrom`, `assignedUntil`.
+- `Ride` lidhet me `RideRequest`, `User customer`, `TaxiCompany`, dhe opsionalisht `Driver` / `Vehicle`; ka statuse dhe timestamp-e të fazave, si edhe `finalAmount`.
+- `DriverLocation` është `@OneToOne Driver`, me një rekord aktual për shofer; `latitude`, `longitude` dhe `locationUpdatedAt`. Nuk ruan në këtë entitet `accuracy`, `deviceTimestamp` ose historik pikash.
+- `Document` ka `ownerType` + `ownerId` (lidhje polimorfike në nivel aplikacioni), tip, skedar, data, status verifikimi dhe arsye refuzimi. **Jo** foreign key direkte nga `ownerId` te tri tabelat — validimi i përkatësisë është përgjegjësi e shërbimeve.
+
+### 12.2 Constraints të konfirmuara në migrimet e lexuara
+
+| Migrimi | Kontrolli i integritetit |
+|---|---|
+| 004 | `drivers.company_id` FK; unique `phone`, `license_number` |
+| 005 | `vehicles.company_id` FK; unique `plate_number` |
+| 008 | `driver_locations.driver_id` FK dhe unique — një pozicion aktual për shofer |
+| 013 | Unique `(ride_request_id, company_id)`, lejon tentativa te kompani të ndryshme |
+| 017 | Partial unique index `active` për caktim shoferi dhe automjeti (një caktim aktiv secili) |
+| 017 | Partial unique index për një ride aktiv për klientin dhe një ride aktiv për shoferin |
+| 017 | Index `(company_id,status,availability_status)` për kërkimin e shoferëve |
+
+**Gjetje e rëndësishme:** kufizimet e konkurrencës nuk mbështeten vetëm te Java; ka mbrojtje DB konkrete. Nuk duhet t'i heqim kur të krijojmë Driver App dhe API-të e reja.
+
+### 12.3 Implikimet për arkitekturën mobile dhe pagesat
+
+1. **Driver Identity:** krijimi i lidhjes `User–Driver` kërkon ADR/migrim additive dhe testim për të mos ndryshuar rekordet ekzistuese të kompanive.
+2. **GPS:** modeli aktual `driver_locations` është pozicioni më i fundit, jo location-event log. Shtesat për `accuracy`, timestamp të pajisjes dhe mbrojtjen nga update-i i vjetër duhet të bëhen pa prishur klientin web.
+3. **Financat:** `Ride.finalAmount` ekziston; në këtë entitet nuk ka `paymentStatus`, `commission` apo `invoice`. Duhet analizuar modeli financiar i veçantë, jo shtuar automatikisht komisioni në secilin tranzicion të ride.
+4. **Dokumentet:** `ownerType+ownerId` kërkon teste negative specifike për aksesin ndërmjet kompanive dhe për pronësinë e dokumentit.
+5. **Invariante:** `uk_active_ride_per_customer`, `uk_active_ride_per_driver`, `uk_active_assignment_per_driver`, `uk_active_assignment_per_vehicle` janë elemente që duhen ruajtur dhe testuar.
+
+### 12.4 Mbetet hapur
+
+- Verifikimi i 20 migrimeve të tjera dhe krahasimi i skemës finale me të gjitha entitetet.
+- Inventar i plotë i DTO-ve dhe endpoint-eve të 24 controller-ave.
+- Auditimi i zbatimit real të authorization për të gjitha operacionet.
+- Ekzekutimi i suite-ve të testeve dhe prova për implementimin aktual.
+- Miratimi i inventarit final.
+
+**Status:** `MRT-00-04` mbetet `[ ]`, megjithëse fazat 1–3 janë dokumentuar.
