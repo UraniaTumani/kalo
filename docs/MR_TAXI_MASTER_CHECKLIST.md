@@ -64,6 +64,7 @@ Një item shënohet `[x]` **vetëm kur**: (1) kërkesa dhe edge cases janë të 
   **Pranimi:** Inventari lidhet me skedarët ekzistues.
 - [ ] **MRT-00-05 · P0** — Auditim i testeve reale në commit-in bazë: unit, integration, E2E, build, lint.  
   **Pranimi:** Regjistrohen komandat, numrat e testeve, rezultati, SHA dhe data.
+  **Evidencë e pjesshme (2026-10-23):** `./mvnw.cmd test` në Windows 11 / Java 17.0.12 / Maven 3.9.16, branch `feature/f42-real-gps-freshness` (local ishte i sinkronizuar me `dabf011` para testit): **443 tests, 0 failures, 0 errors, 0 skipped, BUILD SUCCESS**, 03:39 min. PostgreSQL 17 Testcontainers, `test` profile, Liquibase 31 changesets. **Mbetet `[ ]`: frontend build, lint, E2E, evidenca SHA e konfirmuar nga `git rev-parse HEAD` dhe test-report artefacts.**
 - [ ] **MRT-00-06 · P0** — Përditësojmë README-t dhe heqim mospërputhjet me kodin aktual.  
   **Pranimi:** Dokumentacioni përshkruan saktë dokumentet, i18n, testet dhe GPS-in.
 - [ ] **MRT-00-07 · P0** — Krijojmë ADR për arkitekturën modular-monolith, mobile, tracking dhe financat.  
