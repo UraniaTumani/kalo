@@ -68,7 +68,7 @@ Query, Tailwind, Leaflet) covering all three surfaces. Its dev server proxies
 - Maven (use the bundled `./mvnw` wrapper)
 - PostgreSQL 14+
 - Node.js 20+ (frontend only)
-- Docker (only needed for the integration tests)
+- Docker (required for integration tests, E2E tests, and the optional local Compose stack)
 
 ---
 
@@ -343,7 +343,7 @@ The browser suite does not certify native mobile apps.
 
 ## 8. Swagger / OpenAPI
 
-With the application running:
+With the application running **and** `SWAGGER_ENABLED=true` (the default is `false`):
 
 - Swagger UI — <http://localhost:8080/swagger-ui.html>
 - OpenAPI JSON — <http://localhost:8080/v3/api-docs>
@@ -561,9 +561,10 @@ Known and intentional for this milestone:
   self-service recovery does not work on a real deployment and the admin fallback
   is the only path. Expect sender-ID registration with the operator to take longer
   than the configuration.
-- **The public availability endpoint is unauthenticated and unthrottled.** It
-  is read-only and cheap, but it has no rate limiting; put one in front of it
-  before exposing the API to the internet.
+- **Public availability must be protected against abuse.** The guest endpoint
+  is unauthenticated and read-only; verify rate-limit scope and reverse-proxy
+  client-IP handling before public launch, rather than relying on the absence
+  of writes alone.
 - **No advanced vehicle filtering** (vehicle class, seats, luggage, child
   seats), no passenger count, no promotions, no chat.
 - **Driver has no individual login or native app.** The taxi company drives the
