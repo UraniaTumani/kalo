@@ -1,0 +1,30 @@
+databaseChangeLog:
+  - changeSet:
+      id: 026-link-drivers-to-users
+      author: kalo
+      comment: >
+        Add an optional, unique authentication user link to a driver.
+        Existing drivers are not backfilled or modified. Login and activation
+        flows are intentionally not enabled by this schema change.
+      changes:
+        - addColumn:
+            tableName: drivers
+            columns:
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: true
+
+        - addForeignKeyConstraint:
+            baseTableName: drivers
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_drivers_user
+            onDelete: RESTRICT
+
+        - addUniqueConstraint:
+            tableName: drivers
+            columnNames: user_id
+            constraintName: uk_drivers_user_id
