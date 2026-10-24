@@ -1,6 +1,6 @@
 # MR TAXI — Driver Identity: kontrata dhe plan migrimi
 
-**Status:** IN PROGRESS — faza A u verifikua lokalisht (446 teste); faza B1 e ftesave është shkruar dhe verifikuar lokalisht më 2026-10-24 (453 teste, BUILD SUCCESS)  
+**Status:** IN PROGRESS — fazat A dhe B1 u verifikuan lokalisht; faza B2a (token primitives + driver pending-login guard) është shkruar, por testet e reja ende nuk janë ekzekutuar  
 **Data:** 2026-10-23  
 **Branch i analizuar:** `feature/f42-real-gps-freshness`  
 **Lidhje:** `docs/MR_TAXI_ARCHITECTURE_ADRS.md` (ADR-003), `docs/MR_TAXI_PRD.md`, `docs/MR_TAXI_MASTER_CHECKLIST.md`  
@@ -102,3 +102,13 @@
 **Nuk është implementuar:** gjenerimi kriptografik dhe hashing i tokenit, dërgimi i ftesës në një kanal të provuar, rate limits, kontrolli partner/driver gjatë issuance, redemption atomik, krijimi i `User(DRIVER)`, revokim i sesioneve, endpoint-et, UI dhe testet negative end-to-end. **Mos e përdorni në production dhe mos nxirrni token ftesash si përgjigje API/log.**
 
 **Gate B1 kaloi (evidencë nga log-u lokal i përdoruesit, 2026-10-24):** `./mvnw.cmd test`: **453 tests, 0 failures, 0 errors, 0 skipped, BUILD SUCCESS, 03:06 min**. Java 17, profili `test`, PostgreSQL 17 Testcontainers; Liquibase aplikoi **33 changesets**, përfshirë `027`. Krahasuar me Fazën A: +7 teste (3 DB, 4 unitare). Kjo nuk verifikon staging/production dhe nuk përbën miratim për deploy. `MRT-03-02` mbetet `[ ]` deri te aktivizimi/login real, issuance/delivery të sigurta dhe teste negative të autorizimit.
+
+## 8. Faza B2a — Token primitives dhe kushti i hyrjes (2026-10-24)
+
+**Në branch, pa ekzekutim të ri testesh ende:**
+
+- `DriverInvitationTokenCodec` gjeneron 32 byte nga `SecureRandom` (URL-safe 43 karaktere); për storage/lookup llogarit SHA-256 hex (64 karaktere). Refuzon token null, me gjatësi/format të pasaktë ose jo-kanonik, pa e përfshirë vlerën në gabim. Tri teste të reja `DriverInvitationTokenCodecTest` verifikojnë formatin, diversitetin dhe input të pavlefshëm.
+- `CustomUserDetailsService` refuzon hyrjen për `DRIVER` me `UserStatus.PENDING` dhe kërkon `ACTIVE`; `PARTNER/PENDING` vazhdon të lejohet për onboarding. Katër teste të reja `CustomUserDetailsServiceDriverTest` mbulojnë pending driver, active driver, pending partner dhe suspended driver.
+- Tokeni i papërpunuar **nuk** ruhet në DB, nuk dërgohet përmes API dhe nuk log-ohet. Nuk ekziston ende issuance endpoint, delivery, redemption apo aktivizim.
+
+**Gate:** `./mvnw.cmd test` me Docker/Testcontainers para se të përfundojmë B2a. Këto teste nuk janë ekzekutuar ende; numri i fundit i verifikuar mbetet **453** (B1). `MRT-03-02` mbetet `[ ]`. Për aplikacionin live duhen gjithashtu kanal i sigurt i ftesës, expiry/single-use atomik, cooldown/rate-limit, audit, verifikim pronësie, revoke dhe teste negative E2E.
