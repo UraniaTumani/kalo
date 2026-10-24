@@ -1,6 +1,7 @@
 package com.kalo.auth.security;
 
 import com.kalo.user.entity.User;
+import com.kalo.user.enums.UserRole;
 import com.kalo.user.enums.UserStatus;
 import com.kalo.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,10 +34,13 @@ public class CustomUserDetailsService implements UserDetailsService {
          * PENDING is deliberately treated as authenticatable: a partner has to
          * log in while PENDING to finish onboarding and submit documents.
          * Ride-management operations are gated separately on an APPROVED +
-         * ACTIVE taxi company.
+         * ACTIVE taxi company. DRIVER is deliberately different: a pending
+         * driver must not sign in before verified invitation activation.
          */
         boolean enabled =
-                user.getStatus() != UserStatus.DISABLED;
+                user.getStatus() != UserStatus.DISABLED
+                && (user.getRole() != UserRole.DRIVER
+                    || user.getStatus() == UserStatus.ACTIVE);
 
         boolean accountNonLocked =
                 user.getStatus() != UserStatus.SUSPENDED;
