@@ -10,6 +10,7 @@ import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface DriverInvitationRepository extends JpaRepository<DriverInvitation, Long> {
 
@@ -25,6 +26,7 @@ public interface DriverInvitationRepository extends JpaRepository<DriverInvitati
     Optional<DriverInvitation> findFirstByDriverIdOrderByCreatedAtDesc(Long driverId);
 
     /** Revoke all unredeemed invitation rows for the driver, including expired. */
+    @Transactional
     @Modifying
     @Query("""
             UPDATE DriverInvitation i SET i.revokedAt = :now
