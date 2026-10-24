@@ -1,6 +1,6 @@
 # MR TAXI — Driver Identity: kontrata dhe plan migrimi
 
-**Status:** IN PROGRESS — faza A (lidhja nullable `Driver.user`) u verifikua me teste lokale më 2026-10-24; login dhe authorization i shoferit ende nuk janë implementuar  
+**Status:** IN PROGRESS — faza A u verifikua lokalisht (446 teste); faza B1 e ftesave është shkruar në branch dhe pret testim lokal  
 **Data:** 2026-10-23  
 **Branch i analizuar:** `feature/f42-real-gps-freshness`  
 **Lidhje:** `docs/MR_TAXI_ARCHITECTURE_ADRS.md` (ADR-003), `docs/MR_TAXI_PRD.md`, `docs/MR_TAXI_MASTER_CHECKLIST.md`  
@@ -8,7 +8,7 @@
 
 ## 1. Gjendja reale në kod (verifikuar)
 
-- `UserRole` ka vetëm `CUSTOMER`, `PARTNER`, `ADMIN`; `User` ka `phone` unik, `passwordHash`, `role`, `status`, `phoneVerified`.
+- `UserRole` ka `CUSTOMER`, `PARTNER`, `DRIVER`, `ADMIN` pas fazës B1. **Asnjë rol DRIVER nuk jepet automatikisht**; `User` ka `phone` unik, `passwordHash`, `role`, `status`, `phoneVerified`.
 - `Driver` ka `company_id`, `phone` unik, `license_number` unik, `status`, `availabilityStatus`; aktualisht **nuk** ka FK `user_id`.
 - `DriverServiceImpl.createDriver` merr `CreateDriverRequest` pa password dhe krijon vetëm rekordin Driver (fillimisht ACTIVE/OFFLINE), nën kompaninë e partnerit të autentikuar.
 - `DriverServiceImpl.updateDriver` mund të ndryshojë telefonin; deactivation përdor `takeOutOfService` dhe refuzon deactivation kur shoferi është BUSY.
@@ -88,4 +88,17 @@
 4. Si bëhet account recovery kur shoferi ndryshon telefonin? Identiteti aktual përdor telefonin si subject JWT.
 5. Çfarë ndodh kur shoferi çaktivizohet gjatë një udhëtimi aktiv? Ruaj politikën ekzistuese të refuzimit të deactivation gjatë BUSY derisa të miratohet exception workflow.
 
-**Status (2026-10-24):** rregulli i kompanisë aktive është miratuar; **FAZA A është shkruar dhe testuar lokalisht** (migration 026, nullable FK/unique User link, JPA mapping dhe tri teste të DB). Evidenca e përdoruesit: `./mvnw.cmd test`, Java 17, Docker Desktop, PostgreSQL 17 Testcontainers, `test` profile, 32 Liquibase changeSets; **446 tests, 0 failures, 0 errors, 0 skipped, BUILD SUCCESS, 03:03 min**. Nuk është konfirmuar asnjë deploy/staging/production. Nuk është shtuar ende `DRIVER` në enum dhe nuk ka login, aktivizim apo autorizim të Driver App. **MRT-03-02 / MRT-03-03 mbeten `[ ]`.** Synimi i produktit është **publikimi live**: mos pranoni kode prod pa test migrimi/rollback, autorizim negative-case, HTTPS/secrets, storage privat dokumentesh, GPS testuar në pajisje dhe verifikim të politikave/privacy.
+**Status (2026-10-24):** rregulli i kompanisë aktive është miratuar; **FAZA A është shkruar dhe testuar lokalisht** (migration 026, nullable FK/unique User link, JPA mapping dhe tri teste të DB). Evidenca e përdoruesit: `./mvnw.cmd test`, Java 17, Docker Desktop, PostgreSQL 17 Testcontainers, `test` profile, 32 Liquibase changeSets; **446 tests, 0 failures, 0 errors, 0 skipped, BUILD SUCCESS, 03:03 min**. Nuk është konfirmuar asnjë deploy/staging/production. Pas fazës B1, enum-i përmban `DRIVER`, por **nuk ka ende endpoint për krijimin, aktivizimin apo autorizimin e Driver App**. **MRT-03-02 / MRT-03-03 mbeten `[ ]`.** Synimi i produktit është **publikimi live**: mos pranoni kode prod pa test migrimi/rollback, autorizim negative-case, HTTPS/secrets, storage privat dokumentesh, GPS testuar në pajisje dhe verifikim të politikave/privacy.
+
+## 7. Faza B1 — Struktura e ftesës (2026-10-24)
+
+**Ndryshime të shkruara, ende të patestuara lokalisht pas këtyre commit-eve:**
+
+- `UserRole.DRIVER` rezervohet, por nuk ka endpoint për regjistrim ose privilegje specifike të shoferit.
+- Liquibase `027-create-driver-invitations.yaml` krijon `driver_invitations` me `driver_id`, `company_id`, `token_hash VARCHAR(64) UNIQUE`, `expires_at`, `redeemed_at`, `revoked_at`, audit timestamps, foreign keys dhe indeksin e kërkimit.
+- `DriverInvitation` ruan gjendjen dhe `isRedeemable(now)`; `DriverInvitationRepository.findForUpdateByTokenHash` përgatit locking gjatë aktivizimit në transaksion.
+- 3 teste DB te `SchemaInvariantsIntegrationTest` verifikojnë migrimin/UNIQUE/FK; 4 teste njësi te `DriverInvitationTest` verifikojnë expiry/redeemed/revoked/valid.
+
+**Nuk është implementuar:** gjenerimi kriptografik dhe hashing i tokenit, dërgimi i ftesës në një kanal të provuar, rate limits, kontrolli partner/driver gjatë issuance, redemption atomik, krijimi i `User(DRIVER)`, revokim i sesioneve, endpoint-et, UI dhe testet negative end-to-end. **Mos e përdorni në production dhe mos nxirrni token ftesash si përgjigje API/log.**
+
+**Gate për B1:** ekzekutimi `./mvnw.cmd test` në Docker/Testcontainers; pas tij dokumentohen numri i testeve dhe rezultati. `MRT-03-02` mbetet `[ ]` deri te aktivizimi dhe login real me negative security tests.
