@@ -112,3 +112,9 @@
 - Tokeni i papërpunuar **nuk** ruhet në DB, nuk dërgohet përmes API dhe nuk log-ohet. Nuk ekziston ende issuance endpoint, delivery, redemption apo aktivizim.
 
 **Gate B2a u përmbush (2026-10-24):** `./mvnw.cmd test` me Docker/Testcontainers: **460 teste, 0 failures, 0 errors, 0 skipped, BUILD SUCCESS, 02:50 min**. PostgreSQL 17, profili `test`, Liquibase 33 changesets (përfshirë `026` dhe `027`). Shtatë testet e reja kaluan. `MRT-03-02` mbetet `[ ]`. Për aplikacionin live duhen gjithashtu kanal i sigurt i ftesës, expiry/single-use atomik, cooldown/rate-limit, audit, verifikim pronësie, revoke dhe teste negative E2E.
+
+## 9. Faza B2b-1 — Politika e përshtatshmërisë së ftesës (2026-10-24)
+
+**Në branch, ende pa ekzekutim të ri të testeve:** `DriverInvitationEligibilityPolicy` kontrollon që kompania e autorizuar të jetë `ACTIVE/APPROVED`, shoferi `ACTIVE`, të mos ketë `User` të lidhur dhe të ketë të njëjtën kompani. Pesë teste njësi mbulojnë rrugën pozitive, kompani të huaj, kompani në gjendje të pavlefshme, shofer joaktiv/i lidhur dhe mungesë identiteti.
+
+**E rëndësishme:** kjo politikë nuk mjafton për autorizim. Servisi që lëshon ftesën duhet të nxjerrë `companyId` nga principal-i i partnerit, të lexojë shoferin me query të kufizuar sipas kompanisë dhe me lock, të zbatojë rate limits/revokim ftesash të mëparshme dhe ta dërgojë tokenin vetëm në kanal të verifikuar. Nuk ka ende issuance/delivery/activation endpoint, as rrjedhë të testuar E2E. **B2b dhe MRT-03-02 mbeten të hapura.** Bazë e fundit e verifikuar: 460 teste; ekzekutimi i ri i Maven kërkohet për pesë testet e shtuara.
