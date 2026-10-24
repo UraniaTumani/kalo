@@ -26,7 +26,7 @@ class DriverInvitationTokenCodecTest {
 
     @Test
     void rejectsMissingAndMalformedTokensWithoutIncludingCredentials() {
-        for (String token : new String[]{ "", "test", "A".repeat(43),
+        for (String token : new String[]{ "", "test", "A".repeat(42) + "?",
                 "?".repeat(43), " ".repeat(43) }) {
             assertThatThrownBy(() -> codec.digest(token))
                     .isInstanceOf(IllegalArgumentException.class)
