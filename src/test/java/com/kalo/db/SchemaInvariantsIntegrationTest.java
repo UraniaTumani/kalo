@@ -76,7 +76,8 @@ class SchemaInvariantsIntegrationTest extends AbstractIntegrationTest {
                             "017-one-active-ride-per-driver",
                             "020-create-refresh-tokens",
                             "021-create-support-requests",
-                            "026-link-drivers-to-users"
+                            "026-link-drivers-to-users",
+                            "027-create-driver-invitations"
                     );
         }
 
@@ -151,6 +152,52 @@ class SchemaInvariantsIntegrationTest extends AbstractIntegrationTest {
                     "UPDATE drivers SET user_id = ? WHERE id = ?",
                     Long.MAX_VALUE, f.driverId
             )).isInstanceOf(DataIntegrityViolationException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("Driver invitations (migration 027)")
+    class DriverInvitations {
+
+        @Test
+        @DisplayName("the invitation schema and token uniqueness exist")
+        void schemaExists() {
+            assertThat(constraintExists("fk_driver_invitations_driver")).isTrue();
+            assertThat(constraintExists("fk_driver_invitations_company")).isTrue();
+            assertThat(constraintExists("uk_driver_invitations_token_hash")
+                    || indexExists("uk_driver_invitations_token_hash")).isTrue();
+        }
+
+        @Test
+        @DisplayName("an invitation token hash cannot be reused")
+        void tokenHashIsUnique() {
+            Fixture f = fixture();
+
+            jdbc.update("""
+                    INSERT INTO driver_invitations
+                    (driver_id, company_id, token_hash, expires_at, created_at, updated_at)
+                    VALUES (?, ?, ?, now() + interval '1 hour', now(), now())
+                    """, f.driverId, f.companyId, "abc123");
+
+            assertThatThrownBy(() -> jdbc.update("""
+                    INSERT INTO driver_invitations
+                    (driver_id, company_id, token_hash, expires_at, created_at, updated_at)
+                    VALUES (?, ?, ?, now() + interval '1 hour', now(), now())
+                    """, f.secondDriverId, f.companyId, "abc123"))
+                    .isInstanceOf(DataIntegrityViolationException.class);
+        }
+
+        @Test
+        @DisplayName("an invitation cannot reference a missing driver")
+        void driverMustExist() {
+            Fixture f = fixture();
+
+            assertThatThrownBy(() -> jdbc.update("""
+                    INSERT INTO driver_invitations
+                    (driver_id, company_id, token_hash, expires_at, created_at, updated_at)
+                    VALUES (?, ?, ?, now() + interval '1 hour', now(), now())
+                    """, Long.MAX_VALUE, f.companyId, "other123"))
+                    .isInstanceOf(DataIntegrityViolationException.class);
         }
     }
 
