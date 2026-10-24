@@ -1,6 +1,6 @@
 # MR TAXI — Driver Identity: kontrata dhe plan migrimi
 
-**Status:** IN PROGRESS — faza A u verifikua lokalisht (446 teste); faza B1 e ftesave është shkruar në branch dhe pret testim lokal  
+**Status:** IN PROGRESS — faza A u verifikua lokalisht (446 teste); faza B1 e ftesave është shkruar dhe verifikuar lokalisht më 2026-10-24 (453 teste, BUILD SUCCESS)  
 **Data:** 2026-10-23  
 **Branch i analizuar:** `feature/f42-real-gps-freshness`  
 **Lidhje:** `docs/MR_TAXI_ARCHITECTURE_ADRS.md` (ADR-003), `docs/MR_TAXI_PRD.md`, `docs/MR_TAXI_MASTER_CHECKLIST.md`  
@@ -92,7 +92,7 @@
 
 ## 7. Faza B1 — Struktura e ftesës (2026-10-24)
 
-**Ndryshime të shkruara, ende të patestuara lokalisht pas këtyre commit-eve:**
+**Ndryshime të shkruara dhe të testuara lokalisht më 2026-10-24 (jo të certifikuara për staging/production):**
 
 - `UserRole.DRIVER` rezervohet, por nuk ka endpoint për regjistrim ose privilegje specifike të shoferit.
 - Liquibase `027-create-driver-invitations.yaml` krijon `driver_invitations` me `driver_id`, `company_id`, `token_hash VARCHAR(64) UNIQUE`, `expires_at`, `redeemed_at`, `revoked_at`, audit timestamps, foreign keys dhe indeksin e kërkimit.
@@ -101,4 +101,4 @@
 
 **Nuk është implementuar:** gjenerimi kriptografik dhe hashing i tokenit, dërgimi i ftesës në një kanal të provuar, rate limits, kontrolli partner/driver gjatë issuance, redemption atomik, krijimi i `User(DRIVER)`, revokim i sesioneve, endpoint-et, UI dhe testet negative end-to-end. **Mos e përdorni në production dhe mos nxirrni token ftesash si përgjigje API/log.**
 
-**Gate për B1:** ekzekutimi `./mvnw.cmd test` në Docker/Testcontainers; pas tij dokumentohen numri i testeve dhe rezultati. `MRT-03-02` mbetet `[ ]` deri te aktivizimi dhe login real me negative security tests.
+**Gate B1 kaloi (evidencë nga log-u lokal i përdoruesit, 2026-10-24):** `./mvnw.cmd test`: **453 tests, 0 failures, 0 errors, 0 skipped, BUILD SUCCESS, 03:06 min**. Java 17, profili `test`, PostgreSQL 17 Testcontainers; Liquibase aplikoi **33 changesets**, përfshirë `027`. Krahasuar me Fazën A: +7 teste (3 DB, 4 unitare). Kjo nuk verifikon staging/production dhe nuk përbën miratim për deploy. `MRT-03-02` mbetet `[ ]` deri te aktivizimi/login real, issuance/delivery të sigurta dhe teste negative të autorizimit.
