@@ -1,10 +1,10 @@
 # MR TAXI — Driver Identity: kontrata dhe plan migrimi
 
-**Status:** IN PROGRESS — faza A (lidhja nullable `Driver.user`) është shkruar në branch; migrimi dhe testet kërkojnë ekzekutim lokal përpara se të konsiderohen të verifikuara  
+**Status:** IN PROGRESS — faza A (lidhja nullable `Driver.user`) u verifikua me teste lokale më 2026-10-24; login dhe authorization i shoferit ende nuk janë implementuar  
 **Data:** 2026-10-23  
 **Branch i analizuar:** `feature/f42-real-gps-freshness`  
 **Lidhje:** `docs/MR_TAXI_ARCHITECTURE_ADRS.md` (ADR-003), `docs/MR_TAXI_PRD.md`, `docs/MR_TAXI_MASTER_CHECKLIST.md`  
-**Kufizim:** Ka ndryshime të kodit për fazën A në branch, por **ende nuk janë ekzekutuar/verifikuar testet pas ndryshimit**. Nuk është krijuar login shoferi, asnjë endpoint, dhe ADR-003 nuk pranohet automatikisht.
+**Kufizim:** Testet për fazën A kaluan lokalisht në PostgreSQL Testcontainers më 2026-10-24. Nuk është krijuar login shoferi, asnjë endpoint i Driver App, dhe ADR-003 nuk pranohet automatikisht.
 
 ## 1. Gjendja reale në kod (verifikuar)
 
@@ -52,13 +52,13 @@
 
 ## 3. Strategjia e migrimit Liquibase
 
-**Status i `026-link-drivers-to-users.yaml`: krijuar dhe lidhur në master changelog në branch; **JO i ekzekutuar/verifikuar nga ne në DB**. `Driver.java` ka mapping opsional `User`.**
+**Status i `026-link-drivers-to-users.yaml`: u ekzekutua me sukses më 2026-10-24 në PostgreSQL 17 Testcontainers (profili `test`), me FK dhe UNIQUE për `drivers.user_id`; `Driver.java` ka mapping opsional `User`. Nuk është verifikuar në database dev/staging/prod.**
 
 1. `addColumn` `drivers.user_id BIGINT`, `nullable: true`, pa default.
 2. `addForeignKeyConstraint` `fk_drivers_user` tek `users(id)`.
 3. `addUniqueConstraint` `uk_drivers_user_id` (PostgreSQL lejon shumë NULL te UNIQUE).
 4. Indeksi unik shërben edhe kërkimet `findByUserId`; mos shto indeks tjetër pa nevojë.
-5. **U krye në branch:** include në master changelog, mapping JPA dhe tri teste të reja në `SchemaInvariantsIntegrationTest` për NULL, UNIQUE dhe FK; kërkohet ekzekutimi lokal i testeve përpara merge/deploy.
+5. **U krye dhe u testua lokalisht:** include në master changelog, mapping JPA dhe tri teste të reja në `SchemaInvariantsIntegrationTest` për NULL, UNIQUE dhe FK. Ekzekutimi `./mvnw.cmd test` (2026-10-24): 446 teste, 0 failures/errors/skipped, BUILD SUCCESS; ky rezultat nuk përbën miratim deploy.
 6. Verifiko për skema të vjetra: 25 migrimet ekzistuese, asnjë shofer historik nuk zhduket, `user_id` fillon NULL, app i vjetër vazhdon pa përplasje te schema.
 7. Nuk ka backfill me `phone`; rollout invite është veprim i veçantë dhe i auditueshëm. Rollback i FK/kolonës ka kosto humbjeje link-esh: të vendoset politikë release/backup.
 
@@ -88,4 +88,4 @@
 4. Si bëhet account recovery kur shoferi ndryshon telefonin? Identiteti aktual përdor telefonin si subject JWT.
 5. Çfarë ndodh kur shoferi çaktivizohet gjatë një udhëtimi aktiv? Ruaj politikën ekzistuese të refuzimit të deactivation gjatë BUSY derisa të miratohet exception workflow.
 
-**Status (2026-10-23):** rregulli i kompanisë aktive është miratuar; **FAZA A është shkruar në kod** (migration 026, nullable FK/unique User link, JPA mapping dhe testet e DB). **Asnjë deploy, DB migration i ekzekutuar ose ekzekutim i testeve pas commit-eve nuk është konfirmuar**. Nuk është shtuar ende `DRIVER` në enum dhe nuk ka login, aktivizim apo autorizim të Driver App. **MRT-03-02 / MRT-03-03 mbeten `[ ]`.** Synimi i produktit është **publikimi live**: mos pranoni kode prod pa test migrimi/rollback, autorizim negative-case, HTTPS/secrets, storage privat dokumentesh, GPS testuar në pajisje dhe verifikim të politikave/privacy.
+**Status (2026-10-24):** rregulli i kompanisë aktive është miratuar; **FAZA A është shkruar dhe testuar lokalisht** (migration 026, nullable FK/unique User link, JPA mapping dhe tri teste të DB). Evidenca e përdoruesit: `./mvnw.cmd test`, Java 17, Docker Desktop, PostgreSQL 17 Testcontainers, `test` profile, 32 Liquibase changeSets; **446 tests, 0 failures, 0 errors, 0 skipped, BUILD SUCCESS, 03:03 min**. Nuk është konfirmuar asnjë deploy/staging/production. Nuk është shtuar ende `DRIVER` në enum dhe nuk ka login, aktivizim apo autorizim të Driver App. **MRT-03-02 / MRT-03-03 mbeten `[ ]`.** Synimi i produktit është **publikimi live**: mos pranoni kode prod pa test migrimi/rollback, autorizim negative-case, HTTPS/secrets, storage privat dokumentesh, GPS testuar në pajisje dhe verifikim të politikave/privacy.
