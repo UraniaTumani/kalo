@@ -1,6 +1,6 @@
 # MR TAXI — Driver Identity: kontrata dhe plan migrimi
 
-**Status:** IN PROGRESS — fazat A dhe B1 u verifikuan lokalisht; faza B2a (token primitives + driver pending-login guard) është shkruar, por testet e reja ende nuk janë ekzekutuar  
+**Status:** IN PROGRESS — fazat A dhe B1 u verifikuan lokalisht; faza B2a (token primitives + driver pending-login guard) u verifikua lokalisht më 2026-10-24 (460 teste, BUILD SUCCESS)  
 **Data:** 2026-10-23  
 **Branch i analizuar:** `feature/f42-real-gps-freshness`  
 **Lidhje:** `docs/MR_TAXI_ARCHITECTURE_ADRS.md` (ADR-003), `docs/MR_TAXI_PRD.md`, `docs/MR_TAXI_MASTER_CHECKLIST.md`  
@@ -105,10 +105,10 @@
 
 ## 8. Faza B2a — Token primitives dhe kushti i hyrjes (2026-10-24)
 
-**Në branch, pa ekzekutim të ri testesh ende:**
+**Në branch, verifikuar me teste lokale më 2026-10-24:**
 
 - `DriverInvitationTokenCodec` gjeneron 32 byte nga `SecureRandom` (URL-safe 43 karaktere); për storage/lookup llogarit SHA-256 hex (64 karaktere). Refuzon token null, me gjatësi/format të pasaktë ose jo-kanonik, pa e përfshirë vlerën në gabim. Tri teste të reja `DriverInvitationTokenCodecTest` verifikojnë formatin, diversitetin dhe input të pavlefshëm.
 - `CustomUserDetailsService` refuzon hyrjen për `DRIVER` me `UserStatus.PENDING` dhe kërkon `ACTIVE`; `PARTNER/PENDING` vazhdon të lejohet për onboarding. Katër teste të reja `CustomUserDetailsServiceDriverTest` mbulojnë pending driver, active driver, pending partner dhe suspended driver.
 - Tokeni i papërpunuar **nuk** ruhet në DB, nuk dërgohet përmes API dhe nuk log-ohet. Nuk ekziston ende issuance endpoint, delivery, redemption apo aktivizim.
 
-**Gate:** `./mvnw.cmd test` me Docker/Testcontainers para se të përfundojmë B2a. Këto teste nuk janë ekzekutuar ende; numri i fundit i verifikuar mbetet **453** (B1). `MRT-03-02` mbetet `[ ]`. Për aplikacionin live duhen gjithashtu kanal i sigurt i ftesës, expiry/single-use atomik, cooldown/rate-limit, audit, verifikim pronësie, revoke dhe teste negative E2E.
+**Gate B2a u përmbush (2026-10-24):** `./mvnw.cmd test` me Docker/Testcontainers: **460 teste, 0 failures, 0 errors, 0 skipped, BUILD SUCCESS, 02:50 min**. PostgreSQL 17, profili `test`, Liquibase 33 changesets (përfshirë `026` dhe `027`). Shtatë testet e reja kaluan. `MRT-03-02` mbetet `[ ]`. Për aplikacionin live duhen gjithashtu kanal i sigurt i ftesës, expiry/single-use atomik, cooldown/rate-limit, audit, verifikim pronësie, revoke dhe teste negative E2E.
