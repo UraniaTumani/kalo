@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import com.kalo.driver.repository.DriverInvitationRepository;
+import java.time.Instant;
 
 import java.util.List;
 
@@ -31,6 +33,9 @@ class SchemaInvariantsIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     JdbcTemplate jdbc;
+
+    @Autowired
+    DriverInvitationRepository invitationRepository;
 
     private boolean indexExists(String name) {
         Integer count = jdbc.queryForObject(
@@ -185,6 +190,53 @@ class SchemaInvariantsIntegrationTest extends AbstractIntegrationTest {
                     VALUES (?, ?, ?, now() + interval '1 hour', now(), now())
                     """, f.secondDriverId, f.companyId, "abc123"))
                     .isInstanceOf(DataIntegrityViolationException.class);
+        }
+
+        @Test
+        @DisplayName("bulk revoke invalidates unredeemed invitations only")
+        void revokeUnredeemedForDriver() {
+            Fixture f = fixture();
+            jdbc.update("""
+                    INSERT INTO driver_invitations
+                    (driver_id, company_id, token_hash, expires_at, created_at, updated_at)
+                    VALUES (?, ?, 'pending-a', now() + interval '1 hour', now(), now()),
+                           (?, ?, 'redeemed-b', now() + interval '1 hour', now(), now()),
+                           (?, ?, 'pending-other', now() + interval '1 hour', now(), now())
+                    """, f.driverId, f.companyId,
+                    f.driverId, f.companyId,
+                    f.secondDriverId, f.companyId);
+            jdbc.update("UPDATE driver_invitations SET redeemed_at = now() WHERE token_hash = 'redeemed-b'");
+
+            int count = invitationRepository.revokeUnredeemedForDriver(f.driverId, Instant.now());
+            assertThat(count).isEqualTo(1);
+
+            assertThat(jdbc.queryForObject(
+                    "SELECT revoked_at IS NOT NULL FROM driver_invitations WHERE token_hash = 'pending-a'",
+                    Boolean.class)).isTrue();
+            assertThat(jdbc.queryForObject(
+                    "SELECT revoked_at IS NULL FROM driver_invitations WHERE token_hash = 'redeemed-b'",
+                    Boolean.class)).isTrue();
+            assertThat(jdbc.queryForObject(
+                    "SELECT revoked_at IS NULL FROM driver_invitations WHERE token_hash = 'pending-other'",
+                    Boolean.class)).isTrue();
+        }
+
+        @Test
+        @DisplayName("cooldown lookup returns the most recent invitation for its driver")
+        void latestInvitationIsScopedToDriver() {
+            Fixture f = fixture();
+            jdbc.update("""
+                    INSERT INTO driver_invitations
+                    (driver_id, company_id, token_hash, expires_at, created_at, updated_at)
+                    VALUES (?, ?, 'older', now() + interval '1 hour', now() - interval '10 minutes', now()),
+                           (?, ?, 'newer', now() + interval '1 hour', now(), now()),
+                           (?, ?, 'foreign', now() + interval '1 hour', now() + interval '1 minute', now())
+                    """, f.driverId, f.companyId,
+                    f.driverId, f.companyId,
+                    f.secondDriverId, f.companyId);
+
+            assertThat(invitationRepository.findFirstByDriverIdOrderByCreatedAtDesc(f.driverId))
+                    .get().extracting("tokenHash").isEqualTo("newer");
         }
 
         @Test
