@@ -170,6 +170,16 @@ jobs:
         working-directory: frontend
         run: npx playwright install --with-deps chrome
 
+      # Mocked invitation checks use a separate preview, with no backend or SMS.
+      # Node 24 above supports native TypeScript imports in the helper tests.
+      - name: Driver invitation helper tests
+        working-directory: frontend
+        run: node --test tests/driverInvitation.test.mjs
+
+      - name: Driver invitation UI tests (mock API)
+        working-directory: frontend
+        run: npx playwright test --config playwright.invitations.config.ts
+
       # Brings up its own PostgreSQL and backend, seeded fresh, and takes them
       # down afterwards. Nothing here touches a developer database.
       - name: Run browser tests
