@@ -5,7 +5,7 @@
  * Instant and LocalDate/LocalTime arrive as ISO strings.
  */
 
-export type UserRole = 'CUSTOMER' | 'PARTNER' | 'ADMIN'
+export type UserRole = 'CUSTOMER' | 'PARTNER' | 'ADMIN' | 'DRIVER'
 export type UserStatus = 'ACTIVE' | 'PENDING' | 'SUSPENDED' | 'DISABLED'
 
 export type VerificationStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED'

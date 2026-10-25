@@ -114,6 +114,8 @@ export function homePathFor(role: UserRole | null) {
       return '/partner'
     case 'ADMIN':
       return '/admin'
+    case 'DRIVER':
+      return '/driver'
     case 'CUSTOMER':
       return '/ride'
     default:

@@ -1,3 +1,6 @@
+import { DriverActivationPage } from '@/features/auth/DriverActivationPage'
+import { driverInvitationsEnabled } from '@/lib/driverInvitation'
+import { DriverAccountPage } from '@/features/auth/DriverAccountPage'
 import { Suspense, lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth, homePathFor } from '@/auth/AuthContext'
@@ -132,6 +135,8 @@ export default function App() {
       {/* Public: a visitor with no account lands here. */}
       <Route path="/" element={<GuestLandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      {driverInvitationsEnabled && <Route path="/driver/activate" element={<DriverActivationPage />} />}
+      <Route element={<ProtectedRoute allow={['DRIVER']} />}><Route path="/driver" element={<DriverAccountPage />} /></Route>
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />

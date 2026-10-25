@@ -108,6 +108,7 @@ interface RequestOptions {
   skipAuthRedirect?: boolean
 
   /** Set on the replayed request so a refresh loop cannot form. */
+  anonymous?: boolean
   skipRefresh?: boolean
 }
 
@@ -149,7 +150,7 @@ async function performRequest<T>(path: string, options: RequestOptions = {}): Pr
   const { method = 'GET', body, params } = options
 
   const headers: Record<string, string> = { Accept: 'application/json' }
-  const token = tokenStorage.get()
+  const token = options.anonymous ? null : tokenStorage.get()
 
   if (token) {
     headers.Authorization = `Bearer ${token}`

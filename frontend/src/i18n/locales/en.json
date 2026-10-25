@@ -837,5 +837,25 @@
     "urgent": "Expires within 7 days",
     "soon": "Expires within 30 days",
     "review": "Review documents"
+  },
+  "invitation": {
+    "invite": "Invite driver",
+    "confirmSend": "Queue an activation invitation for {{phone}}? A new invitation replaces the previous unused link.",
+    "queued": "Invitation queued. SMS delivery is not yet confirmed.",
+    "notEligible": "Cannot invite this driver now. Check eligibility or wait before trying again.",
+    "queueFailed": "Could not confirm queueing. Do not retry immediately; check with your administrator.",
+    "activateTitle": "Activate your driver account",
+    "activateHint": "Choose a password for the phone number that received this invitation.",
+    "passwordRule": "Use at least 8 characters and at most 72 UTF-8 bytes (some characters use more than one byte).",
+    "passwordMismatch": "Passwords do not match.",
+    "confirmPassword": "Confirm password",
+    "activate": "Activate account",
+    "activated": "Your driver account is active. Sign in using the invited phone number and your new password.",
+    "invalidLink": "This invitation link is missing or invalid. Reopen the original SMS link or ask your company for a new invitation.",
+    "activationFailed": "Activation could not be confirmed. The link may be expired, used or unavailable. If you already submitted it, try signing in before requesting a new link.",
+    "tooMany": "Too many attempts. Please wait before trying again.",
+    "driverAccount": "Driver account",
+    "driverAccountHint": "You are signed in. Driver trip and availability controls are not available yet.",
+    "signOut": "Sign out"
   }
 }
