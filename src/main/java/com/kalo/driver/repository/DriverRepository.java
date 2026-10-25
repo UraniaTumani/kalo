@@ -1,6 +1,10 @@
 package com.kalo.driver.repository;
 
 import com.kalo.driver.entity.Driver;
+import com.kalo.user.enums.UserRole;
+import com.kalo.user.enums.UserStatus;
+import com.kalo.partner.enums.CompanyStatus;
+import com.kalo.partner.enums.VerificationStatus;
 import com.kalo.driver.enums.DriverAvailabilityStatus;
 import com.kalo.driver.enums.DriverStatus;
 import org.springframework.data.domain.Page;
@@ -17,6 +21,19 @@ import java.util.Optional;
 
 public interface DriverRepository
         extends JpaRepository<Driver, Long> {
+
+    /** One database read validates the actual linked account, phone and tenant status. */
+    @Query("""
+            SELECT COUNT(d) > 0 FROM Driver d JOIN d.user u JOIN d.company c
+            WHERE u.id = :userId AND u.phone = :phone AND d.phone = u.phone
+              AND u.role = :role AND u.status = :userStatus AND u.phoneVerified = TRUE
+              AND d.status = :driverStatus AND c.status = :companyStatus
+              AND c.verificationStatus = :verification
+            """)
+    boolean hasEligibleUserBinding(@Param("userId") Long userId,@Param("phone") String phone,
+            @Param("role") UserRole role,@Param("userStatus") UserStatus userStatus,
+            @Param("driverStatus") DriverStatus driverStatus,@Param("companyStatus") CompanyStatus companyStatus,
+            @Param("verification") VerificationStatus verification);
 
     /**
      * Company scoping is part of the query, not a caller's responsibility: a

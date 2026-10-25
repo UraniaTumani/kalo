@@ -17,6 +17,7 @@ import java.util.List;
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final DriverAccountAccessPolicy driverAccess;
 
     @Override
     public UserDetails loadUserByUsername(String phone)
@@ -33,10 +34,13 @@ public class CustomUserDetailsService implements UserDetailsService {
          * PENDING is deliberately treated as authenticatable: a partner has to
          * log in while PENDING to finish onboarding and submit documents.
          * Ride-management operations are gated separately on an APPROVED +
-         * ACTIVE taxi company.
+         * ACTIVE taxi company. DRIVER is deliberately different: a pending
+         * driver must not sign in before verified invitation activation.
+         * ACTIVE drivers additionally require a verified, current driver/company binding.
          */
         boolean enabled =
-                user.getStatus() != UserStatus.DISABLED;
+                user.getStatus() != UserStatus.DISABLED
+                && driverAccess.canAuthenticate(user);
 
         boolean accountNonLocked =
                 user.getStatus() != UserStatus.SUSPENDED;

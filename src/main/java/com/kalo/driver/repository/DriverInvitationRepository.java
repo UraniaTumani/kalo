@@ -1,0 +1,43 @@
+package com.kalo.driver.repository;
+
+import com.kalo.driver.entity.DriverInvitation;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
+
+import java.time.Instant;
+import java.util.Optional;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.transaction.annotation.Transactional;
+
+public interface DriverInvitationRepository extends JpaRepository<DriverInvitation, Long> {
+
+    /**
+     * Redemption will lock the invitation row before checking expiry, use,
+     * company ownership and linked driver identity. Delivery remains disabled.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT i FROM DriverInvitation i WHERE i.tokenHash = :hash")
+    Optional<DriverInvitation> findForUpdateByTokenHash(@Param("hash") String hash);
+
+    /** Cooldown applies to the driver, regardless of request IP. */
+    Optional<DriverInvitation> findFirstByDriverIdOrderByCreatedAtDesc(Long driverId);
+
+    /** All issuance states count, so revocation/redemption cannot reset the quota. */
+    long countByCompanyIdAndCreatedAtGreaterThanEqual(Long companyId, Instant since);
+
+    /** Revoke all unredeemed invitation rows for the driver, including expired. */
+    @Transactional
+    @Modifying
+    @Query("""
+            UPDATE DriverInvitation i SET i.revokedAt = :now
+            WHERE i.driver.id = :driverId
+              AND i.redeemedAt IS NULL
+              AND i.revokedAt IS NULL
+            """)
+    int revokeUnredeemedForDriver(
+            @Param("driverId") Long driverId,
+            @Param("now") Instant now);
+}

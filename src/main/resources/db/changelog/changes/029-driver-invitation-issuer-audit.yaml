@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: 029-driver-invitation-issuer-audit
+      author: kalo
+      comment: Add nullable issuance actor FK; historical invitations remain unattributed.
+      changes:
+        - addColumn:
+            tableName: driver_invitations
+            columns:
+              - column:
+                  name: issued_by_user_id
+                  type: BIGINT
+        - addForeignKeyConstraint:
+            baseTableName: driver_invitations
+            baseColumnNames: issued_by_user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_driver_invitation_issuer
+            onDelete: RESTRICT
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: driver_invitations
+            constraintName: fk_driver_invitation_issuer
+        - dropColumn:
+            tableName: driver_invitations
+            columnName: issued_by_user_id

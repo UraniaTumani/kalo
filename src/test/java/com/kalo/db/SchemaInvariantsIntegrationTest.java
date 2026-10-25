@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import com.kalo.driver.repository.DriverInvitationRepository;
+import java.time.Instant;
 
 import java.util.List;
 
@@ -31,6 +33,9 @@ class SchemaInvariantsIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     JdbcTemplate jdbc;
+
+    @Autowired
+    DriverInvitationRepository invitationRepository;
 
     private boolean indexExists(String name) {
         Integer count = jdbc.queryForObject(
@@ -75,7 +80,9 @@ class SchemaInvariantsIntegrationTest extends AbstractIntegrationTest {
                             "017-one-active-ride-per-customer",
                             "017-one-active-ride-per-driver",
                             "020-create-refresh-tokens",
-                            "021-create-support-requests"
+                            "021-create-support-requests",
+                            "026-link-drivers-to-users",
+                            "027-create-driver-invitations"
                     );
         }
 
@@ -104,6 +111,145 @@ class SchemaInvariantsIntegrationTest extends AbstractIntegrationTest {
         void schemaValidates() {
 
             assertThat(jdbc.queryForObject("SELECT 1", Integer.class)).isEqualTo(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("Driver authentication link (migration 026)")
+    class DriverUserLink {
+
+        @Test
+        @DisplayName("legacy driver records stay unlinked by default")
+        void existingDriversRemainUnlinked() {
+            Fixture f = fixture();
+
+            Long linkedUser = jdbc.queryForObject(
+                    "SELECT user_id FROM drivers WHERE id = ?",
+                    Long.class, f.driverId
+            );
+
+            assertThat(linkedUser).isNull();
+            assertThat(constraintExists("fk_drivers_user")).isTrue();
+            assertThat(constraintExists("uk_drivers_user_id")
+                    || indexExists("uk_drivers_user_id")).isTrue();
+        }
+
+        @Test
+        @DisplayName("one account cannot be linked to two driver records")
+        void userCanOnlyLinkOneDriver() {
+            Fixture f = fixture();
+
+            jdbc.update("UPDATE drivers SET user_id = ? WHERE id = ?",
+                    f.ownerId, f.driverId);
+
+            assertThatThrownBy(() -> jdbc.update(
+                    "UPDATE drivers SET user_id = ? WHERE id = ?",
+                    f.ownerId, f.secondDriverId
+            )).isInstanceOf(DataIntegrityViolationException.class);
+        }
+
+        @Test
+        @DisplayName("a driver cannot link to a non-existent user")
+        void linkedUserMustExist() {
+            Fixture f = fixture();
+
+            assertThatThrownBy(() -> jdbc.update(
+                    "UPDATE drivers SET user_id = ? WHERE id = ?",
+                    Long.MAX_VALUE, f.driverId
+            )).isInstanceOf(DataIntegrityViolationException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("Driver invitations (migration 027)")
+    class DriverInvitations {
+
+        @Test
+        @DisplayName("the invitation schema and token uniqueness exist")
+        void schemaExists() {
+            assertThat(constraintExists("fk_driver_invitations_driver")).isTrue();
+            assertThat(constraintExists("fk_driver_invitations_company")).isTrue();
+            assertThat(constraintExists("uk_driver_invitations_token_hash")
+                    || indexExists("uk_driver_invitations_token_hash")).isTrue();
+        }
+
+        @Test
+        @DisplayName("an invitation token hash cannot be reused")
+        void tokenHashIsUnique() {
+            Fixture f = fixture();
+
+            jdbc.update("""
+                    INSERT INTO driver_invitations
+                    (driver_id, company_id, token_hash, expires_at, created_at, updated_at)
+                    VALUES (?, ?, ?, now() + interval '1 hour', now(), now())
+                    """, f.driverId, f.companyId, "abc123");
+
+            assertThatThrownBy(() -> jdbc.update("""
+                    INSERT INTO driver_invitations
+                    (driver_id, company_id, token_hash, expires_at, created_at, updated_at)
+                    VALUES (?, ?, ?, now() + interval '1 hour', now(), now())
+                    """, f.secondDriverId, f.companyId, "abc123"))
+                    .isInstanceOf(DataIntegrityViolationException.class);
+        }
+
+        @Test
+        @DisplayName("bulk revoke invalidates unredeemed invitations only")
+        void revokeUnredeemedForDriver() {
+            Fixture f = fixture();
+            jdbc.update("""
+                    INSERT INTO driver_invitations
+                    (driver_id, company_id, token_hash, expires_at, created_at, updated_at)
+                    VALUES (?, ?, 'pending-a', now() + interval '1 hour', now(), now()),
+                           (?, ?, 'redeemed-b', now() + interval '1 hour', now(), now()),
+                           (?, ?, 'pending-other', now() + interval '1 hour', now(), now())
+                    """, f.driverId, f.companyId,
+                    f.driverId, f.companyId,
+                    f.secondDriverId, f.companyId);
+            jdbc.update("UPDATE driver_invitations SET redeemed_at = now() WHERE token_hash = 'redeemed-b'");
+
+            int count = invitationRepository.revokeUnredeemedForDriver(f.driverId, Instant.now());
+            assertThat(count).isEqualTo(1);
+
+            assertThat(jdbc.queryForObject(
+                    "SELECT revoked_at IS NOT NULL FROM driver_invitations WHERE token_hash = 'pending-a'",
+                    Boolean.class)).isTrue();
+            assertThat(jdbc.queryForObject(
+                    "SELECT revoked_at IS NULL FROM driver_invitations WHERE token_hash = 'redeemed-b'",
+                    Boolean.class)).isTrue();
+            assertThat(jdbc.queryForObject(
+                    "SELECT revoked_at IS NULL FROM driver_invitations WHERE token_hash = 'pending-other'",
+                    Boolean.class)).isTrue();
+        }
+
+        @Test
+        @DisplayName("cooldown lookup returns the most recent invitation for its driver")
+        void latestInvitationIsScopedToDriver() {
+            Fixture f = fixture();
+            jdbc.update("""
+                    INSERT INTO driver_invitations
+                    (driver_id, company_id, token_hash, expires_at, created_at, updated_at)
+                    VALUES (?, ?, 'older', now() + interval '1 hour', now() - interval '10 minutes', now()),
+                           (?, ?, 'newer', now() + interval '1 hour', now(), now()),
+                           (?, ?, 'foreign', now() + interval '1 hour', now() + interval '1 minute', now())
+                    """, f.driverId, f.companyId,
+                    f.driverId, f.companyId,
+                    f.secondDriverId, f.companyId);
+
+            assertThat(invitationRepository.findFirstByDriverIdOrderByCreatedAtDesc(f.driverId))
+                    .get().extracting("tokenHash").isEqualTo("newer");
+        }
+
+        @Test
+        @DisplayName("an invitation cannot reference a missing driver")
+        void driverMustExist() {
+            Fixture f = fixture();
+
+            assertThatThrownBy(() -> jdbc.update("""
+                    INSERT INTO driver_invitations
+                    (driver_id, company_id, token_hash, expires_at, created_at, updated_at)
+                    VALUES (?, ?, ?, now() + interval '1 hour', now(), now())
+                    """, Long.MAX_VALUE, f.companyId, "other123"))
+                    .isInstanceOf(DataIntegrityViolationException.class);
         }
     }
 

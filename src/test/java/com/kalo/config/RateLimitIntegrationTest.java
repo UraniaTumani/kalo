@@ -194,4 +194,12 @@ class RateLimitIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(true).as("no request was throttled").isTrue();
     }
+    @Test void driverActivationIsLimitedEvenWhenRouteIsDisabled() throws Exception {
+        for(int i=0;i<10;i++)
+            mockMvc.perform(post("/api/v1/auth/driver/activate").contentType(APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/v1/auth/driver/activate").contentType(APPLICATION_JSON).content("{}"))
+                .andExpect(status().isTooManyRequests()).andExpect(header().exists("Retry-After"));
+    }
+
 }

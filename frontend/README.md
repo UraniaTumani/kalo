@@ -26,7 +26,11 @@ cd frontend && npm install && npm run dev
 Open <http://localhost:5173>. Point the proxy somewhere else with
 `VITE_API_TARGET=http://host:port npm run dev`.
 
-Other scripts: `npm run build` (type-check + production build), `npm run lint`.
+Other scripts: `npm run build` (type-check + production build), `npm run lint`,
+`npm run test:e2e`, `npm run test:regression`, and `npm run test:documents`.
+`test:e2e` starts an isolated `kalo-e2e` Docker Compose stack: PostgreSQL on
+55432, backend on 18080 and frontend preview on 5174. The script tears its
+own stack down after the tests (including the temporary database).
 
 ## Structure
 
@@ -44,7 +48,8 @@ src/
     customer/     book a taxi, current ride, history, rating
     partner/      dashboard, rides, drivers, vehicles, assignments,
                   documents, settings, availability
-    admin/        verification queue, companies, users, rides
+    admin/        verification queue, companies, users, rides, support
+    support/      help and support requests
 ```
 
 ## Notes on behaviour
@@ -58,9 +63,9 @@ src/
   editable; the phone number is shown read-only because it is the login
   identifier and changing it needs a verification flow the backend does not
   have.
-- **Auth.** The token lives in `localStorage`. Any 401 from the API clears the
-  session, so a token revoked server-side (suspension) logs the user out on
-  their next action rather than leaving a broken shell.
+- **Auth.** The web app uses access and refresh tokens. Expired access tokens
+  can be refreshed and the original request retried; a rejected refresh logs
+  out the user. Backend authorization remains authoritative.
 - **Roles.** Signing in sends you to your own surface. Landing on another
   role's route redirects you to yours instead of showing a dead end.
 - **Polling.** `GET /rides/current` polls every 5s while the ride is live and
@@ -76,12 +81,23 @@ src/
 - **Code splitting.** Each role's screens load on demand, so Leaflet only
   reaches the browser on pages that show a map.
 
+## Current implementation and verified baseline
+
+- Playwright browser E2E tests exercise a real, isolated backend and PostgreSQL
+  stack: **124 Chrome desktop tests passed on 2026-10-23**. Additional document
+  and GPS freshness test files exist; native mobile behavior is not covered.
+- Company, driver and vehicle document upload and private download are present;
+  production private storage is still outstanding.
+- Access-token refresh/logout and both **Albanian and English** UI copy exist.
+- Partner web can report browser GPS and restart tracking; customer ride pages
+  apply location freshness checks. This is **not reliable native background GPS**.
+- Production frontend build passed, and lint reported 0 errors and 22 warnings;
+  Vite warned about a bundle above 500 kB on 2026-10-23.
+
 ## Not built yet
 
-- No tests. Vitest and Testing Library are not wired up yet.
-- No document upload — documents are submitted as hosted URLs, matching the
-  backend MVP.
-- No driver-facing app; the company drives the ride lifecycle on the driver's
-  behalf, as the API is designed.
-- No refresh tokens; when the JWT expires the user signs in again.
-- No i18n. Copy is English only.
+- Native Customer and Driver apps, individual Driver login and native GPS in
+  background remain future work.
+- In-app payments and a commission ledger do not exist yet; cash/card collection
+  is direct to the driver/company, based on the taximeter's fare.
+- No routed road ETA; straight-line distance is not travel time.

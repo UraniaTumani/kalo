@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { partnerApi } from '@/lib/api/endpoints'
 import { watchPosition, type Position } from '@/lib/geolocation'
+import { isFreshGpsFix } from '@/lib/gpsFreshness'
 
 /** Taxi search ignores positions older than two minutes, so stay well inside it. */
 const UPLOAD_INTERVAL_MS = 25_000
@@ -56,6 +57,14 @@ export function useDriverTracking() {
     async function upload() {
       const position = latestPosition.current
       if (!position) return
+
+      if (!isFreshGpsFix(position.timestamp, Date.now())) {
+        setState((previous) => ({
+          ...previous,
+          error: 'GPS position is outdated. Waiting for a new device location.',
+        }))
+        return
+      }
 
       const results = await Promise.allSettled(
         trackedRef.current.map((driverId) =>
