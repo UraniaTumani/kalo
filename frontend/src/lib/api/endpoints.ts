@@ -54,6 +54,9 @@ interface PageParams {
 /* ------------------------------------------------------------------ auth */
 
 export const authApi = {
+  activateDriver: (body: { token: string; password: string }) =>
+    api.post<void>('/api/v1/auth/driver/activate', body, { anonymous: true, skipRefresh: true, skipAuthRedirect: true }),
+
   login: (body: { phone: string; password: string }) =>
     api.post<LoginResponse>('/api/v1/auth/login', body, { skipAuthRedirect: true }),
 
@@ -181,6 +184,8 @@ export const supportApi = {
 /* --------------------------------------------------------------- partner */
 
 export const partnerApi = {
+  inviteDriver: (id: number) => api.post<void>(`/api/v1/partner/drivers/${id}/invitations`, undefined, { skipRefresh: true }),
+
   profile: () => api.get<PartnerProfileResponse>('/api/v1/partner/me'),
 
   readiness: () => api.get<PartnerReadinessResponse>('/api/v1/partner/readiness'),

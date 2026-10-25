@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { partnerApi, rideApi } from '@/lib/api/endpoints'
 import { ApiError } from '@/lib/api/client'
-import type { RideStatus } from '@/lib/api/types'
+import type { RideStatus, UserRole } from '@/lib/api/types'
 import { isActiveRide } from '@/lib/api/types'
 import { recallRide, rememberRide } from '@/features/customer/rideMemory'
 import { partnerNotificationKeys } from '@/features/partner/notificationQueries'
@@ -73,7 +73,8 @@ const adminNav: NavItem[] = [
   { to: '/admin/password-resets', labelKey: 'nav.passwordResets', icon: KeyRound },
 ]
 
-const navByRole = {
+const navByRole: Record<UserRole, NavItem[]> = {
+  DRIVER: [{ to: '/driver', labelKey: 'invitation.driverAccount', icon: User, end: true }],
   CUSTOMER: customerNav,
   PARTNER: partnerNav,
   ADMIN: adminNav,

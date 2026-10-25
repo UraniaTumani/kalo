@@ -1,3 +1,4 @@
+import { DriverInviteButton } from './DriverInviteButton'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { FleetDocumentsCard } from './FleetDocumentsCard'
 import { useTranslation } from 'react-i18next'
@@ -287,6 +288,7 @@ export function PartnerDriversPage() {
                     </p>
 
                     <div className="mt-3 flex flex-wrap justify-end gap-2">
+                      <DriverInviteButton driver={driver} />
                       <Button size="sm" variant="secondary" onClick={() => setDocumentsFor(driver)}>
                         {t('partner.documentsTitle')}
                       </Button>
@@ -393,7 +395,8 @@ export function PartnerDriversPage() {
                       </Td>
                       <Td>
                         <RowActions>
-                          <Button size="sm" variant="secondary" onClick={() => setDocumentsFor(driver)}>
+                          <DriverInviteButton driver={driver} />
+                      <Button size="sm" variant="secondary" onClick={() => setDocumentsFor(driver)}>
                             {t('partner.documentsTitle')}
                           </Button>
                           {driver.status === 'ACTIVE' && driver.availabilityStatus !== 'BUSY' && (

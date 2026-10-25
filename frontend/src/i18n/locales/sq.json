@@ -837,5 +837,25 @@
     "urgent": "Skadon brenda 7 ditëve",
     "soon": "Skadon brenda 30 ditëve",
     "review": "Shiko dokumentet"
+  },
+  "invitation": {
+    "invite": "Fto shoferin",
+    "confirmSend": "Të vendoset në radhë ftesa e aktivizimit për {{phone}}? Ftesa e re zëvendëson lidhjen e mëparshme të papërdorur.",
+    "queued": "Ftesa u vendos në radhë. Dorëzimi i SMS-së ende nuk është konfirmuar.",
+    "notEligible": "Shoferi nuk mund të ftohet tani. Kontrolloni kushtet ose prisni para se të provoni përsëri.",
+    "queueFailed": "Vendosja në radhë nuk u konfirmua. Mos provoni menjëherë përsëri; kontaktoni administratorin.",
+    "activateTitle": "Aktivizo llogarinë e shoferit",
+    "activateHint": "Zgjidhni një fjalëkalim për numrin që mori këtë ftesë.",
+    "passwordRule": "Përdorni të paktën 8 karaktere dhe jo më shumë se 72 bajte UTF-8 (disa karaktere përdorin më shumë se një bajt).",
+    "passwordMismatch": "Fjalëkalimet nuk përputhen.",
+    "confirmPassword": "Konfirmo fjalëkalimin",
+    "activate": "Aktivizo llogarinë",
+    "activated": "Llogaria juaj e shoferit është aktive. Hyni me numrin e ftuar dhe fjalëkalimin e ri.",
+    "invalidLink": "Lidhja e ftesës mungon ose është e pavlefshme. Rihapni lidhjen origjinale nga SMS-ja ose kërkoni një ftesë të re.",
+    "activationFailed": "Aktivizimi nuk u konfirmua. Lidhja mund të ketë skaduar, të jetë përdorur ose shërbimi të jetë i padisponueshëm. Nëse e keni dërguar kërkesën, provoni të hyni para se të kërkoni lidhje të re.",
+    "tooMany": "Shumë përpjekje. Prisni para se të provoni përsëri.",
+    "driverAccount": "Llogaria e shoferit",
+    "driverAccountHint": "Jeni të identifikuar. Funksionet e udhëtimeve dhe disponueshmërisë së shoferit ende nuk janë të disponueshme.",
+    "signOut": "Dil"
   }
 }
