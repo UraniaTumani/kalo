@@ -64,3 +64,15 @@ databaseChangeLog:
 
   - include:
       file: db/changelog/changes/027-create-driver-invitations.yaml
+
+  - include:
+      file: db/changelog/changes/028-create-driver-invitation-deliveries.yaml
+
+  - include:
+      file: db/changelog/changes/029-driver-invitation-issuer-audit.yaml
+
+  - include:
+      file: db/changelog/changes/030-driver-delivery-reconciliation.yaml
+
+  - include:
+      file: db/changelog/changes/031-driver-report-check-schedule.yaml

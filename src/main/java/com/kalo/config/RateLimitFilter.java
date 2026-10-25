@@ -108,6 +108,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
      */
     private static final Map<String, Limit> LIMITED_PATHS = Map.ofEntries(
             Map.entry("/api/v1/auth/login", LOGIN),
+            Map.entry("/api/v1/auth/driver/activate", LOGIN),
             Map.entry("/api/v1/auth/register/customer", REGISTER),
             Map.entry("/api/v1/auth/register/partner", REGISTER),
             Map.entry("/api/v1/public/taxi-availability", PUBLIC),

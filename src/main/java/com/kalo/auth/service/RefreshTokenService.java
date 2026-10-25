@@ -1,6 +1,8 @@
 package com.kalo.auth.service;
 
 import com.kalo.auth.entity.RefreshToken;
+import com.kalo.auth.security.DriverAccountAccessPolicy;
+import com.kalo.common.exception.UnauthorizedException;
 import com.kalo.auth.repository.RefreshTokenRepository;
 import com.kalo.user.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +45,8 @@ public class RefreshTokenService {
     private static final int TOKEN_BYTES = 32;
 
     private final RefreshTokenRepository refreshTokenRepository;
+    private final DriverAccountAccessPolicy driverAccess;
+    private final DriverRefreshTokenRevocation driverRevocation;
 
     @Value("${app.jwt.refresh-expiration}")
     private long refreshExpirationMillis;
@@ -53,7 +57,9 @@ public class RefreshTokenService {
      */
     @Transactional
     public String issue(User user) {
-
+        if (!driverAccess.canAuthenticate(user)) {
+            throw new UnauthorizedException("Driver account is not eligible for authentication");
+        }
         byte[] raw = new byte[TOKEN_BYTES];
         RANDOM.nextBytes(raw);
 
@@ -105,6 +111,13 @@ public class RefreshTokenService {
                         );
                     }
 
+                    return false;
+                })
+                .filter(existing -> {
+                    User user = existing.getUser();
+                    if (driverAccess.canAuthenticate(user)) return true;
+                    // No token row has been modified/locked by this transaction yet.
+                    driverRevocation.revoke(user.getId());
                     return false;
                 })
                 .map(existing -> {

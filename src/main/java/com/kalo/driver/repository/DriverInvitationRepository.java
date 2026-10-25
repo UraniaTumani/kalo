@@ -25,6 +25,9 @@ public interface DriverInvitationRepository extends JpaRepository<DriverInvitati
     /** Cooldown applies to the driver, regardless of request IP. */
     Optional<DriverInvitation> findFirstByDriverIdOrderByCreatedAtDesc(Long driverId);
 
+    /** All issuance states count, so revocation/redemption cannot reset the quota. */
+    long countByCompanyIdAndCreatedAtGreaterThanEqual(Long companyId, Instant since);
+
     /** Revoke all unredeemed invitation rows for the driver, including expired. */
     @Transactional
     @Modifying

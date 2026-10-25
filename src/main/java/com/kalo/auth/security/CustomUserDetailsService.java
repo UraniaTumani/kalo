@@ -1,7 +1,6 @@
 package com.kalo.auth.security;
 
 import com.kalo.user.entity.User;
-import com.kalo.user.enums.UserRole;
 import com.kalo.user.enums.UserStatus;
 import com.kalo.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +17,7 @@ import java.util.List;
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final DriverAccountAccessPolicy driverAccess;
 
     @Override
     public UserDetails loadUserByUsername(String phone)
@@ -36,11 +36,11 @@ public class CustomUserDetailsService implements UserDetailsService {
          * Ride-management operations are gated separately on an APPROVED +
          * ACTIVE taxi company. DRIVER is deliberately different: a pending
          * driver must not sign in before verified invitation activation.
+         * ACTIVE drivers additionally require a verified, current driver/company binding.
          */
         boolean enabled =
                 user.getStatus() != UserStatus.DISABLED
-                && (user.getRole() != UserRole.DRIVER
-                    || user.getStatus() == UserStatus.ACTIVE);
+                && driverAccess.canAuthenticate(user);
 
         boolean accountNonLocked =
                 user.getStatus() != UserStatus.SUSPENDED;

@@ -1,0 +1,22 @@
+databaseChangeLog:
+  - changeSet:
+      id: 031-driver-report-check-schedule
+      author: kalo
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE driver_invitation_deliveries ADD COLUMN report_checks INTEGER NOT NULL DEFAULT 0;
+              ALTER TABLE driver_invitation_deliveries ADD COLUMN next_report_check_at TIMESTAMP WITH TIME ZONE;
+              ALTER TABLE driver_invitation_deliveries ADD COLUMN report_stop_reason VARCHAR(20);
+              ALTER TABLE driver_invitation_deliveries ADD CONSTRAINT ck_driver_report_checks CHECK (report_checks BETWEEN 0 AND 12);
+              ALTER TABLE driver_invitation_deliveries ADD CONSTRAINT ck_driver_report_stop CHECK (report_stop_reason IN ('AGE_LIMIT','ATTEMPT_LIMIT'));
+              CREATE INDEX idx_driver_report_due ON driver_invitation_deliveries(state,report_stop_reason,next_report_check_at);
+      rollback:
+        - sql:
+            sql: |
+              DROP INDEX idx_driver_report_due;
+              ALTER TABLE driver_invitation_deliveries DROP CONSTRAINT ck_driver_report_stop;
+              ALTER TABLE driver_invitation_deliveries DROP CONSTRAINT ck_driver_report_checks;
+              ALTER TABLE driver_invitation_deliveries DROP COLUMN report_stop_reason;
+              ALTER TABLE driver_invitation_deliveries DROP COLUMN next_report_check_at;
+              ALTER TABLE driver_invitation_deliveries DROP COLUMN report_checks;

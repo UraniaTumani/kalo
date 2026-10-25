@@ -1,0 +1,29 @@
+databaseChangeLog:
+  - changeSet:
+      id: 028-create-driver-invitation-deliveries
+      author: kalo
+      comment: Encrypted durable delivery preparation only; no sender or scheduler enabled.
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE driver_invitation_deliveries (
+                id BIGSERIAL PRIMARY KEY,
+                invitation_id BIGINT NOT NULL UNIQUE REFERENCES driver_invitations(id),
+                destination VARCHAR(30) NOT NULL,
+                key_id VARCHAR(100) NOT NULL,
+                encrypted_payload VARCHAR(98),
+                state VARCHAR(20) NOT NULL,
+                attempts INTEGER NOT NULL DEFAULT 0,
+                next_attempt_at TIMESTAMP WITH TIME ZONE NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+                updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+                CONSTRAINT ck_driver_delivery_attempts CHECK (attempts BETWEEN 0 AND 5),
+                CONSTRAINT ck_driver_delivery_state CHECK (state IN ('PENDING','ACCEPTED','FAILED','CANCELLED')),
+                CONSTRAINT ck_driver_delivery_payload CHECK (
+                  (state = 'PENDING' AND encrypted_payload IS NOT NULL) OR
+                  (state <> 'PENDING' AND encrypted_payload IS NULL))
+              );
+              CREATE INDEX idx_driver_delivery_due ON driver_invitation_deliveries(state, next_attempt_at);
+      rollback:
+        - dropTable:
+            tableName: driver_invitation_deliveries

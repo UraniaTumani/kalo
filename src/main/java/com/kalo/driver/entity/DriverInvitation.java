@@ -4,6 +4,7 @@ import com.kalo.common.entity.BaseEntity;
 import com.kalo.partner.entity.TaxiCompany;
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.AccessLevel;
 import lombok.Setter;
 
 import java.time.Instant;
@@ -32,6 +33,18 @@ public class DriverInvitation extends BaseEntity {
     @JoinColumn(name = "company_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_driver_invitations_company"))
     private TaxiCompany company;
+
+    /** Nullable for historical rows. New issuance records the authenticated company owner. */
+    @Setter(AccessLevel.NONE)
+    @Column(name = "issued_by_user_id", updatable = false)
+    private Long issuedByUserId;
+
+    public void recordIssuer(Long userId) {
+        if (userId == null || userId <= 0 || issuedByUserId != null) {
+            throw new IllegalArgumentException("Invitation issuer must be recorded once with a valid user ID");
+        }
+        issuedByUserId = userId;
+    }
 
     @Column(name = "token_hash", nullable = false, unique = true, length = 64)
     private String tokenHash;

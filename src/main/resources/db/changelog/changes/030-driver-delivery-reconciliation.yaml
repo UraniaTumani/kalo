@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: 030-driver-delivery-reconciliation
+      author: kalo
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE driver_invitation_deliveries ADD COLUMN provider_message_id VARCHAR(36);
+              ALTER TABLE driver_invitation_deliveries DROP CONSTRAINT ck_driver_delivery_state;
+              ALTER TABLE driver_invitation_deliveries ADD CONSTRAINT ck_driver_delivery_state
+                CHECK (state IN ('PENDING','ACCEPTED','FAILED','CANCELLED','REVIEW'));
+              ALTER TABLE driver_invitation_deliveries ADD CONSTRAINT ck_driver_delivery_review
+                CHECK (state <> 'REVIEW' OR provider_message_id IS NOT NULL);
+      rollback:
+        - sql:
+            sql: |
+              ALTER TABLE driver_invitation_deliveries DROP CONSTRAINT ck_driver_delivery_review;
+              ALTER TABLE driver_invitation_deliveries DROP CONSTRAINT ck_driver_delivery_state;
+              ALTER TABLE driver_invitation_deliveries ADD CONSTRAINT ck_driver_delivery_state
+                CHECK (state IN ('PENDING','ACCEPTED','FAILED','CANCELLED'));
+              ALTER TABLE driver_invitation_deliveries DROP COLUMN provider_message_id;
