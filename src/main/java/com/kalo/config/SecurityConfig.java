@@ -135,6 +135,9 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**")
                         .hasRole("ADMIN")
 
+                        .requestMatchers("/api/v1/driver/**")
+                        .hasRole("DRIVER")
+
                         .requestMatchers("/api/v1/partner/**")
                         .hasRole("PARTNER")
 

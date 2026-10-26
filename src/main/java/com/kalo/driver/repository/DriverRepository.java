@@ -22,6 +22,13 @@ import java.util.Optional;
 public interface DriverRepository
         extends JpaRepository<Driver, Long> {
 
+    /** Resolve identity only from the authenticated account, never a supplied driver ID. */
+    @Query("""
+            SELECT d FROM Driver d JOIN FETCH d.user u JOIN FETCH d.company
+            WHERE u.phone = :phone
+            """)
+    Optional<Driver> findSelfByUserPhone(@Param("phone") String phone);
+
     /** One database read validates the actual linked account, phone and tenant status. */
     @Query("""
             SELECT COUNT(d) > 0 FROM Driver d JOIN d.user u JOIN d.company c
