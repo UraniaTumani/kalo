@@ -1,0 +1,56 @@
+# Dedicated disposable stack. Never references the developer database or volumes.
+name: kalo-invitation-e2e
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: kalo_invitation_e2e
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: invitation-test-only
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kalo_invitation_e2e"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.invitation-e2e
+    environment:
+      SPRING_PROFILES_ACTIVE: dev,invitation-e2e
+      DB_URL: jdbc:postgresql://postgres:5432/kalo_invitation_e2e
+      DB_USERNAME: postgres
+      DB_PASSWORD: invitation-test-only
+      GEOCODING_PROVIDER: static
+      SPRING_APPLICATION_JSON: >-
+        {"app.rate-limit.enabled":false,
+         "app.ride.timeout-sweep.enabled":false,
+         "app.driver-invitation.issuance-api-enabled":true,
+         "app.driver-invitation.activation-api-enabled":true,
+         "app.driver-invitation.activation-enabled":true,
+         "app.driver-invitation.redemption-enabled":false,
+         "app.driver-invitation.delivery-key-id":"invitation-browser-only",
+         "app.driver-invitation.worker-enabled":true,
+         "app.driver-invitation.scheduler-enabled":true,
+         "app.driver-invitation.initial-delay":"PT1S",
+         "app.driver-invitation.poll-delay":"PT1S",
+         "app.driver-invitation.report-scheduler-enabled":false,
+         "app.driver-invitation.report-check-enabled":false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:18881:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+      start_period: 30s
+# Use a standard bridge so Docker Desktop can publish the loopback port.
+# The explicit test transport stays in-memory; no SMS provider is registered.
+networks:
+  default:
+    internal: false
