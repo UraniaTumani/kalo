@@ -857,5 +857,15 @@
     "driverAccount": "Llogaria e shoferit",
     "driverAccountHint": "Jeni të identifikuar. Funksionet e udhëtimeve dhe disponueshmërisë së shoferit ende nuk janë të disponueshme.",
     "signOut": "Dil"
+  },
+  "driverGps": {
+    "start": "Fillo ndarjen e vendndodhjes",
+    "stop": "Ndalo ndarjen e vendndodhjes",
+    "stopped": "Ndarja e vendndodhjes është ndaluar.",
+    "waiting": "Në pritje të vendndodhjes.",
+    "sent": "Vendndodhja u dërgua në",
+    "error": "Vendndodhja nuk është e disponueshme ose nuk u dërgua. Kontrolloni lejet dhe lidhjen.",
+    "explanation": "Ndani vendndodhjen e kësaj pajisjeje gjatë punës.",
+    "browserLimit": "Mbajeni këtë faqe të hapur dhe të dukshme. Përditësimet mund të ndalen në sfond. Një kërkesë e dërguar mund të përfundojë edhe pas ndalimit."
   }
 }
