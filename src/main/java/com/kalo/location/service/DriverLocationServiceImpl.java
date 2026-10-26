@@ -28,6 +28,7 @@ public class DriverLocationServiceImpl
     private final DriverLocationRepository driverLocationRepository;
     private final DriverRepository driverRepository;
     private final TaxiCompanyRepository taxiCompanyRepository;
+    private final DriverLocationWriter writer;
 
     @Override
     @Transactional
@@ -55,35 +56,7 @@ public class DriverLocationServiceImpl
 
         validateDriverCanSendLocation(driver);
 
-        DriverLocation location =
-                driverLocationRepository
-                        .findByDriverId(driver.getId())
-                        .orElseGet(() -> {
-
-                            DriverLocation newLocation =
-                                    new DriverLocation();
-
-                            newLocation.setDriver(driver);
-
-                            return newLocation;
-                        });
-
-        location.setLatitude(
-                request.latitude()
-        );
-
-        location.setLongitude(
-                request.longitude()
-        );
-
-        location.setLocationUpdatedAt(
-                Instant.now()
-        );
-
-        DriverLocation saved =
-                driverLocationRepository.save(location);
-
-        return mapToResponse(saved);
+        return writer.write(driver.getId(), request);
     }
 
     @Override
