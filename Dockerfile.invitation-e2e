@@ -1,0 +1,16 @@
+# Test image only. The production Dockerfile and jar remain unchanged.
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /build
+COPY pom.xml .
+COPY src ./src
+RUN mvn -B -DskipTests test-compile dependency:copy-dependencies -DincludeScope=test -DoutputDirectory=target/dependencies
+
+FROM eclipse-temurin:21-jre-alpine
+RUN addgroup -S kalo && adduser -S kalo -G kalo
+WORKDIR /app
+COPY --from=build /build/target/classes ./classes
+COPY --from=build /build/target/test-classes ./test-classes
+COPY --from=build /build/target/dependencies ./dependencies
+USER kalo
+EXPOSE 8080
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-cp", "/app/classes:/app/test-classes:/app/dependencies/*", "e2e.invitation.InvitationBrowserApplication"]
