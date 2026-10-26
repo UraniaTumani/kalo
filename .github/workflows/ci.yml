@@ -180,6 +180,13 @@ jobs:
         working-directory: frontend
         run: npx playwright test --config playwright.invitations.config.ts
 
+      # Real invitation API, worker, activation and login; SMS stays simulated.
+      # The runner owns and cleans up its dedicated Compose project.
+      - name: Driver invitation integration test (real backend)
+        working-directory: frontend
+        timeout-minutes: 20
+        run: node e2e/run-invitation-integration.mjs
+
       # Brings up its own PostgreSQL and backend, seeded fresh, and takes them
       # down afterwards. Nothing here touches a developer database.
       - name: Run browser tests

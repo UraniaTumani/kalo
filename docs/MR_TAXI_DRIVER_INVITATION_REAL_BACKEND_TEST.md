@@ -53,13 +53,19 @@ only this project from the project root with:
     docker compose --project-name kalo-invitation-e2e -f docker-compose.invitation-e2e.yml down --volumes --remove-orphans
 
 The test build replaces frontend/dist; rebuild with normal flags before reusing dist
-for another purpose. No deployment is performed. This scenario is not added to CI in
-this patch; first verify it locally.
+for another purpose. No deployment is performed.
+
+## Continuous integration
+
+The existing Browser tests job runs this scenario after the mocked invitation tests
+and before the general browser suite. It reuses the installed Node 24 and Chrome.
+The runner builds the dedicated test image, starts its disposable PostgreSQL/backend,
+runs Playwright and cleans up its own Compose project. A failure fails Browser tests
+and therefore the existing Regression gate. No live SMS credentials are needed.
 
 ## Verification status
 
-Here: Compose YAML parsed and isolation/flag invariants checked, runner JavaScript
-syntax checked, patch application compared byte-for-byte, whitespace checked. Full
-Docker run unavailable because Docker is absent. Maven compilation is also blocked
-by the existing dependency-resolution restriction. No Java compilation or browser
-pass is claimed for this step. Report any startup/build/test failure before merging.
+Verified locally on Windows with Docker Desktop: 1 passed (17.2s), including partner
+invitation, simulated delivery, activation, rejection of token reuse, driver login,
+refusal of partner access and sign-out. Test containers and network were removed.
+The CI workflow addition still needs its first GitHub Actions run.
