@@ -26,6 +26,8 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * The sweep that takes a lapsed driver offline (F36).
@@ -42,6 +44,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  */
 @DisplayName("The driver licence sweep")
 class DriverLicenseSweepIntegrationTest extends AbstractIntegrationTest {
+
+    @Test
+    void partnerCannotChangeAvailabilityDuringAnAssignedRide() throws Exception {
+        TestDataFactory.BookableCompany taxi = fixtures.bookableCompany();
+        bookAndAccept(taxi);
+        assertThat(availabilityOf(taxi.driver())).isEqualTo(DriverAvailabilityStatus.BUSY);
+        for (String requested : List.of("ONLINE", "OFFLINE")) {
+            mockMvc.perform(patch("/api/v1/partner/drivers/" + taxi.driver().getId() + "/availability")
+                    .header("Authorization", bearer(tokenFor(taxi.company().getOwner())))
+                    .contentType(APPLICATION_JSON)
+                    .content("{\"availabilityStatus\":\"%s\"}".formatted(requested)))
+                    .andExpect(status().isBadRequest());
+            assertThat(availabilityOf(taxi.driver())).isEqualTo(DriverAvailabilityStatus.BUSY);
+        }
+    }
 
     private static final String SEARCH_BODY = """
             {
