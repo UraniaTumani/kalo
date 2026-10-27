@@ -128,11 +128,8 @@ public class DriverServiceImpl
 
         validateCompanyCanManageDrivers(company);
 
-        Driver driver =
-                getOwnedDriver(
-                        driverId,
-                        company.getId()
-                );
+        Driver driver = driverRepository.findForUpdateByIdAndCompanyId(driverId, company.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Driver not found"));
 
         if (driver.getStatus()
                 != DriverStatus.ACTIVE) {
@@ -144,6 +141,10 @@ public class DriverServiceImpl
 
         DriverAvailabilityStatus requestedStatus =
                 request.availabilityStatus();
+
+        if (driver.getAvailabilityStatus() == DriverAvailabilityStatus.BUSY) {
+            throw new InvalidOperationException("Availability cannot be changed while the driver is busy");
+        }
 
         if (requestedStatus
                 == DriverAvailabilityStatus.ONLINE) {
