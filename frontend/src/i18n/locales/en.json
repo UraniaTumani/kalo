@@ -857,5 +857,15 @@
     "driverAccount": "Driver account",
     "driverAccountHint": "You are signed in. Driver trip and availability controls are not available yet.",
     "signOut": "Sign out"
+  },
+  "driverGps": {
+    "start": "Start sharing location",
+    "stop": "Stop sharing location",
+    "stopped": "Location sharing is stopped.",
+    "waiting": "Waiting for a location.",
+    "sent": "Location sent at",
+    "error": "Location is unavailable or could not be sent. Check permissions and connection.",
+    "explanation": "Share this device’s location while you are working.",
+    "browserLimit": "Keep this page open and visible. Location updates may stop in the background. A request already sent may still finish after stopping."
   }
 }

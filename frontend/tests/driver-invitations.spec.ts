@@ -149,3 +149,29 @@ for (const width of [375, 1280]) {
     })
   })
 }
+
+
+test('driver can start and stop location sharing', async ({ page, context }) => {
+  await fixtures(page)
+  await context.grantPermissions(['geolocation'])
+  await context.setGeolocation({ latitude: 41.33, longitude: 19.82 })
+  let uploads = 0
+  await page.route('**/api/v1/driver/me/location', async route => {
+    uploads++
+    expect(route.request().method()).toBe('PUT')
+    expect(route.request().headers().authorization).toBe('Bearer fixture-driver')
+    expect(route.request().postDataJSON()).toEqual({ latitude: 41.33, longitude: 19.82 })
+    await route.fulfill({ json: { driverId: 1, latitude: 41.33, longitude: 19.82, locationUpdatedAt: new Date().toISOString() } })
+  })
+  await page.goto('/login')
+  await page.locator('input[type="tel"]').fill(phone)
+  await page.locator('input[type="password"]').fill(password)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page).toHaveURL(/\/driver$/)
+  expect(uploads).toBe(0)
+  await page.getByRole('button', { name: 'Start sharing location' }).click()
+  await expect(page.getByRole('status')).toContainText('Location sent at')
+  expect(uploads).toBe(1)
+  await page.getByRole('button', { name: 'Stop sharing location' }).click()
+  await expect(page.getByRole('status')).toContainText('Location sharing is stopped.')
+})

@@ -42,7 +42,9 @@ test('partner invitation activates exactly one driver who can log in', async ({ 
     return Boolean(token)
   }, { timeout: 20_000, message: 'Simulated transport should capture the queued invitation' }).toBe(true)
 
-  const context = await browser.newContext()
+  const context = await browser.newContext({
+    permissions: ['geolocation'], geolocation: { latitude: 41.33, longitude: 19.82 },
+  })
   try {
     await context.addInitScript(() => localStorage.setItem('kalo.language', 'en'))
     const driverPage = await context.newPage()
@@ -64,6 +66,17 @@ test('partner invitation activates exactly one driver who can log in', async ({ 
     await driverPage.getByRole('button', { name: 'Sign in', exact: true }).click()
     await expect(driverPage).toHaveURL('http://localhost:5177/driver')
     await expect(driverPage.getByRole('heading', { name: 'Driver account', exact: true })).toBeVisible()
+    // Browser location is simulated; HTTP, authorization and database are real.
+    const gpsUpload = driverPage.waitForResponse(response =>
+      response.url().endsWith('/api/v1/driver/me/location') && response.request().method() === 'PUT')
+    await driverPage.getByRole('button', { name: 'Start sharing location' }).click()
+    expect((await gpsUpload).status()).toBe(200)
+    await expect(driverPage.getByRole('status')).toContainText('Location sent at')
+    const savedLocation = await request.get(`http://127.0.0.1:18881/api/v1/partner/drivers/${driver.id}/location`, { headers })
+    expect(savedLocation.status()).toBe(200)
+    expect(await savedLocation.json()).toMatchObject({ driverId: driver.id, latitude: 41.33, longitude: 19.82 })
+    await driverPage.getByRole('button', { name: 'Stop sharing location' }).click()
+    await expect(driverPage.getByRole('status')).toContainText('Location sharing is stopped.')
     const accessToken = await driverPage.evaluate(() => localStorage.getItem('kalo.token'))
     const forbidden = await request.get('http://127.0.0.1:18881/api/v1/partner/drivers', { headers: { Authorization: `Bearer ${accessToken}` } })
     expect(forbidden.status()).toBe(403)
