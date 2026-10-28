@@ -1,9 +1,9 @@
 # MR TAXI — MASTER PRODUCT & ENGINEERING CHECKLIST
 
-**Version:** 1.0 (baseline 2026-10-23)  
+**Version:** 1.1 (baseline 2026-10-23; reconciliation 2026-10-28)  
 **Repository:** `UraniaTumani/kalo`  
-**Baza e analizuar:** `feature/f42-real-gps-freshness`  
-**Status:** AKTIV — dokument bazë në branch-in `feature/f42-real-gps-freshness`; jo i integruar në `main`.  
+**Baza historike:** `feature/f42-real-gps-freshness`; progresi i fundit i konfirmuar në `main`: `d3ef94e`.  
+**Status:** AKTIV — dokumenti është në `main`; shënimet historike më poshtë përshkruajnë gjendjen në datën përkatëse.  
 **Pronësia:** MR TAXI project owner.  
 
 > **Qëllimi:** një burim i vetëm për çdo punë të MR TAXI. Nuk është projekt nga zero; ruan Spring Boot modular monolith, PostgreSQL/Liquibase, React web, dokumentet F12 dhe ride lifecycle ekzistues. Customer App dhe Driver App janë aplikacione të dedikuara iOS/Android.
@@ -370,8 +370,8 @@ Një item shënohet `[x]` **vetëm kur**: (1) kërkesa dhe edge cases janë të 
 ## C. Përmbledhje progresi
 
 - **Baseline të verifikuara:** 7 `[x]` (janë prova ekzistence/funksioni, jo përfundim i detyrave të reja).
-- **Detyra të hapura:** 130 (`P0`: 90, `P1`: 36, `P2`: 4).
-- **Detyra të mbyllura nga backlog B:** 1/131; kjo është pikënisje konservatore që shmang deklarimin e gabuar të punëve si Done.
+- **Detyra të hapura:** 128 (`P0`: 88, `P1`: 36, `P2`: 4).
+- **Detyra të mbyllura nga backlog B:** 3/131 (MRT-00-01, MRT-00-05, MRT-00-06). Numërimi pasqyron checkbox-et, jo përqindjen e kodit të ndërtuar. Kërkesat pjesërisht të realizuara mbeten të hapura deri në plotësimin e DoD.
 
 ### Format i detyrës së përfunduar
 
@@ -395,3 +395,40 @@ Një item shënohet `[x]` **vetëm kur**: (1) kërkesa dhe edge cases janë të 
 | Data | Versioni | Ndryshimi | Evidence / miratimi |
 |---|---|---|---|
 | 2026-10-23 | 1.0 | Krijimi dhe vendosja e master checklist në branch-in F42 | Miratuar në bisedë; MRT-00-01 |
+
+
+## D. Rakordim i progresit — 2026-10-28
+
+Ky seksion përditëson gjendjen aktuale pa fshirë evidencën historike. Deklaratat e datuara më sipër si “nuk ka ende API/login” janë historike dhe nuk përshkruajnë gjendjen në `main` në `d3ef94e`.
+
+### Ndryshime të integruara dhe prova të konfirmuara
+
+| Pjesa | Evidence nga puna dhe log-et e pronarit | Kufiri i provës |
+|---|---|---|
+| Ftesa, aktivizim dhe login individual DRIVER | Commit funksional `bf18a3d`; UI `2ed5828`; test me backend real `15bcc2e`; integrim CI `4e43ed4`; pronari konfirmoi merge-et | Transporti SMS në test është i simuluar; nuk provon dërgim SMS në production |
+| Identiteti i shoferit të kyçur | `97dda8c`, integruar në `main` `0fa64f5`; 703 teste backend kaluan | Vetëm të dhënat e shoferit të autorizuar; nuk zëvendëson aplikacionin native |
+| GPS personal i autorizuar | `db9bb19`, integruar në `091bdb6`; suite 711 teste kaloi | Browser foreground; native/background ende i hapur |
+| Kontrollet GPS në web | `d117496`, integruar në `0aaf613`; teste shfletuesi dhe backend real; test manual iPhone me timestamp në PostgreSQL | Nuk garantohet tracking me ekran të kyçur ose app në background |
+| Mbrojtja e statusit BUSY | `8f0df37`, integruar në `4ead998`; suite 712 teste, pa failures/errors/skipped | Testi i kësaj faze është kontroll regresioni, jo provë e të gjitha garave të mundshme |
+| API personale Online/Offline | Integruar në `ac93c05`; suite 718 teste, pa failures/errors/skipped | Përfshin test me bllokim ku BUSY konfirmohet gjatë pritjes; nuk është test i plotë i të gjitha veprimeve konkurruese të flotës |
+| UI personale Online/Offline | Integruar në `d3ef94e`; 14 teste shfletuesi kaluan; test me backend real kaloi më 2026-10-28 | Testi real verifikon refuzim pa automjet, caktim automjeti dhe ruajtjen Online/Offline; GPS dhe availability kontrollohen veçmas |
+
+Log-u i fundit i lint-it tregoi 0 errors dhe 22 warnings. Rezultati i build-it për UI-në e fundit nuk është bashkëngjitur në këtë rakordim. Numrat e testeve janë rezultate të ekzekutimeve përkatëse, jo një ekzekutim i ri në commit-in e këtij dokumenti. Merge-et janë raportuar nga pronari; ky dokument nuk pretendon auditim të pavarur të çdo rezultati CI ose konfigurimit të branch protection.
+
+### Lidhja me kërkesat e hapura
+
+- **MRT-03-02:** login individual, lidhja User–Driver dhe aktivizimi janë implementuar dhe testuar. Për mbyllje formale duhet bashkuar evidenca me review/DoD; nuk presim më implementimin nga zero.
+- **MRT-03-03 / MRT-09-02:** GPS dhe availability personale kanë kontrolle identiteti. Autorizimi i tranzicioneve të udhëtimit nga shoferi mbetet për t'u implementuar/verifikuar.
+- **MRT-03-06 / MRT-06-04:** statusi Online/Offline ruhet në server dhe BUSY mbrohet. Sesioni i punës native, disconnect dhe background nuk janë përfunduar.
+- **MRT-06-01..03 / MRT-12-04:** aplikacionet native dhe matrica fizike iOS/Android mbeten të hapura. Testi iPhone Safari është provë foreground web.
+- **MRT-04-05:** ekzistenca e një caktimi automjeti nuk provon eligibility të plotë të automjetit/dokumenteve; nevojitet auditim dhe teste specifike.
+- **MRT-12-01..02:** CI dhe Testcontainers ekzistojnë. Mbyllja formale kërkon lidhjet e rezultateve CI dhe konfirmimin e bllokimit të merge-it kur kontrollet dështojnë.
+
+### Hapat e ardhshëm
+
+1. Verifikim i endpoint-eve ekzistuese dhe matricës së aktorëve për udhëtimet.
+2. Leximi i udhëtimit të caktuar vetëm nga shoferi përkatës, me teste negative për shofer/kompani tjetër.
+3. Tranzicionet e autorizuara të shoferit përmes logjikës së përbashkët të udhëtimit; pa dyfishim të state machine.
+4. Ekranet përkatëse dhe testi me backend real.
+
+Go-live, native GPS, financat dhe gatishmëria production nuk shpallen të përfunduara nga ky përditësim.
