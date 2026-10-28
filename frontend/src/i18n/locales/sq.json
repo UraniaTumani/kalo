@@ -184,9 +184,16 @@
     "SUSPENDED": "Pezulluar"
   },
   "driverAvailability": {
-    "ONLINE": "Në linjë",
-    "OFFLINE": "Jashtë linje",
-    "BUSY": "Në udhëtim"
+    "title": "Disponueshmëria",
+    "ONLINE": "Online",
+    "OFFLINE": "Offline",
+    "BUSY": "I zënë në udhëtim",
+    "unknown": "Statusi nuk është i disponueshëm.",
+    "error": "Statusi nuk mund të konfirmohej. Kontrollo lidhjen dhe provo përsëri.",
+    "goOnline": "Kalo online",
+    "goOffline": "Kalo offline",
+    "hint": "Për të kaluar online, duhet një patentë e vlefshme dhe një automjet i caktuar. Vendndodhja ndahet veçmas.",
+    "refresh": "Rifresko statusin"
   },
   "paymentMethod": {
     "CASH": "Para në dorë",

@@ -175,3 +175,36 @@ test('driver can start and stop location sharing', async ({ page, context }) => 
   await page.getByRole('button', { name: 'Stop sharing location' }).click()
   await expect(page.getByRole('status')).toContainText('Location sharing is stopped.')
 })
+
+test('driver can change availability and recover from an unconfirmed update', async ({ page }) => {
+  await fixtures(page)
+  let current = 'OFFLINE'
+  let fail = false
+  await page.route('**/api/v1/driver/me', route => route.fulfill({ json: { availabilityStatus: current } }))
+  await page.route('**/api/v1/driver/me/availability', async route => {
+    expect(route.request().method()).toBe('PUT')
+    expect(route.request().headers().authorization).toBe('Bearer fixture-driver')
+    if (fail) return route.fulfill({ status: 400, json: { message: 'secret detail' } })
+    current = route.request().postDataJSON().availabilityStatus
+    return route.fulfill({ json: { availabilityStatus: current } })
+  })
+  await page.goto('/login')
+  await page.locator('input[type="tel"]').fill(phone)
+  await page.locator('input[type="password"]').fill(password)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Go online' })).toBeEnabled()
+  await page.getByRole('button', { name: 'Go online' }).click()
+  await expect(page.getByRole('button', { name: 'Go offline' })).toBeEnabled()
+  fail = true
+  await page.getByRole('button', { name: 'Go offline' }).click()
+  await expect(page.getByRole('alert')).toContainText('Could not confirm')
+  await expect(page.locator('body')).not.toContainText('secret detail')
+  await expect(page.getByRole('button', { name: 'Go offline' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Refresh status' }).click()
+  await expect(page.getByRole('button', { name: 'Go offline' })).toBeEnabled()
+  current = 'BUSY'
+  await page.reload()
+  await expect(page.getByText('Busy on a ride')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Go online' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Go offline' })).toBeDisabled()
+})

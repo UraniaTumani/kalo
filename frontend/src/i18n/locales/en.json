@@ -184,9 +184,16 @@
     "SUSPENDED": "Suspended"
   },
   "driverAvailability": {
+    "title": "Availability",
     "ONLINE": "Online",
     "OFFLINE": "Offline",
-    "BUSY": "On a ride"
+    "BUSY": "Busy on a ride",
+    "unknown": "Availability is unavailable.",
+    "error": "Could not confirm your availability. Please check your connection and try again.",
+    "goOnline": "Go online",
+    "goOffline": "Go offline",
+    "hint": "To go online, you need a valid licence and an assigned vehicle. Location sharing is controlled separately.",
+    "refresh": "Refresh status"
   },
   "paymentMethod": {
     "CASH": "Cash",

@@ -66,6 +66,33 @@ test('partner invitation activates exactly one driver who can log in', async ({ 
     await driverPage.getByRole('button', { name: 'Sign in', exact: true }).click()
     await expect(driverPage).toHaveURL('http://localhost:5177/driver')
     await expect(driverPage.getByRole('heading', { name: 'Driver account', exact: true })).toBeVisible()
+    // Availability uses the real API, including the missing-assignment refusal.
+    await expect(driverPage.getByRole('button', { name: 'Go online', exact: true })).toBeEnabled()
+    const refused = driverPage.waitForResponse(r => r.url().endsWith('/driver/me/availability') && r.request().method() === 'PUT')
+    await driverPage.getByRole('button', { name: 'Go online', exact: true }).click()
+    expect((await refused).status()).toBe(400)
+    await expect(driverPage.getByRole('alert')).toContainText('Could not confirm your availability')
+    const vehicleResponse = await request.post('http://127.0.0.1:18881/api/v1/partner/vehicles', {
+      headers, data: { plateNumber: 'E2E-AVAIL-ONLY', brand: 'Skoda', model: 'Octavia',
+        manufactureYear: 2024, seats: 4, vehicleType: 'STANDARD', registrationExpiryDate: '2035-01-01',
+        insuranceExpiryDate: '2035-01-01', technicalInspectionExpiryDate: '2035-01-01' },
+    })
+    expect(vehicleResponse.status(), await vehicleResponse.text()).toBe(201)
+    const vehicle = await vehicleResponse.json()
+    const assigned = await request.post('http://127.0.0.1:18881/api/v1/partner/driver-vehicle-assignments', {
+      headers, data: { driverId: driver.id, vehicleId: vehicle.id },
+    })
+    expect(assigned.status(), await assigned.text()).toBe(201)
+    await driverPage.getByRole('button', { name: 'Refresh status', exact: true }).click()
+    await expect(driverPage.getByRole('button', { name: 'Go online', exact: true })).toBeEnabled()
+    for (const [button, next] of [['Go online', 'ONLINE'], ['Go offline', 'OFFLINE']] as const) {
+      const changed = driverPage.waitForResponse(r => r.url().endsWith('/driver/me/availability') && r.request().method() === 'PUT')
+      await driverPage.getByRole('button', { name: button, exact: true }).click()
+      expect((await changed).status()).toBe(200)
+      const persisted = await request.get(`http://127.0.0.1:18881/api/v1/partner/drivers/${driver.id}`, { headers })
+      expect(persisted.status()).toBe(200)
+      expect((await persisted.json()).availabilityStatus).toBe(next)
+    }
     // Browser location is simulated; HTTP, authorization and database are real.
     const gpsUpload = driverPage.waitForResponse(response =>
       response.url().endsWith('/api/v1/driver/me/location') && response.request().method() === 'PUT')
