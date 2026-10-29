@@ -105,6 +105,52 @@ test('partner invitation activates exactly one driver who can log in', async ({ 
     await driverPage.getByRole('button', { name: 'Stop sharing location' }).click()
     await expect(driverPage.getByRole('status')).toContainText('Location sharing is stopped.')
     const accessToken = await driverPage.evaluate(() => localStorage.getItem('kalo.token'))
+    const driverHeaders = { Authorization: `Bearer ${accessToken}` }
+    const rideCard = driverPage.getByRole('region', { name: 'Current ride', exact: true })
+    await expect(rideCard).toContainText('You have no active assigned ride.')
+    const selfResponse = await request.get('http://127.0.0.1:18881/api/v1/driver/me', { headers: driverHeaders })
+    expect(selfResponse.status()).toBe(200)
+    const self = await selfResponse.json()
+    const online = await request.put('http://127.0.0.1:18881/api/v1/driver/me/availability', {
+      headers: driverHeaders, data: { availabilityStatus: 'ONLINE' },
+    })
+    expect(online.status(), await online.text()).toBe(200)
+    const customerLogin = await request.post('http://127.0.0.1:18881/api/v1/auth/login', {
+      data: { phone: '+355690000002', password: 'Customer123!' },
+    })
+    expect(customerLogin.status()).toBe(200)
+    const customerHeaders = { Authorization: `Bearer ${(await customerLogin.json()).accessToken}` }
+    const search = await request.post('http://127.0.0.1:18881/api/v1/rides/search', {
+      headers: customerHeaders, data: {
+        pickupLatitude: 41.33, pickupLongitude: 19.82, pickupAddress: 'Current ride pickup test',
+        destinationLatitude: 41.34, destinationLongitude: 19.83, destinationAddress: 'Current ride destination test',
+      },
+    })
+    expect(search.status(), await search.text()).toBe(201)
+    const searchResult = await search.json()
+    const offer = searchResult.taxiOptions.find((option: { companyId: number }) => option.companyId === self.companyId)
+    expect(offer, 'The isolated partner company must appear in real search results').toBeTruthy()
+    const selected = await request.post(`http://127.0.0.1:18881/api/v1/rides/requests/${searchResult.rideRequestId}/select`, {
+      headers: customerHeaders, data: { offerId: offer.offerId },
+    })
+    expect(selected.status(), await selected.text()).toBe(201)
+    const ride = await selected.json()
+    const accepted = await request.post(`http://127.0.0.1:18881/api/v1/partner/rides/${ride.rideId}/accept`, {
+      headers, data: { driverId: driver.id },
+    })
+    expect(accepted.status(), await accepted.text()).toBe(200)
+    await rideCard.getByRole('button', { name: 'Refresh ride', exact: true }).click()
+    await expect(rideCard).toContainText('Ride assigned')
+    await expect(rideCard).toContainText('Current ride pickup test')
+    await expect(rideCard).toContainText('Current ride destination test')
+    const ownRide = await request.get('http://127.0.0.1:18881/api/v1/driver/me/ride', { headers: driverHeaders })
+    expect(ownRide.status()).toBe(200)
+    expect(await ownRide.json()).toMatchObject({ rideId: ride.rideId, status: 'DRIVER_ASSIGNED', vehicleId: vehicle.id })
+    const cancelled = await request.post(`http://127.0.0.1:18881/api/v1/rides/${ride.rideId}/cancel`, { headers: customerHeaders })
+    expect(cancelled.status(), await cancelled.text()).toBe(200)
+    await rideCard.getByRole('button', { name: 'Refresh ride', exact: true }).click()
+    await expect(rideCard).toContainText('You have no active assigned ride.')
+    await expect(rideCard).not.toContainText('Current ride pickup test')
     const forbidden = await request.get('http://127.0.0.1:18881/api/v1/partner/drivers', { headers: { Authorization: `Bearer ${accessToken}` } })
     expect(forbidden.status()).toBe(403)
     await driverPage.getByRole('button', { name: 'Sign out', exact: true }).click()

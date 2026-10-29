@@ -874,5 +874,19 @@
     "error": "Vendndodhja nuk është e disponueshme ose nuk u dërgua. Kontrolloni lejet dhe lidhjen.",
     "explanation": "Ndani vendndodhjen e kësaj pajisjeje gjatë punës.",
     "browserLimit": "Mbajeni këtë faqe të hapur dhe të dukshme. Përditësimet mund të ndalen në sfond. Një kërkesë e dërguar mund të përfundojë edhe pas ndalimit."
+  },
+  "driverRide": {
+    "title": "Udhëtimi aktual",
+    "loading": "Po ngarkohet udhëtimi…",
+    "empty": "Nuk ke udhëtim aktiv të caktuar.",
+    "error": "Udhëtimi nuk mund të konfirmohej. Kontrollo lidhjen dhe rifresko.",
+    "pickup": "Pika e marrjes",
+    "destination": "Destinacioni",
+    "refresh": "Rifresko udhëtimin",
+    "refreshHint": "Të dhënat rifreskohen çdo 15 sekonda kur kjo faqe është e dukshme.",
+    "DRIVER_ASSIGNED": "Udhëtim i caktuar",
+    "DRIVER_ARRIVING": "Drejt pikës së marrjes",
+    "DRIVER_ARRIVED": "Mbërritur në pikën e marrjes",
+    "IN_PROGRESS": "Udhëtimi në vazhdim"
   }
 }

@@ -874,5 +874,19 @@
     "error": "Location is unavailable or could not be sent. Check permissions and connection.",
     "explanation": "Share this device’s location while you are working.",
     "browserLimit": "Keep this page open and visible. Location updates may stop in the background. A request already sent may still finish after stopping."
+  },
+  "driverRide": {
+    "title": "Current ride",
+    "loading": "Loading current ride…",
+    "empty": "You have no active assigned ride.",
+    "error": "Could not confirm your current ride. Check your connection and refresh.",
+    "pickup": "Pickup",
+    "destination": "Destination",
+    "refresh": "Refresh ride",
+    "refreshHint": "Ride details refresh every 15 seconds while this page is visible.",
+    "DRIVER_ASSIGNED": "Ride assigned",
+    "DRIVER_ARRIVING": "On the way to pickup",
+    "DRIVER_ARRIVED": "Arrived at pickup",
+    "IN_PROGRESS": "Ride in progress"
   }
 }

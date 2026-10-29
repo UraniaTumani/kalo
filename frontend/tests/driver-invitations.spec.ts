@@ -39,6 +39,7 @@ async function fixtures(page: Page, partner = false) {
     }
     if (path === '/api/v1/auth/refresh') { state.refreshes++; return route.fulfill({ status: 401 }) }
     if (path === '/api/v1/auth/logout') { state.logout++; return route.fulfill({ status: 204 }) }
+    if (path === '/api/v1/driver/me/ride') return route.fulfill({ status: 204 })
     if (path === '/api/v1/me') return route.fulfill({ json: {
       id: 1, role: state.role, firstName: 'Test', lastName: 'Account', phone,
       email: null, status: 'ACTIVE', phoneVerified: true,
@@ -208,3 +209,43 @@ test('driver can change availability and recover from an unconfirmed update', as
   await expect(page.getByRole('button', { name: 'Go online' })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Go offline' })).toBeDisabled()
 })
+
+for (const width of [375, 1280]) {
+  test(`current ride handles assignment, failure and cancellation at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await fixtures(page)
+    let response: 'empty' | 'ride' | 'error' = 'empty'
+    await page.route('**/api/v1/driver/me/ride', async route => {
+      expect(route.request().method()).toBe('GET')
+      expect(route.request().headers().authorization).toBe('Bearer fixture-driver')
+      if (response === 'empty') return route.fulfill({ status: 204 })
+      if (response === 'error') return route.fulfill({ status: 500, json: { message: 'SECRET_DATABASE_DETAIL' } })
+      return route.fulfill({ json: {
+        rideId: 17, status: 'DRIVER_ASSIGNED', vehicleId: 3,
+        pickupAddress: 'Pickup test address', pickupLatitude: 41.33, pickupLongitude: 19.82,
+        destinationAddress: null, destinationLatitude: 41.34, destinationLongitude: 19.83,
+      } })
+    })
+    await page.goto('/login')
+    await page.locator('input[type="tel"]').fill(phone)
+    await page.locator('input[type="password"]').fill(password)
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    const card = page.getByRole('region', { name: 'Current ride', exact: true })
+    await expect(card).toContainText('You have no active assigned ride.')
+    response = 'ride'
+    await card.getByRole('button', { name: 'Refresh ride' }).click()
+    await expect(card).toContainText('Ride assigned')
+    await expect(card).toContainText('Pickup test address')
+    await expect(card).toContainText('41.34, 19.83')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    response = 'error'
+    await card.getByRole('button', { name: 'Refresh ride' }).click()
+    await expect(card.getByRole('alert')).toContainText('Could not confirm your current ride.')
+    await expect(card).not.toContainText('Pickup test address')
+    await expect(page.locator('body')).not.toContainText('SECRET_DATABASE_DETAIL')
+    response = 'empty'
+    await card.getByRole('button', { name: 'Refresh ride' }).click()
+    await expect(card).toContainText('You have no active assigned ride.')
+    await expect(card.getByRole('alert')).toHaveCount(0)
+  })
+}
