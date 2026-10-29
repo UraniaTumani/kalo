@@ -146,8 +146,26 @@ test('partner invitation activates exactly one driver who can log in', async ({ 
     const ownRide = await request.get('http://127.0.0.1:18881/api/v1/driver/me/ride', { headers: driverHeaders })
     expect(ownRide.status()).toBe(200)
     expect(await ownRide.json()).toMatchObject({ rideId: ride.rideId, status: 'DRIVER_ASSIGNED', vehicleId: vehicle.id })
-    const cancelled = await request.post(`http://127.0.0.1:18881/api/v1/rides/${ride.rideId}/cancel`, { headers: customerHeaders })
-    expect(cancelled.status(), await cancelled.text()).toBe(200)
+    // Driver performs each transition through the actual UI and real backend.
+    for (const [label, action, state] of [
+      ['On my way', 'driver-arriving', 'DRIVER_ARRIVING'],
+      ['I have arrived', 'driver-arrived', 'DRIVER_ARRIVED'],
+      ['Start ride', 'start', 'IN_PROGRESS'],
+    ] as const) {
+      await rideCard.getByRole('button', { name: label, exact: true }).click()
+      const changed = driverPage.waitForResponse(r => r.url().endsWith(`/driver/me/rides/${ride.rideId}/${action}`) && r.request().method() === 'POST')
+      await driverPage.getByRole('dialog').getByRole('button', { name: label, exact: true }).click()
+      expect((await changed).status()).toBe(200)
+      await expect(driverPage.getByRole('dialog')).toHaveCount(0)
+      const persisted = await request.get('http://127.0.0.1:18881/api/v1/driver/me/ride', { headers: driverHeaders })
+      expect((await persisted.json()).status).toBe(state)
+    }
+    await expect(rideCard).toContainText('Ride in progress')
+    // Completion remains a partner operation in this implementation phase.
+    const completed = await request.post(`http://127.0.0.1:18881/api/v1/partner/rides/${ride.rideId}/complete`, {
+      headers, data: { finalAmount: 800 },
+    })
+    expect(completed.status(), await completed.text()).toBe(200)
     await rideCard.getByRole('button', { name: 'Refresh ride', exact: true }).click()
     await expect(rideCard).toContainText('You have no active assigned ride.')
     await expect(rideCard).not.toContainText('Current ride pickup test')

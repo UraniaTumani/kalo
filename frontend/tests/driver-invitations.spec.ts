@@ -249,3 +249,52 @@ for (const width of [375, 1280]) {
     await expect(card.getByRole('alert')).toHaveCount(0)
   })
 }
+
+for (const width of [375, 1280]) {
+  test(`driver ride actions require confirmation and follow server state at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await fixtures(page)
+    let status = 'DRIVER_ASSIGNED'
+    let posts = 0
+    let fail = false
+    await page.route('**/api/v1/driver/me/ride', route => route.fulfill({ json: {
+      rideId: 17, status, pickupAddress: 'Pickup', destinationAddress: 'Destination',
+      pickupLatitude: 41.3, pickupLongitude: 19.8, destinationLatitude: 41.4, destinationLongitude: 19.9,
+    } }))
+    await page.route('**/api/v1/driver/me/rides/17/*', async route => {
+      expect(route.request().method()).toBe('POST')
+      expect(route.request().headers().authorization).toBe('Bearer fixture-driver')
+      posts++
+      if (fail) return route.fulfill({ status: 409, json: { message: 'SECRET_DETAIL' } })
+      const action = new URL(route.request().url()).pathname.split('/').pop()
+      const expected = { 'driver-arriving': 'DRIVER_ASSIGNED', 'driver-arrived': 'DRIVER_ARRIVING', start: 'DRIVER_ARRIVED' }
+      expect(status).toBe(expected[action as keyof typeof expected])
+      status = { 'driver-arriving': 'DRIVER_ARRIVING', 'driver-arrived': 'DRIVER_ARRIVED', start: 'IN_PROGRESS' }[action as keyof typeof expected]
+      await route.fulfill({ json: { rideId: 17, status } })
+    })
+    await page.goto('/login')
+    await page.locator('input[type="tel"]').fill(phone)
+    await page.locator('input[type="password"]').fill(password)
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    const card = page.getByRole('region', { name: 'Current ride', exact: true })
+    await card.getByRole('button', { name: 'On my way', exact: true }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click()
+    expect(posts).toBe(0)
+    fail = true
+    await card.getByRole('button', { name: 'On my way', exact: true }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'On my way', exact: true }).click()
+    await expect(card.getByRole('alert')).toContainText('could not be confirmed')
+    await expect(card.getByRole('button', { name: 'On my way', exact: true })).toBeVisible()
+    expect(posts).toBe(1)
+    await expect(card).not.toContainText('SECRET_DETAIL')
+    fail = false
+    for (const label of ['On my way', 'I have arrived', 'Start ride']) {
+      await card.getByRole('button', { name: label, exact: true }).click()
+      await page.getByRole('dialog').getByRole('button', { name: label, exact: true }).click()
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+    }
+    await expect(card).toContainText('Ride in progress')
+    await expect(card.getByRole('button', { name: 'Start ride', exact: true })).toHaveCount(0)
+    expect(posts).toBe(4)
+  })
+}
