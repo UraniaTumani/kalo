@@ -6,6 +6,7 @@ import { api } from '@/lib/api/client'
 import { watchPosition, type Position } from '@/lib/geolocation'
 import { isFreshGpsFix } from '@/lib/gpsFreshness'
 import { AuthShell } from './AuthShell'
+import { DriverCurrentRideCard } from './DriverCurrentRideCard'
 
 type Availability = 'ONLINE' | 'OFFLINE' | 'BUSY'
 type State = 'stopped' | 'waiting' | 'sent' | 'error'
@@ -106,6 +107,7 @@ export function DriverAccountPage() {
   }
   return <AuthShell title={t('invitation.driverAccount')}>
     <p className="mb-4 text-sm text-ink-600">{t('invitation.driverAccountHint')}</p>
+    <DriverCurrentRideCard />
     <div className="mb-6 space-y-3">
       <p className="text-sm font-semibold">{t('driverAvailability.title')}</p>
       <p className="text-sm text-ink-600">{availability ? t(`driverAvailability.${availability}`) : t('driverAvailability.unknown')}</p>
