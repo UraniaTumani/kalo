@@ -891,10 +891,15 @@
     "action": {
       "driver-arriving": "On my way",
       "driver-arrived": "I have arrived",
-      "start": "Start ride"
+      "start": "Start ride",
+      "complete": "Complete ride"
     },
     "confirmTitle": "Confirm ride update",
     "confirmDescription": "Confirm that you are ready to update this ride to the next stage.",
-    "actionError": "The ride update could not be confirmed. Check the refreshed ride status before trying again."
+    "actionError": "The ride update could not be confirmed. Check the refreshed ride status before trying again.",
+    "fareLabel": "Taximeter amount (ALL)",
+    "fareHint": "Enter the final taximeter amount in lek. Recording this amount does not confirm payment collection.",
+    "fareError": "Enter a positive amount with at most 10 digits and 2 decimal places.",
+    "completeConfirm": "Complete this ride with a taximeter amount of {{amount}} ALL? Check the amount before confirming."
   }
 }

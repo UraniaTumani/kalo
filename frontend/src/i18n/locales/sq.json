@@ -891,10 +891,15 @@
     "action": {
       "driver-arriving": "Drejt klientit",
       "driver-arrived": "Mbërrita",
-      "start": "Nis udhëtimin"
+      "start": "Nis udhëtimin",
+      "complete": "Përfundo udhëtimin"
     },
     "confirmTitle": "Konfirmo ndryshimin e udhëtimit",
     "confirmDescription": "Konfirmo që je gati ta kalosh udhëtimin në hapin e radhës.",
-    "actionError": "Ndryshimi nuk mund të konfirmohej. Kontrollo statusin e rifreskuar para se të provosh përsëri."
+    "actionError": "Ndryshimi nuk mund të konfirmohej. Kontrollo statusin e rifreskuar para se të provosh përsëri.",
+    "fareLabel": "Shuma e taksimetrit (ALL)",
+    "fareHint": "Vendos shumën përfundimtare të taksimetrit në lekë. Regjistrimi nuk konfirmon arkëtimin e pagesës.",
+    "fareError": "Vendos një shumë pozitive me maksimum 10 shifra dhe 2 shifra pas presjes.",
+    "completeConfirm": "Ta përfundosh udhëtimin me shumën {{amount}} ALL? Kontrollo shumën përpara konfirmimit."
   }
 }

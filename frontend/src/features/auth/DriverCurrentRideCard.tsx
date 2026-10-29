@@ -15,7 +15,7 @@ type Ride = {
   destinationLongitude: number
 }
 type Result = { kind: 'loading' } | { kind: 'empty' } | { kind: 'error' } | { kind: 'ride'; ride: Ride }
-type Action = 'driver-arriving' | 'driver-arrived' | 'start'
+type Action = 'driver-arriving' | 'driver-arrived' | 'start' | 'complete'
 const nextAction: Partial<Record<Ride['status'], Action>> = {
   DRIVER_ASSIGNED: 'driver-arriving', DRIVER_ARRIVING: 'driver-arrived', DRIVER_ARRIVED: 'start',
 }
@@ -25,9 +25,11 @@ export function DriverCurrentRideCard() {
   const { t } = useTranslation()
   const [result, setResult] = useState<Result>({ kind: 'loading' })
   const [refresh, setRefresh] = useState(0)
-  const [confirmation, setConfirmation] = useState<{ rideId: number; status: Ride['status']; action: Action } | null>(null)
+  const [confirmation, setConfirmation] = useState<{ rideId: number; status: Ride['status']; action: Action; amount?: string } | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [actionError, setActionError] = useState(false)
+  const [fare, setFare] = useState<{ rideId: number; value: string } | null>(null)
+  const [fareError, setFareError] = useState(false)
   const submittingRef = useRef(false)
   const epoch = useRef(0)
   useEffect(() => {
@@ -67,7 +69,8 @@ export function DriverCurrentRideCard() {
     setSubmitting(true)
     setActionError(false)
     try {
-      await api.post(`/api/v1/driver/me/rides/${confirmation.rideId}/${confirmation.action}`)
+      await api.post(`/api/v1/driver/me/rides/${confirmation.rideId}/${confirmation.action}`,
+        confirmation.action === 'complete' ? { finalAmount: Number(confirmation.amount) } : undefined)
     } catch {
       setActionError(true)
     } finally {
@@ -78,6 +81,16 @@ export function DriverCurrentRideCard() {
       setResult({ kind: 'loading' })
       setRefresh(value => value + 1)
     }
+  }
+
+  function requestCompletion(ride: Ride) {
+    const value = (fare?.rideId === ride.rideId ? fare.value : '').trim().replace(',', '.')
+    if (!/^\d{1,10}(\.\d{1,2})?$/.test(value) || Number(value) <= 0) {
+      setFareError(true)
+      return
+    }
+    setFareError(false)
+    setConfirmation({ rideId: ride.rideId, status: ride.status, action: 'complete', amount: Number(value).toFixed(2) })
   }
 
   function point(address: string | null, latitude: number, longitude: number) {
@@ -99,11 +112,22 @@ export function DriverCurrentRideCard() {
         const action = nextAction[result.ride.status]
         if (action) setConfirmation({ rideId: result.ride.rideId, status: result.ride.status, action })
       }}>{t(`driverRide.action.${nextAction[result.ride.status]}`)}</Button>}
+      {result.ride.status === 'IN_PROGRESS' && <div className="space-y-2">
+        <label htmlFor="driver-taximeter-amount" className="block font-semibold">{t('driverRide.fareLabel')}</label>
+        <input id="driver-taximeter-amount" type="text" inputMode="decimal" maxLength={13}
+          className="w-full rounded border border-ink-200 p-2" disabled={submitting}
+          value={fare?.rideId === result.ride.rideId ? fare.value : ''}
+          aria-invalid={fareError} aria-describedby="driver-taximeter-hint"
+          onChange={event => { setFare({ rideId: result.ride.rideId, value: event.target.value }); setFareError(false) }} />
+        <p id="driver-taximeter-hint">{t('driverRide.fareHint')}</p>
+        {fareError && <p role="alert">{t('driverRide.fareError')}</p>}
+        <Button disabled={submitting} onClick={() => requestCompletion(result.ride)}>{t('driverRide.action.complete')}</Button>
+      </div>}
       <p className="text-ink-600">{t('driverRide.refreshHint')}</p>
     </div>}
     <Button disabled={submitting || result.kind === 'loading'} onClick={() => { setResult({ kind: 'loading' }); setRefresh(value => value + 1) }}>{t('driverRide.refresh')}</Button>
     <ConfirmDialog open={confirmation !== null} title={t('driverRide.confirmTitle')}
-      description={t('driverRide.confirmDescription')}
+      description={confirmation?.action === 'complete' ? t('driverRide.completeConfirm', { amount: confirmation.amount }) : t('driverRide.confirmDescription')}
       confirmLabel={confirmation ? t(`driverRide.action.${confirmation.action}`) : ''}
       loading={submitting} onConfirm={() => { void confirmAction() }} onCancel={() => { if (!submittingRef.current) setConfirmation(null) }} />
   </section>
