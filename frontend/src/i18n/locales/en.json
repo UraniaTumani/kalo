@@ -887,6 +887,14 @@
     "DRIVER_ASSIGNED": "Ride assigned",
     "DRIVER_ARRIVING": "On the way to pickup",
     "DRIVER_ARRIVED": "Arrived at pickup",
-    "IN_PROGRESS": "Ride in progress"
+    "IN_PROGRESS": "Ride in progress",
+    "action": {
+      "driver-arriving": "On my way",
+      "driver-arrived": "I have arrived",
+      "start": "Start ride"
+    },
+    "confirmTitle": "Confirm ride update",
+    "confirmDescription": "Confirm that you are ready to update this ride to the next stage.",
+    "actionError": "The ride update could not be confirmed. Check the refreshed ride status before trying again."
   }
 }

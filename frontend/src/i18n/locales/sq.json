@@ -887,6 +887,14 @@
     "DRIVER_ASSIGNED": "Udhëtim i caktuar",
     "DRIVER_ARRIVING": "Drejt pikës së marrjes",
     "DRIVER_ARRIVED": "Mbërritur në pikën e marrjes",
-    "IN_PROGRESS": "Udhëtimi në vazhdim"
+    "IN_PROGRESS": "Udhëtimi në vazhdim",
+    "action": {
+      "driver-arriving": "Drejt klientit",
+      "driver-arrived": "Mbërrita",
+      "start": "Nis udhëtimin"
+    },
+    "confirmTitle": "Konfirmo ndryshimin e udhëtimit",
+    "confirmDescription": "Konfirmo që je gati ta kalosh udhëtimin në hapin e radhës.",
+    "actionError": "Ndryshimi nuk mund të konfirmohej. Kontrollo statusin e rifreskuar para se të provosh përsëri."
   }
 }
