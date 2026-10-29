@@ -57,6 +57,7 @@ public class RideServiceImpl implements RideService {
     private final RideRequestRepository rideRequestRepository;
     private final RideOfferRepository rideOfferRepository;
     private final RideRepository rideRepository;
+    private final RideProgression rideProgression;
     private final DriverLocationRepository driverLocationRepository;
     private final UserRepository userRepository;
     private final TaxiCompanyRepository taxiCompanyRepository;
@@ -518,21 +519,7 @@ public class RideServiceImpl implements RideService {
                         company.getId()
                 );
 
-        if (ride.getStatus()
-                != RideStatus.DRIVER_ASSIGNED) {
-
-            throw new InvalidOperationException(
-                    "Ride must be driver assigned before driver can start arriving"
-            );
-        }
-
-        ride.setStatus(
-                RideStatus.DRIVER_ARRIVING
-        );
-
-        ride.setDriverArrivingAt(
-                Instant.now()
-        );
+        rideProgression.advance(ride, RideStatus.DRIVER_ARRIVING);
 
         Ride savedRide =
                 rideRepository.save(
@@ -565,21 +552,7 @@ public class RideServiceImpl implements RideService {
                         company.getId()
                 );
 
-        if (ride.getStatus()
-                != RideStatus.DRIVER_ARRIVING) {
-
-            throw new InvalidOperationException(
-                    "Ride must be driver arriving before marking driver as arrived"
-            );
-        }
-
-        ride.setStatus(
-                RideStatus.DRIVER_ARRIVED
-        );
-
-        ride.setDriverArrivedAt(
-                Instant.now()
-        );
+        rideProgression.advance(ride, RideStatus.DRIVER_ARRIVED);
 
         Ride savedRide =
                 rideRepository.save(
@@ -612,21 +585,7 @@ public class RideServiceImpl implements RideService {
                         company.getId()
                 );
 
-        if (ride.getStatus()
-                != RideStatus.DRIVER_ARRIVED) {
-
-            throw new InvalidOperationException(
-                    "Ride can only start after driver has arrived"
-            );
-        }
-
-        ride.setStatus(
-                RideStatus.IN_PROGRESS
-        );
-
-        ride.setStartedAt(
-                Instant.now()
-        );
+        rideProgression.advance(ride, RideStatus.IN_PROGRESS);
 
         Ride savedRide =
                 rideRepository.save(
