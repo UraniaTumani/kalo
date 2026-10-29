@@ -58,6 +58,7 @@ public class RideServiceImpl implements RideService {
     private final RideOfferRepository rideOfferRepository;
     private final RideRepository rideRepository;
     private final RideProgression rideProgression;
+    private final RideCompletion rideCompletion;
     private final DriverLocationRepository driverLocationRepository;
     private final UserRepository userRepository;
     private final TaxiCompanyRepository taxiCompanyRepository;
@@ -646,46 +647,7 @@ public class RideServiceImpl implements RideService {
                                 )
                         );
 
-        Instant now =
-                Instant.now();
-
-        ride.setFinalAmount(
-                request.finalAmount()
-        );
-
-        ride.setCompletedAt(
-                now
-        );
-
-        ride.setStatus(
-                RideStatus.COMPLETED
-        );
-
-        RideRequest rideRequest =
-                ride.getRideRequest();
-
-        /*
-         * This search successfully generated
-         * a completed ride.
-         */
-        rideRequest.setStatus(
-                RideRequestStatus.SELECTED
-        );
-
-        rideRequestRepository.save(
-                rideRequest
-        );
-
-        /*
-         * Driver becomes available again.
-         */
-        driver.setAvailabilityStatus(
-                DriverAvailabilityStatus.ONLINE
-        );
-
-        driverRepository.save(
-                driver
-        );
+        rideCompletion.complete(ride, driver, request.finalAmount());
 
         Ride savedRide =
                 rideRepository.save(

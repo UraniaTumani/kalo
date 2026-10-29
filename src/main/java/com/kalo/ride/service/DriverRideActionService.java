@@ -17,10 +17,28 @@ public class DriverRideActionService {
     private final DriverRideActionRepository rides;
     private final RideProgression progression;
     private final JdbcTemplate jdbc;
+    private final RideCompletion completion;
+    private final jakarta.persistence.EntityManager entities;
     public record Result(Long rideId, RideStatus status) {}
 
     @Transactional
     public Result advance(Long rideId, RideStatus target) {
+        var ride = lockAuthorized(rideId);
+        progression.advance(ride, target);
+        return new Result(ride.getId(), ride.getStatus());
+    }
+
+    @Transactional
+    public Result complete(Long rideId, com.kalo.ride.dto.CompleteRideRequest request) {
+        var ride = lockAuthorized(rideId);
+        var driver = ride.getDriver();
+        // self.current() may have loaded this entity before waiting for locks.
+        entities.refresh(driver);
+        completion.complete(ride, driver, request.finalAmount());
+        return new Result(ride.getId(), ride.getStatus());
+    }
+
+    private com.kalo.ride.entity.Ride lockAuthorized(Long rideId) {
         var driver = self.current();
         // Ride first, matching partner lifecycle/cancellation; never lock driver then ride.
         var ride = rides.lockOwned(rideId, driver.driverId(), driver.companyId())
@@ -38,8 +56,7 @@ public class DriverRideActionService {
               AND d.status='ACTIVE' AND c.status='ACTIVE' AND c.verification_status='APPROVED'
             """, Long.class, driver.driverId(), driver.companyId(), userId, driver.phone());
         if (eligible == null || eligible != 1L) throw denied();
-        progression.advance(ride, target);
-        return new Result(ride.getId(), ride.getStatus());
+        return ride;
     }
     private void lock(String sql, Long id) {
         if (jdbc.queryForList(sql, Long.class, id).size() != 1) throw denied();
