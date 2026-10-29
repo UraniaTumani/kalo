@@ -161,11 +161,16 @@ test('partner invitation activates exactly one driver who can log in', async ({ 
       expect((await persisted.json()).status).toBe(state)
     }
     await expect(rideCard).toContainText('Ride in progress')
-    // Completion remains a partner operation in this implementation phase.
-    const completed = await request.post(`http://127.0.0.1:18881/api/v1/partner/rides/${ride.rideId}/complete`, {
-      headers, data: { finalAmount: 800 },
-    })
-    expect(completed.status(), await completed.text()).toBe(200)
+    await rideCard.getByLabel('Taximeter amount (ALL)', { exact: true }).fill('800.50')
+    await rideCard.getByRole('button', { name: 'Complete ride', exact: true }).click()
+    await expect(driverPage.getByRole('dialog')).toContainText('800.50 ALL')
+    const completed = driverPage.waitForResponse(r => r.url().endsWith(`/driver/me/rides/${ride.rideId}/complete`) && r.request().method() === 'POST')
+    await driverPage.getByRole('dialog').getByRole('button', { name: 'Complete ride', exact: true }).click()
+    expect((await completed).status()).toBe(200)
+    await expect(rideCard).toContainText('You have no active assigned ride.')
+    const savedRide = await request.get(`http://127.0.0.1:18881/api/v1/rides/${ride.rideId}`, { headers: customerHeaders })
+    expect(savedRide.status()).toBe(200)
+    expect(await savedRide.json()).toMatchObject({ status: 'COMPLETED', finalAmount: 800.50 })
     await rideCard.getByRole('button', { name: 'Refresh ride', exact: true }).click()
     await expect(rideCard).toContainText('You have no active assigned ride.')
     await expect(rideCard).not.toContainText('Current ride pickup test')

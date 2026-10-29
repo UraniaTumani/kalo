@@ -298,3 +298,45 @@ for (const width of [375, 1280]) {
     expect(posts).toBe(4)
   })
 }
+
+for (const width of [375, 1280]) {
+  test(`driver validates and confirms taximeter amount at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await fixtures(page)
+    let completed = false
+    let posts = 0
+    await page.route('**/api/v1/driver/me/ride', route => route.fulfill(completed ? { status: 204 } : { json: {
+      rideId: 17, status: 'IN_PROGRESS', pickupAddress: 'Pickup', destinationAddress: 'Destination',
+      pickupLatitude: 41.3, pickupLongitude: 19.8, destinationLatitude: 41.4, destinationLongitude: 19.9,
+    } }))
+    await page.route('**/api/v1/driver/me/rides/17/complete', async route => {
+      posts++
+      expect(route.request().method()).toBe('POST')
+      expect(route.request().headers().authorization).toBe('Bearer fixture-driver')
+      expect(route.request().postDataJSON()).toEqual({ finalAmount: 800.5 })
+      completed = true
+      await route.fulfill({ json: { rideId: 17, status: 'COMPLETED' } })
+    })
+    await page.goto('/login')
+    await page.locator('input[type="tel"]').fill(phone)
+    await page.locator('input[type="password"]').fill(password)
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    const card = page.getByRole('region', { name: 'Current ride', exact: true })
+    const amount = card.getByLabel('Taximeter amount (ALL)', { exact: true })
+    for (const invalid of ['', '0', '-1', '1.234', '10000000000', 'abc']) {
+      await amount.fill(invalid)
+      await card.getByRole('button', { name: 'Complete ride', exact: true }).click()
+      await expect(card.getByRole('alert')).toContainText('Enter a positive amount')
+      expect(posts).toBe(0)
+    }
+    await amount.fill('800,50')
+    await card.getByRole('button', { name: 'Complete ride', exact: true }).click()
+    await expect(page.getByRole('dialog')).toContainText('800.50 ALL')
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click()
+    expect(posts).toBe(0)
+    await card.getByRole('button', { name: 'Complete ride', exact: true }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Complete ride', exact: true }).click()
+    await expect(card).toContainText('You have no active assigned ride.')
+    expect(posts).toBe(1)
+  })
+}
