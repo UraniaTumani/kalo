@@ -47,6 +47,23 @@ class DriverSelfAvailabilityIntegrationTest extends AbstractIntegrationTest {
         change(expired, "ONLINE").andExpect(status().isBadRequest());
         assertThat(state(expired)).isEqualTo("OFFLINE");
     }
+    @Test void invalidVehicleDatesRefuseOnlineButAllowOffline() throws Exception {
+        for (String column : new String[]{"registration_expiry_date", "insurance_expiry_date", "technical_inspection_expiry_date"}) {
+            for (java.time.LocalDate invalid : new java.time.LocalDate[]{null, com.kalo.common.util.LicenseValidity.today().minusDays(1)}) {
+                var a = account(true);
+                jdbcTemplate.update("UPDATE vehicles SET " + column + "=? WHERE id=(SELECT vehicle_id FROM driver_vehicle_assignments WHERE driver_id=? AND active=true)", invalid, a.driverId());
+                change(a, "ONLINE").andExpect(status().isBadRequest());
+                assertThat(state(a)).isEqualTo("OFFLINE");
+                change(a, "OFFLINE").andExpect(status().isOk());
+            }
+        }
+    }
+    @Test void inactiveVehicleRefusesOnline() throws Exception {
+        var a = account(true);
+        jdbcTemplate.update("UPDATE vehicles SET status='SUSPENDED' WHERE id=(SELECT vehicle_id FROM driver_vehicle_assignments WHERE driver_id=? AND active=true)", a.driverId());
+        change(a, "ONLINE").andExpect(status().isBadRequest());
+        assertThat(state(a)).isEqualTo("OFFLINE");
+    }
     @Test void busyCannotBeSetOrOverwritten() throws Exception {
         var a = account(true);
         change(a, "BUSY").andExpect(status().isBadRequest());

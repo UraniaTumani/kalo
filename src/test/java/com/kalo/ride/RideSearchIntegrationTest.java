@@ -40,6 +40,22 @@ class RideSearchIntegrationTest extends AbstractIntegrationTest {
             }
             """.formatted(TestDataFactory.TIRANA_LAT, TestDataFactory.TIRANA_LNG);
 
+    @org.springframework.beans.factory.annotation.Autowired
+    com.kalo.ride.repository.TaxiSearchRepository taxiSearchRepository;
+
+    @Test void invalidVehicleDatesAreExcludedFromSearchAndDashboard() throws Exception {
+        var taxi = fixtures.bookableCompany();
+        var repository = taxiSearchRepository;
+        for (String column : new String[]{"registration_expiry_date", "insurance_expiry_date", "technical_inspection_expiry_date"}) {
+            for (java.time.LocalDate invalid : new java.time.LocalDate[]{null, com.kalo.common.util.LicenseValidity.today().minusDays(1)}) {
+                jdbcTemplate.update("UPDATE vehicles SET " + column + "=? WHERE id=?", invalid, taxi.vehicle().getId());
+                expectOptions(fixtures.customer(), 0);
+                org.assertj.core.api.Assertions.assertThat(repository.hasEligibleTaxiForCompany(taxi.company().getId(), java.time.Instant.now().minusSeconds(120), com.kalo.common.util.LicenseValidity.today())).isFalse();
+            }
+            jdbcTemplate.update("UPDATE vehicles SET " + column + "=? WHERE id=?", com.kalo.common.util.LicenseValidity.today().plusYears(1), taxi.vehicle().getId());
+        }
+    }
+
     private void expectOptions(User customer, int count) throws Exception {
 
         mockMvc.perform(

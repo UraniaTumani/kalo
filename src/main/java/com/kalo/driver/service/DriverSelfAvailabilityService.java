@@ -1,6 +1,8 @@
 package com.kalo.driver.service;
 
 import com.kalo.common.exception.InvalidOperationException;
+import com.kalo.vehicle.service.VehicleEligibility;
+import com.kalo.vehicle.enums.VehicleStatus;
 import com.kalo.common.util.LicenseValidity;
 import com.kalo.driver.enums.DriverAvailabilityStatus;
 import lombok.RequiredArgsConstructor;
@@ -43,8 +45,20 @@ public class DriverSelfAvailabilityService {
         if (requested == DriverAvailabilityStatus.ONLINE) {
             LocalDate expiry = jdbc.queryForObject("SELECT license_expiry_date FROM drivers WHERE id = ?", LocalDate.class, candidate.driverId());
             if (!LicenseValidity.isValid(expiry)) throw new InvalidOperationException("Driver license is expired");
-            Long assignments = jdbc.queryForObject("SELECT count(*) FROM driver_vehicle_assignments WHERE driver_id = ? AND active = true", Long.class, candidate.driverId());
-            if (assignments == null || assignments != 1L) throw new InvalidOperationException("An active vehicle assignment is required");
+            var vehicles = jdbc.query("""
+                SELECT v.company_id, v.status, v.registration_expiry_date,
+                       v.insurance_expiry_date, v.technical_inspection_expiry_date
+                FROM driver_vehicle_assignments a JOIN vehicles v ON v.id = a.vehicle_id
+                WHERE a.driver_id = ? AND a.active = true
+                """, (rs, row) -> {
+                    VehicleEligibility.requireEligible(candidate.companyId(), rs.getLong("company_id"),
+                            VehicleStatus.valueOf(rs.getString("status")),
+                            rs.getObject("registration_expiry_date", LocalDate.class),
+                            rs.getObject("insurance_expiry_date", LocalDate.class),
+                            rs.getObject("technical_inspection_expiry_date", LocalDate.class));
+                    return Boolean.TRUE;
+                }, candidate.driverId());
+            if (vehicles.size() != 1) throw new InvalidOperationException("An active vehicle assignment is required");
         }
         jdbc.update("UPDATE drivers SET availability_status = ?, updated_at = ? WHERE id = ?", requested.name(), java.sql.Timestamp.from(java.time.Instant.now()), candidate.driverId());
         return requested;
