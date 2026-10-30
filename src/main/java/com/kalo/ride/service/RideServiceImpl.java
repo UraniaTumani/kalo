@@ -39,6 +39,7 @@ import com.kalo.user.enums.UserStatus;
 import com.kalo.user.repository.UserRepository;
 import com.kalo.vehicle.entity.Vehicle;
 import com.kalo.vehicle.enums.VehicleStatus;
+import com.kalo.assignment.service.FleetMutationLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -64,6 +65,7 @@ public class RideServiceImpl implements RideService {
     private final UserRepository userRepository;
     private final TaxiCompanyRepository taxiCompanyRepository;
     private final DriverRepository driverRepository;
+    private final FleetMutationLock fleetMutationLock;
     private final DriverVehicleAssignmentRepository assignmentRepository;
     private final CompanyAvailabilityChecker companyAvailabilityChecker;
     private final CompanyNotificationService companyNotificationService;
@@ -273,6 +275,12 @@ public class RideServiceImpl implements RideService {
                         rideId,
                         company.getId()
                 );
+
+        fleetMutationLock.acquire(company);
+        if (company.getStatus() != CompanyStatus.ACTIVE
+                || company.getVerificationStatus() != VerificationStatus.APPROVED) {
+            throw new InvalidOperationException("Taxi company must be active and approved to accept rides");
+        }
 
         if (ride.getStatus()
                 != RideStatus.REQUESTED) {

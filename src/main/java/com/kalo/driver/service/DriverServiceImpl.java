@@ -18,6 +18,7 @@ import com.kalo.partner.entity.TaxiCompany;
 import com.kalo.partner.enums.CompanyStatus;
 import com.kalo.partner.enums.VerificationStatus;
 import com.kalo.partner.repository.TaxiCompanyRepository;
+import com.kalo.assignment.service.FleetMutationLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -39,6 +40,7 @@ public class DriverServiceImpl
 
     private final DriverRepository driverRepository;
     private final TaxiCompanyRepository taxiCompanyRepository;
+    private final FleetMutationLock fleetMutationLock;
     private final DriverVehicleAssignmentRepository assignmentRepository;
 
     @Override
@@ -49,6 +51,7 @@ public class DriverServiceImpl
 
         TaxiCompany company = getCurrentCompany();
 
+        fleetMutationLock.acquire(company);
         validateCompanyCanManageDrivers(company);
 
         validateLicenseExpiry(
@@ -127,6 +130,7 @@ public class DriverServiceImpl
         TaxiCompany company =
                 getCurrentCompany();
 
+        fleetMutationLock.acquire(company);
         validateCompanyCanManageDrivers(company);
 
         Driver driver = driverRepository.findForUpdateByIdAndCompanyId(driverId, company.getId())
@@ -251,6 +255,7 @@ public class DriverServiceImpl
         TaxiCompany company =
                 getCurrentCompany();
 
+        fleetMutationLock.acquire(company);
         validateCompanyCanManageDrivers(company);
 
         Driver driver =
@@ -340,6 +345,7 @@ public class DriverServiceImpl
         TaxiCompany company =
                 getCurrentCompany();
 
+        fleetMutationLock.acquire(company);
         validateCompanyCanManageDrivers(company);
 
         Driver driver =
