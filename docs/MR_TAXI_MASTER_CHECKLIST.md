@@ -1,10 +1,10 @@
 # MR TAXI — MASTER PRODUCT & ENGINEERING CHECKLIST
 
-**Version:** 1.1 (baseline 2026-10-23; reconciliation 2026-10-28)  
-**Repository:** `UraniaTumani/kalo`  
-**Baza historike:** `feature/f42-real-gps-freshness`; progresi i fundit i konfirmuar në `main`: `d3ef94e`.  
-**Status:** AKTIV — dokumenti është në `main`; shënimet historike më poshtë përshkruajnë gjendjen në datën përkatëse.  
-**Pronësia:** MR TAXI project owner.  
+**Version:** 1.2 (baseline 2026-10-23; reconciliation 2026-10-29)
+**Repository:** `UraniaTumani/kalo`
+**Baza historike:** `feature/f42-real-gps-freshness`; progresi i fundit i konfirmuar në `main`: `0e24563`.
+**Status:** AKTIV — dokumenti është në `main`; shënimet historike më poshtë përshkruajnë gjendjen në datën përkatëse.
+**Pronësia:** MR TAXI project owner.
 
 > **Qëllimi:** një burim i vetëm për çdo punë të MR TAXI. Nuk është projekt nga zero; ruan Spring Boot modular monolith, PostgreSQL/Liquibase, React web, dokumentet F12 dhe ride lifecycle ekzistues. Customer App dhe Driver App janë aplikacione të dedikuara iOS/Android.
 
@@ -38,19 +38,19 @@ Një item shënohet `[x]` **vetëm kur**: (1) kërkesa dhe edge cases janë të 
 
 ## A. Baseline e verifikuar — evidencë historike, jo certifikim production
 
-- [x] **V-01** Repository monorepo ekziston me Spring Boot modular monolith dhe frontend React.  
+- [x] **V-01** Repository monorepo ekziston me Spring Boot modular monolith dhe frontend React.
   Evidence: README.md, pom.xml, frontend/package.json.
-- [x] **V-02** Ekziston skema `DocumentType` me 2 kategori kompani, 2 shoferi dhe 5 automjeti.  
+- [x] **V-02** Ekziston skema `DocumentType` me 2 kategori kompani, 2 shoferi dhe 5 automjeti.
   Evidence: frontend/src/lib/api/types.ts.
-- [x] **V-03** UI i dokumenteve F12 ka upload dhe shkarkim për shoferët dhe automjetet.  
+- [x] **V-03** UI i dokumenteve F12 ka upload dhe shkarkim për shoferët dhe automjetet.
   Evidence: FleetDocumentsCard.tsx; testet E2E/role kërkojnë ri-ekzekutim.
-- [x] **V-04** Ekziston model ride me REQUESTED→DRIVER_ASSIGNED→DRIVER_ARRIVING→DRIVER_ARRIVED→IN_PROGRESS→COMPLETED.  
+- [x] **V-04** Ekziston model ride me REQUESTED→DRIVER_ASSIGNED→DRIVER_ARRIVING→DRIVER_ARRIVED→IN_PROGRESS→COMPLETED.
   Evidence: README.md / Main API Flows.
-- [x] **V-05** Testimi lokal konfirmoi dërgim GPS real iPhone → backend → PostgreSQL.  
+- [x] **V-05** Testimi lokal konfirmoi dërgim GPS real iPhone → backend → PostgreSQL.
   Evidence: Testi i përshkruar në bisedë; driver_id=1.
-- [x] **V-06** U realizua testimi i një ride demo #5 dhe u pa statusi COMPLETED.  
+- [x] **V-06** U realizua testimi i një ride demo #5 dhe u pa statusi COMPLETED.
   Evidence: Testi i përshkruar në bisedë.
-- [x] **V-07** U implementua UI “Rifillo GPS” në branch-in F42, me build/typecheck të suksesshëm.  
+- [x] **V-07** U implementua UI “Rifillo GPS” në branch-in F42, me build/typecheck të suksesshëm.
   Evidence: feature/f42-real-gps-freshness, commit a0063f8; funksionimi pas klikimit kërkon ri-test.
 
 **Kufizim:** disa README përmbajnë përshkrime të vjetruara, p.sh. dokumentet dhe testet. Nuk janë konsideruar të verifikuara në prodhim pa një auditim dhe ri-ekzekutim të testeve.
@@ -59,312 +59,312 @@ Një item shënohet `[x]` **vetëm kur**: (1) kërkesa dhe edge cases janë të 
 
 ### 00 — Governance dhe burimi i së vërtetës
 
-- [x] **MRT-00-01 · P0** — Publikojmë këtë checklist si dokument të versionuar në repo (`docs/MR_TAXI_MASTER_CHECKLIST.md`).  
-  **Pranimi:** Skedari është në branch-in e miratuar dhe ka link të qëndrueshëm.  
+- [x] **MRT-00-01 · P0** — Publikojmë këtë checklist si dokument të versionuar në repo (`docs/MR_TAXI_MASTER_CHECKLIST.md`).
+  **Pranimi:** Skedari është në branch-in e miratuar dhe ka link të qëndrueshëm.
   **Evidence:** `docs/MR_TAXI_MASTER_CHECKLIST.md` në `feature/f42-real-gps-freshness`, 2026-10-23.
-- [ ] **MRT-00-02 · P0** — Krijojmë PRD unik me aktorë, udhëtime, rregulla biznesi dhe kërkesa jo-funksionale.  
+- [ ] **MRT-00-02 · P0** — Krijojmë PRD unik me aktorë, udhëtime, rregulla biznesi dhe kërkesa jo-funksionale.
   **Pranimi:** PRD miratohet dhe çdo kërkesë ka ID.
-- [ ] **MRT-00-03 · P0** — Përcaktojmë kufijtë e produktit: marketplace kompanish, kompania cakton shoferin, taksimetër, pagesë direkte.  
+- [ ] **MRT-00-03 · P0** — Përcaktojmë kufijtë e produktit: marketplace kompanish, kompania cakton shoferin, taksimetër, pagesë direkte.
   **Pranimi:** Vendimet dhe përjashtimet shkruhen në PRD.
-- [ ] **MRT-00-04 · P0** — Hartojmë inventarin real të moduleve, endpoints, DTO-ve, entiteteve, migrimeve dhe UI-ve.  
+- [ ] **MRT-00-04 · P0** — Hartojmë inventarin real të moduleve, endpoints, DTO-ve, entiteteve, migrimeve dhe UI-ve.
   **Pranimi:** Inventari lidhet me skedarët ekzistues.
-- [x] **MRT-00-05 · P0** — Auditim i testeve reale në commit-in bazë: unit, integration, E2E, build, lint.  
+- [x] **MRT-00-05 · P0** — Auditim i testeve reale në commit-in bazë: unit, integration, E2E, build, lint.
   **Pranimi:** Regjistrohen komandat, numrat e testeve, rezultati, SHA dhe data.
   **Evidencë e verifikuar nga log-et e ekzekutimit (2026-10-23):** `./mvnw.cmd test` në Windows 11 / Java 17.0.12 / Maven 3.9.16, branch `feature/f42-real-gps-freshness` (local ishte i sinkronizuar me `dabf011` para testit): **443 tests, 0 failures, 0 errors, 0 skipped, BUILD SUCCESS**, 03:39 min. PostgreSQL 17 Testcontainers, `test` profile, Liquibase 31 changesets. **Frontend (2026-10-23, pas sinkronizimit në `92d57d7`):** `npm run build` kaloi (`tsc -b && vite build`, 2153 module, ~1.19s), Vite paralajmëroi për chunk `index` ~615.05 kB >500 kB. `npm run lint` kaloi me **0 errors, 22 warnings** (`oxlint`, 98 files, 116 rules); paralajmërime për React hooks, purity `Date.now()` gjatë render-it, ref mutation gjatë render-it, Fast Refresh, dhe dependencies. **E2E (2026-10-23, pas fast-forward në `d74a774`):** `npm run test:e2e` kaloi: **124 passed, 0 failed, 6.4m**, Chrome desktop, 1 worker; Docker Compose `kalo-e2e` krijoi PostgreSQL të izoluar dhe backend healthy, me mesazhin final `tearing the stack down`. **SHA e konfirmuar:** `git rev-parse HEAD` dha `4605d6829d18f4d0f314c2ef81ef550dd13af5b9` (commit vetëm dokumentacioni, pas testimit; kodi funksional mbeti i pandryshuar ndërmjet ekzekutimeve dhe këtij commit-i). **Kufizime të dokumentuara:** raportet artefakt të Surefire/Playwright nuk janë verifikuar veçmas; 22 warnings të lint dhe paralajmërimi i chunk-it ~615 kB mbeten për një task cilësie të ardhshëm. Verifikimi i E2E është në Chrome desktop, jo prova native iOS/Android.
-- [x] **MRT-00-06 · P0** — Përditësojmë README-t dhe heqim mospërputhjet me kodin aktual.  
+- [x] **MRT-00-06 · P0** — Përditësojmë README-t dhe heqim mospërputhjet me kodin aktual.
   **Pranimi:** Dokumentacioni përshkruan saktë dokumentet, i18n, testet dhe GPS-in.
   **Evidencë e fazës 1 (2026-10-23):** Përditësuar `README.md` (commit `00071a8`) dhe `frontend/README.md` (commit `ba60357`) për upload/shkarkim privat të dokumenteve, storage dev/test, JWT refresh, i18n, Playwright (124 E2E), backend (443 teste), kufizime browser GPS/native dhe funksione ende të papërfunduara. **Auditimi plotësues i README (2026-10-23):** krahasuar udhëzimet e Maven/testeve, Vite proxy, Docker Compose dev dhe production rehearsal, profilet dhe Swagger me skedarët realë; `README.md` u korrigjua sërish në `2accd50` për kërkesën Docker dhe flag-un Swagger. Kriteret e dokumentimit të dokumenteve, i18n, testeve dhe GPS-it u plotësuan; task mbyllet si auditim README, jo si certifikim i deployment-it production.
-- [ ] **MRT-00-07 · P0** — Krijojmë ADR për arkitekturën modular-monolith, mobile, tracking dhe financat.  
+- [ ] **MRT-00-07 · P0** — Krijojmë ADR për arkitekturën modular-monolith, mobile, tracking dhe financat.
   **Pranimi:** Çdo vendim ka alternativa, arsyetim, pasoja dhe status.
   **Evidencë draft (2026-10-23):** `docs/MR_TAXI_ARCHITECTURE_ADRS.md`, commit `3cbcf48`. Propozohen 6 ADR për backend modular, mobile React Native feasibility, driver identity/authorization, native GPS/freshness, ride lifecycle dhe finance/ledger. Secili ka kontekst, alternativa, pasoja, kritere pranimi. **Status `[ ]`: ADR-001 u pranua si drejtim (Spring Boot backend i vetëm), ADR-002 u pranua për ndarjen Customer App/Driver App; React Native mbetet kandidat derisa të kalojë PoC në pajisje fizike. ADR-003..006 dhe DEC-01..08 presin review.**
-- [ ] **MRT-00-08 · P0** — Vendosim rregullin Done dhe template të issue/PR me testet e pranimit.  
+- [ ] **MRT-00-08 · P0** — Vendosim rregullin Done dhe template të issue/PR me testet e pranimit.
   **Pranimi:** Çdo task ka owner, acceptance, evidence, commit dhe review.
-- [ ] **MRT-00-09 · P1** — Përcaktojmë KPI për rezervimin dhe performancën operacionale.  
+- [ ] **MRT-00-09 · P1** — Përcaktojmë KPI për rezervimin dhe performancën operacionale.
   **Pranimi:** Maten conversion, accept time, completion, cancellations, GPS freshness.
-- [ ] **MRT-00-10 · P1** — Hartojmë plan release me milestone të verifikueshëm dhe kapacitet real.  
+- [ ] **MRT-00-10 · P1** — Hartojmë plan release me milestone të verifikueshëm dhe kapacitet real.
   **Pranimi:** Varësitë dhe kriteret e daljeve janë dokumentuar.
 
 ### 01 — Rregullat e biznesit dhe modelet
 
-- [ ] **MRT-01-01 · P0** — Specifikojmë rolet CUSTOMER, DRIVER, PARTNER_OWNER, DISPATCHER, ADMIN dhe lejet.  
+- [ ] **MRT-01-01 · P0** — Specifikojmë rolet CUSTOMER, DRIVER, PARTNER_OWNER, DISPATCHER, ADMIN dhe lejet.
   **Pranimi:** Matrica RBAC miratohet dhe testohet.
-- [ ] **MRT-01-02 · P0** — Përcaktojmë marrëdhënien User–Driver–Company dhe kushtet për kalim kompanie.  
+- [ ] **MRT-01-02 · P0** — Përcaktojmë marrëdhënien User–Driver–Company dhe kushtet për kalim kompanie.
   **Pranimi:** Modeli dhe migrimet përputhen me përdoruesit ekzistues.
-- [ ] **MRT-01-03 · P0** — Përcaktojmë përgjegjësinë e statusit të udhëtimit: kompania, shoferi, admin.  
+- [ ] **MRT-01-03 · P0** — Përcaktojmë përgjegjësinë e statusit të udhëtimit: kompania, shoferi, admin.
   **Pranimi:** Tabela e tranzicioneve tregon aktorin dhe kushtet.
-- [ ] **MRT-01-04 · P0** — Ruajmë një model unik të udhëtimit për web dhe mobile.  
+- [ ] **MRT-01-04 · P0** — Ruajmë një model unik të udhëtimit për web dhe mobile.
   **Pranimi:** Të gjitha kanalet përdorin të njëjtat shërbime biznesi.
-- [ ] **MRT-01-05 · P0** — Ndajmë `availability`, `rideStatus`, `locationFreshness`, `paymentStatus`.  
+- [ ] **MRT-01-05 · P0** — Ndajmë `availability`, `rideStatus`, `locationFreshness`, `paymentStatus`.
   **Pranimi:** Asnjë gjendje nuk ngatërrohet ose inferohet pa rregull.
-- [ ] **MRT-01-06 · P0** — Përcaktojmë kufizimet e një udhëtimi aktiv për klientin/shoferin.  
+- [ ] **MRT-01-06 · P0** — Përcaktojmë kufizimet e një udhëtimi aktiv për klientin/shoferin.
   **Pranimi:** Teste konkurrence dhe partial indexes mbajnë invariantet.
-- [ ] **MRT-01-07 · P1** — Politikat për refuzim, timeout, anulim, no-show dhe rikaktim.  
+- [ ] **MRT-01-07 · P1** — Politikat për refuzim, timeout, anulim, no-show dhe rikaktim.
   **Pranimi:** Çdo rrugë ka rezultat dhe përgjegjësi të përcaktuar.
-- [ ] **MRT-01-08 · P1** — Politikat për shërbim ndërqytetas, rezervime të ardhshme dhe kategori taksish.  
+- [ ] **MRT-01-08 · P1** — Politikat për shërbim ndërqytetas, rezervime të ardhshme dhe kategori taksish.
   **Pranimi:** Skenarët vlerësohen dhe planifikohen pa prishur MVP.
 
 ### 02 — Onboarding i kompanisë dhe compliance
 
-- [ ] **MRT-02-01 · P0** — Validim i checklist-it ligjor për taksitë në Shqipëri me këshilltar/autoritetet përkatëse.  
+- [ ] **MRT-02-01 · P0** — Validim i checklist-it ligjor për taksitë në Shqipëri me këshilltar/autoritetet përkatëse.
   **Pranimi:** Burimet, juridiksioni dhe data e verifikimit ruhen.
-- [ ] **MRT-02-02 · P0** — Ruajmë regjistrimin e kompanisë me emër ligjor, NIPT, kontakt, adresë, licencë.  
+- [ ] **MRT-02-02 · P0** — Ruajmë regjistrimin e kompanisë me emër ligjor, NIPT, kontakt, adresë, licencë.
   **Pranimi:** Formulari dhe backend-i validuar.
-- [ ] **MRT-02-03 · P0** — Ruajmë upload-in e `BUSINESS_REGISTRATION` dhe `TAXI_LICENSE`.  
+- [ ] **MRT-02-03 · P0** — Ruajmë upload-in e `BUSINESS_REGISTRATION` dhe `TAXI_LICENSE`.
   **Pranimi:** Ngarkim, download privat dhe status verifikimi testohen.
-- [ ] **MRT-02-04 · P0** — Shtojmë verifikim për përfaqësuesin ligjor dhe të drejtën e përfaqësimit kur duhet.  
+- [ ] **MRT-02-04 · P0** — Shtojmë verifikim për përfaqësuesin ligjor dhe të drejtën e përfaqësimit kur duhet.
   **Pranimi:** Politikë e minimizimit të ID-ve dhe prova të dokumentuara.
-- [ ] **MRT-02-05 · P0** — Përcaktojmë kushtet për `APPROVED`, `SUSPENDED`, `REJECTED` dhe riaplikim.  
+- [ ] **MRT-02-05 · P0** — Përcaktojmë kushtet për `APPROVED`, `SUSPENDED`, `REJECTED` dhe riaplikim.
   **Pranimi:** Backend bllokon rezervime për partnerët jo të përshtatshëm.
-- [ ] **MRT-02-06 · P0** — Krijojmë checklist onboarding progresive me dokumente të munguar dhe gjendje.  
+- [ ] **MRT-02-06 · P0** — Krijojmë checklist onboarding progresive me dokumente të munguar dhe gjendje.
   **Pranimi:** Partneri sheh çfarë duhet të plotësojë dhe pse.
-- [ ] **MRT-02-07 · P1** — Shtojmë kontakt financiar dhe të dhëna faturimi B2B me kontroll autorizimi.  
+- [ ] **MRT-02-07 · P1** — Shtojmë kontakt financiar dhe të dhëna faturimi B2B me kontroll autorizimi.
   **Pranimi:** Përfaqësuesi mund t’i përditësojë dhe admin t’i auditojë.
-- [ ] **MRT-02-08 · P1** — Verifikojmë licencimin sipas qytetit/zonës dhe datave të vlefshmërisë.  
+- [ ] **MRT-02-08 · P1** — Verifikojmë licencimin sipas qytetit/zonës dhe datave të vlefshmërisë.
   **Pranimi:** Kontrolli parametrizohet sipas juridiksionit.
-- [ ] **MRT-02-09 · P1** — Rishikojmë oraret, zonat e shërbimit dhe mënyrat e pagesës.  
+- [ ] **MRT-02-09 · P1** — Rishikojmë oraret, zonat e shërbimit dhe mënyrat e pagesës.
   **Pranimi:** Kërkimi përjashton kompani të papërshtatshme.
 
 ### 03 — Shoferët dhe Driver Identity
 
-- [ ] **MRT-03-01 · P0** — Ruajmë CRUD/statuset ekzistuese të shoferëve dhe dokumentet F12.  
+- [ ] **MRT-03-01 · P0** — Ruajmë CRUD/statuset ekzistuese të shoferëve dhe dokumentet F12.
   **Pranimi:** Regression dhe autorizimi partner testohen.
-- [ ] **MRT-03-02 · P0** — Ndërtojmë login individual të shoferit, lidhur me `Driver` ekzistues.  
+- [ ] **MRT-03-02 · P0** — Ndërtojmë login individual të shoferit, lidhur me `Driver` ekzistues.
   **Pranimi:** Driver futet pa përdorur llogarinë e kompanisë.
   **Projektim i përgatitur (2026-10-23):** `docs/MR_TAXI_DRIVER_IDENTITY_DESIGN.md` (commit `875e2e3`) përshkruan lidhjen opsionale User–Driver, Liquibase 026 si propozim, invitation flow, endpoints additive, autorizim objekt-level dhe testet. **Status `[ ]`: një kompani aktive për shofer u miratua; faza A u shkrua në branch (Liquibase `026-link-drivers-to-users.yaml`, mapping JPA nullable dhe 3 teste të invariants në `SchemaInvariantsIntegrationTest`, commit `f0fed7d`). **Verifikim lokal 2026-10-24:** `./mvnw.cmd test` përfundoi me **446 teste, 0 failures/errors/skipped, BUILD SUCCESS, 03:03 min**. PostgreSQL 17 Testcontainers (`test` profile) aplikoi me sukses 32 changeSets përfshirë `026`; tri testet e reja DB u përfshinë në ekzekutim. Nuk ka aktivizim, login, `ROLE_DRIVER` ose authorization API; `MRT-03-02` mbetet `[ ]` dhe nuk është miratuar deploy.**
   **B1 e verifikuar lokalisht (2026-10-24):** shtuar `UserRole.DRIVER`, Liquibase `027-create-driver-invitations.yaml`, `DriverInvitation` + repository me pessimistic lock, 3 teste DB dhe 4 teste unitare. Log-u i `./mvnw.cmd test`: **453 tests, 0 failures/errors/skipped, BUILD SUCCESS, 03:06 min**; PostgreSQL 17 Testcontainers, profili `test`, **33 changesets**, përfshirë `027`. Nuk ka ende issuance/delivery/redeem endpoint apo aktivizim real dhe as verifikim staging/production. Statusi `MRT-03-02` mbetet `[ ]`.
   **B2a, verifikuar 2026-10-24:** Shtuar token codec 256-bit + SHA-256 (3 teste) dhe login guard për DRIVER/PENDING (4 teste). Ekzekutimi lokal `./mvnw.cmd test`: **460 teste, 0 failures/errors/skipped, BUILD SUCCESS, 02:50 min**, PostgreSQL 17 Testcontainers dhe 33 changesets Liquibase. Nuk ka ende API per ftesa ose aktivizim, prandaj MRT-03-02 mbetet i hapur.
   **B2b-1 e verifikuar lokalisht (2026-10-24):** `DriverInvitationEligibilityPolicy` me 5 teste të reja (kompani e huaj/joaktive/paverifikuar, driver joaktiv/i lidhur, input i pavlefshëm). Nga log-u: `./mvnw.cmd test` — **465 teste, 0 failures/errors/skipped, BUILD SUCCESS, 02:56 min**; PostgreSQL 17 Testcontainers, profili `test`, 33 changesets Liquibase. Nuk ka ende API/delivery/activation; `MRT-03-02` mbetet `[ ]`. Pa verifikim staging/production.
   **B2b-2a, në pritje të testimit (2026-10-24):** repository për lookup të ftesës më të fundit/cooldown dhe revokim transaksional të ftesave të papërdorura; 2 teste integrimi të reja. Nuk ekziston ende issuance/delivery/activation service ose API, prandaj MRT-03-02 mbetet `[ ]`. Testet e fundit të konfirmuara: 465; duhet ekzekutuar `./mvnw.cmd test` për këtë ndryshim.
-- [ ] **MRT-03-03 · P0** — Autorizojmë update GPS dhe statuse vetëm për shoferin/udhëtimin e tij.  
+- [ ] **MRT-03-03 · P0** — Autorizojmë update GPS dhe statuse vetëm për shoferin/udhëtimin e tij.
   **Pranimi:** Teste negative për id të huaj dhe kompani tjetër.
-- [ ] **MRT-03-04 · P0** — Dokumente shoferi: patentë + certifikatë profesionale, me status verifikimi.  
+- [ ] **MRT-03-04 · P0** — Dokumente shoferi: patentë + certifikatë profesionale, me status verifikimi.
   **Pranimi:** Skadimi/pezullimi bllokon eligibility sipas politikës.
-- [ ] **MRT-03-05 · P0** — Shtojmë verifikim identiteti dhe foto profili të përshtatshme për shfaqje.  
+- [ ] **MRT-03-05 · P0** — Shtojmë verifikim identiteti dhe foto profili të përshtatshme për shfaqje.
   **Pranimi:** Identiteti përputhet me dokumentet dhe respektohet privatësia.
-- [ ] **MRT-03-06 · P0** — Përcaktojmë kuptimin e `ONLINE`, `BUSY`, `OFFLINE` dhe kohën e sesionit të punës.  
+- [ ] **MRT-03-06 · P0** — Përcaktojmë kuptimin e `ONLINE`, `BUSY`, `OFFLINE` dhe kohën e sesionit të punës.
   **Pranimi:** Rregullat mbeten konsistente edhe në disconnect.
-- [ ] **MRT-03-07 · P1** — Rregulla për shoferë me shumë kompani, ftesa dhe revokim aksesi.  
+- [ ] **MRT-03-07 · P1** — Rregulla për shoferë me shumë kompani, ftesa dhe revokim aksesi.
   **Pranimi:** Nuk ka dy sesione kontradiktore pa politikë të qartë.
-- [ ] **MRT-03-08 · P1** — Përcaktojmë checks për dokumente mjekësore/penale vetëm kur kërkohen me ligj.  
+- [ ] **MRT-03-08 · P1** — Përcaktojmë checks për dokumente mjekësore/penale vetëm kur kërkohen me ligj.
   **Pranimi:** Nuk ruhen kopje sensitive pa bazë dhe afat.
-- [ ] **MRT-03-09 · P1** — Historik i ndryshimeve të përkatësisë dhe i statusit të shoferit.  
+- [ ] **MRT-03-09 · P1** — Historik i ndryshimeve të përkatësisë dhe i statusit të shoferit.
   **Pranimi:** Admin mund të auditojë aktorin, arsyen dhe datën.
 
 ### 04 — Automjetet, caktimet dhe dokumentet
 
-- [ ] **MRT-04-01 · P0** — Ruajmë CRUD/statuset për automjete, asignimet dhe dokumentet F12.  
+- [ ] **MRT-04-01 · P0** — Ruajmë CRUD/statuset për automjete, asignimet dhe dokumentet F12.
   **Pranimi:** Regresion dhe kontroll multi-tenant.
-- [ ] **MRT-04-02 · P0** — Validim targë, brand/model, vit, vende, kategori dhe skadimet.  
+- [ ] **MRT-04-02 · P0** — Validim targë, brand/model, vit, vende, kategori dhe skadimet.
   **Pranimi:** Input invalid refuzohet në API dhe UI.
-- [ ] **MRT-04-03 · P0** — Dokumentet ekzistuese të mjetit: regjistrim, sigurim, pasagjerë, kontroll teknik, taksimetër.  
+- [ ] **MRT-04-03 · P0** — Dokumentet ekzistuese të mjetit: regjistrim, sigurim, pasagjerë, kontroll teknik, taksimetër.
   **Pranimi:** Upload/approve/expiry verifikohen për secilin tip.
-- [ ] **MRT-04-04 · P0** — Verifikim i mbulimit të sigurimit për transport pasagjerësh kundrejt pagesës.  
+- [ ] **MRT-04-04 · P0** — Verifikim i mbulimit të sigurimit për transport pasagjerësh kundrejt pagesës.
   **Pranimi:** Nuk mjafton vetëm një emërtim gjenerik sigurimi.
-- [ ] **MRT-04-05 · P0** — Kontroll eligibility për çdo çift shofer–automjet para ONLINE/caktimit.  
+- [ ] **MRT-04-05 · P0** — Kontroll eligibility për çdo çift shofer–automjet para ONLINE/caktimit.
   **Pranimi:** Test për automjet ose dokument të skaduar.
-- [ ] **MRT-04-06 · P1** — Shtojmë VIN, ngjyrë, pronar ligjor, prova përdorimi dhe leje të veçantë taksie kur kërkohet.  
+- [ ] **MRT-04-06 · P1** — Shtojmë VIN, ngjyrë, pronar ligjor, prova përdorimi dhe leje të veçantë taksie kur kërkohet.
   **Pranimi:** Fushat lidhen me regjistrimin e automjetit dhe dokumentet.
-- [ ] **MRT-04-07 · P1** — Mbështetje për automjet rezervë dhe rikaktim me historik.  
+- [ ] **MRT-04-07 · P1** — Mbështetje për automjet rezervë dhe rikaktim me historik.
   **Pranimi:** Ndryshimet gjatë udhëtimit ruhen dhe komunikohen.
-- [ ] **MRT-04-08 · P1** — Kalendari i skadimit 30/14/7 ditë dhe rinovimi i dokumentit.  
+- [ ] **MRT-04-08 · P1** — Kalendari i skadimit 30/14/7 ditë dhe rinovimi i dokumentit.
   **Pranimi:** Njoftimet dhe ndryshimi i eligibility testohen.
-- [ ] **MRT-04-09 · P1** — Versionim dhe auditim dokumentesh në vend të fshirjes pa gjurmë.  
+- [ ] **MRT-04-09 · P1** — Versionim dhe auditim dokumentesh në vend të fshirjes pa gjurmë.
   **Pranimi:** Historiku i vendimeve dhe ndryshimeve mbetet i verifikueshëm.
 
 ### 05 — Customer App iOS/Android dhe UX
 
-- [ ] **MRT-05-01 · P0** — Zgjedhim React Native dhe provojmë feasibility në të dy platformat.  
+- [ ] **MRT-05-01 · P0** — Zgjedhim React Native dhe provojmë feasibility në të dy platformat.
   **Pranimi:** Prototip API, push dhe background GPS vlerësohet.
-- [ ] **MRT-05-02 · P0** — Design system i përbashkët: typography, ngjyra, aksesueshmëri, lokalizim.  
+- [ ] **MRT-05-02 · P0** — Design system i përbashkët: typography, ngjyra, aksesueshmëri, lokalizim.
   **Pranimi:** Ekranet kryesore kalojnë checklist UX/a11y.
-- [ ] **MRT-05-03 · P0** — Onboarding klienti, login, rikuperim dhe profile personale.  
+- [ ] **MRT-05-03 · P0** — Onboarding klienti, login, rikuperim dhe profile personale.
   **Pranimi:** Funksionon me auth ekzistues dhe test E2E.
-- [ ] **MRT-05-04 · P0** — Harta + pickup manual/GPS + destinacion + rikonfirmim pin-i.  
+- [ ] **MRT-05-04 · P0** — Harta + pickup manual/GPS + destinacion + rikonfirmim pin-i.
   **Pranimi:** Pika e gabuar korrigjohet lehtë.
-- [ ] **MRT-05-05 · P0** — Kërkimi shfaq një ofertë për kompani dhe vetëm kompani të përshtatshme.  
+- [ ] **MRT-05-05 · P0** — Kërkimi shfaq një ofertë për kompani dhe vetëm kompani të përshtatshme.
   **Pranimi:** Saktësi e rezultateve dhe status i qartë no-results.
-- [ ] **MRT-05-06 · P0** — Kartë kompanie: kategori, disponueshmëri, vlerësim dhe informacion transparent mbi taksimetrin.  
+- [ ] **MRT-05-06 · P0** — Kartë kompanie: kategori, disponueshmëri, vlerësim dhe informacion transparent mbi taksimetrin.
   **Pranimi:** Asnjë çmim/ETA e shpikur.
-- [ ] **MRT-05-07 · P0** — Rezervim, pritje përgjigjeje, timeout/refuzim dhe kompani tjetër.  
+- [ ] **MRT-05-07 · P0** — Rezervim, pritje përgjigjeje, timeout/refuzim dhe kompani tjetër.
   **Pranimi:** Flow i plotë me ekrane gabimi dhe retry.
-- [ ] **MRT-05-08 · P0** — Ride live me identitet shoferi, targë, model, pozicion, freski dhe ETA kur ka provider.  
+- [ ] **MRT-05-08 · P0** — Ride live me identitet shoferi, targë, model, pozicion, freski dhe ETA kur ka provider.
   **Pranimi:** UI nuk shfaq pozicion të vjetër si live.
-- [ ] **MRT-05-09 · P0** — Anulim me konfirmim; historik, përmbledhje dhe rating.  
+- [ ] **MRT-05-09 · P0** — Anulim me konfirmim; historik, përmbledhje dhe rating.
   **Pranimi:** Gjendjet fundore nuk zhduken nga UI.
-- [ ] **MRT-05-10 · P1** — Adresat e ruajtura, udhëtimet e fundit dhe booking më i shpejtë.  
+- [ ] **MRT-05-10 · P1** — Adresat e ruajtura, udhëtimet e fundit dhe booking më i shpejtë.
   **Pranimi:** Flow i përsëritur me pak ndërveprime.
-- [ ] **MRT-05-11 · P1** — Share trip me kontakt të besuar, me kufizim aksesi dhe afat.  
+- [ ] **MRT-05-11 · P1** — Share trip me kontakt të besuar, me kufizim aksesi dhe afat.
   **Pranimi:** Linku skadon dhe nuk zbulon të dhëna të panevojshme.
-- [ ] **MRT-05-12 · P1** — Kontaktim i shoferit dhe qendër ndihme për ride.  
+- [ ] **MRT-05-12 · P1** — Kontaktim i shoferit dhe qendër ndihme për ride.
   **Pranimi:** Privatësi e numrit dhe raportim i kontrolluar.
-- [ ] **MRT-05-13 · P1** — Rezervim për një orë të ardhshme vetëm pas projektimit të kapacitetit dispatch.  
+- [ ] **MRT-05-13 · P1** — Rezervim për një orë të ardhshme vetëm pas projektimit të kapacitetit dispatch.
   **Pranimi:** Teste për ndryshime dhe anulime.
-- [ ] **MRT-05-14 · P2** — Pagesë in-app vetëm me provider të licencuar dhe politikë payout/refund.  
+- [ ] **MRT-05-14 · P2** — Pagesë in-app vetëm me provider të licencuar dhe politikë payout/refund.
   **Pranimi:** Integrimi i verifikuar për Shqipërinë.
 
 ### 06 — Driver App dhe GPS native
 
-- [ ] **MRT-06-01 · P0** — Ndërtojmë skeleton Driver App, auth, sesion të sigurt dhe profil pune.  
+- [ ] **MRT-06-01 · P0** — Ndërtojmë skeleton Driver App, auth, sesion të sigurt dhe profil pune.
   **Pranimi:** Build Android dhe iOS në pajisje.
-- [ ] **MRT-06-02 · P0** — Onboarding leje location dhe shpjegim i qartë i përdorimit.  
+- [ ] **MRT-06-02 · P0** — Onboarding leje location dhe shpjegim i qartë i përdorimit.
   **Pranimi:** Lejet nuk kërkohen para kohe.
-- [ ] **MRT-06-03 · P0** — Implementojmë location tracking native në background, sipas kufizimeve OS.  
+- [ ] **MRT-06-03 · P0** — Implementojmë location tracking native në background, sipas kufizimeve OS.
   **Pranimi:** Teste foreground, background, lock screen.
-- [ ] **MRT-06-04 · P0** — Online/Offline dhe GPS lidhen me sesion pune, jo me ekranin aktiv.  
+- [ ] **MRT-06-04 · P0** — Online/Offline dhe GPS lidhen me sesion pune, jo me ekranin aktiv.
   **Pranimi:** Refresh/navigation nuk humb gjendjen e serverit.
-- [ ] **MRT-06-05 · P0** — Update koordinatash me accuracy, deviceTimestamp, serverTimestamp dhe dedupe.  
+- [ ] **MRT-06-05 · P0** — Update koordinatash me accuracy, deviceTimestamp, serverTimestamp dhe dedupe.
   **Pranimi:** Fix i vjetër nuk mbishkruan fix të ri.
-- [ ] **MRT-06-06 · P0** — Trajtim offline, reconnect, permission revoked, low battery dhe app killed.  
+- [ ] **MRT-06-06 · P0** — Trajtim offline, reconnect, permission revoked, low battery dhe app killed.
   **Pranimi:** UI tregon saktë disponueshmërinë; nuk premton tracking të pamundur.
-- [ ] **MRT-06-07 · P0** — Push për udhëtim të caktuar dhe deep link në udhëtim.  
+- [ ] **MRT-06-07 · P0** — Push për udhëtim të caktuar dhe deep link në udhëtim.
   **Pranimi:** Njoftimi arrin kur app është në background sipas OS.
-- [ ] **MRT-06-08 · P0** — Ekrane: assigned → arriving → arrived → start → complete.  
+- [ ] **MRT-06-08 · P0** — Ekrane: assigned → arriving → arrived → start → complete.
   **Pranimi:** Çdo veprim kalon backend state machine.
-- [ ] **MRT-06-09 · P0** — Formular final taksimetri + metodë pagese + konfirmim.  
+- [ ] **MRT-06-09 · P0** — Formular final taksimetri + metodë pagese + konfirmim.
   **Pranimi:** Rregulla idempotence dhe validim server-side.
-- [ ] **MRT-06-10 · P0** — Navigim në hartë/app hartash dhe mënyrë e qartë për rikthim.  
+- [ ] **MRT-06-10 · P0** — Navigim në hartë/app hartash dhe mënyrë e qartë për rikthim.
   **Pranimi:** Shoferi vazhdon kontrollin e udhëtimit pa humbur statusin.
-- [ ] **MRT-06-11 · P1** — Foto/profil, historik turnesh, udhëtime dhe përmbledhje fitimesh.  
+- [ ] **MRT-06-11 · P1** — Foto/profil, historik turnesh, udhëtime dhe përmbledhje fitimesh.
   **Pranimi:** Vetëm të dhënat e autorizuara.
-- [ ] **MRT-06-12 · P1** — Përdorim inteligjent i baterisë dhe metrika të cilësisë së GPS-it.  
+- [ ] **MRT-06-12 · P1** — Përdorim inteligjent i baterisë dhe metrika të cilësisë së GPS-it.
   **Pranimi:** Matje në pajisje reale, jo interval fiks si garanci.
 
 ### 07 — Ride lifecycle, dispatch dhe realtime
 
-- [ ] **MRT-07-01 · P0** — Ruajmë ride state machine dhe mekanizmat ekzistues të konkurencës.  
+- [ ] **MRT-07-01 · P0** — Ruajmë ride state machine dhe mekanizmat ekzistues të konkurencës.
   **Pranimi:** Teste rollback, race dhe API contracts.
-- [ ] **MRT-07-02 · P0** — Specifikojmë kush vendos secilin tranzicion dhe çfarë audit eventi krijohet.  
+- [ ] **MRT-07-02 · P0** — Specifikojmë kush vendos secilin tranzicion dhe çfarë audit eventi krijohet.
   **Pranimi:** Matrica API per role aprovohet.
-- [ ] **MRT-07-03 · P0** — Migrimi i kontrolleve nga partner web drejt Driver App pa dyfishuar logjikën.  
+- [ ] **MRT-07-03 · P0** — Migrimi i kontrolleve nga partner web drejt Driver App pa dyfishuar logjikën.
   **Pranimi:** Partner/Driver përdorin shërbime të njëjta tranzicioni.
-- [ ] **MRT-07-04 · P0** — Idempotency keys për accept/start/complete/payment record.  
+- [ ] **MRT-07-04 · P0** — Idempotency keys për accept/start/complete/payment record.
   **Pranimi:** Retry nuk dyfishon udhëtim ose faturim.
-- [ ] **MRT-07-05 · P0** — Timeout dhe përgjigje e kontrolluar kur partneri/driveri nuk përgjigjet.  
+- [ ] **MRT-07-05 · P0** — Timeout dhe përgjigje e kontrolluar kur partneri/driveri nuk përgjigjet.
   **Pranimi:** Customer sheh alternativë të qartë.
-- [ ] **MRT-07-06 · P0** — Ride events të auditueshme me actor, timestamp, old/new state.  
+- [ ] **MRT-07-06 · P0** — Ride events të auditueshme me actor, timestamp, old/new state.
   **Pranimi:** Hetimi i çdo tranzicioni është i mundur.
-- [ ] **MRT-07-07 · P0** — Rregulla stale-GPS për eligibility dhe shfaqjen e hartës.  
+- [ ] **MRT-07-07 · P0** — Rregulla stale-GPS për eligibility dhe shfaqjen e hartës.
   **Pranimi:** Driver online me GPS të vjetër nuk promovohet si live.
-- [ ] **MRT-07-08 · P1** — Shtojmë push për njoftime kritike, evente live ku justifikohet; polling fallback.  
+- [ ] **MRT-07-08 · P1** — Shtojmë push për njoftime kritike, evente live ku justifikohet; polling fallback.
   **Pranimi:** Nuk humbasin tranzicionet pas disconnect.
-- [ ] **MRT-07-09 · P1** — PIN për nisjen e udhëtimit dhe politika e përjashtimeve.  
+- [ ] **MRT-07-09 · P1** — PIN për nisjen e udhëtimit dhe politika e përjashtimeve.
   **Pranimi:** Testohet PIN i saktë, gabim dhe skadim.
-- [ ] **MRT-07-10 · P1** — Rikaktim i kontrolluar shoferi me informim të klientit.  
+- [ ] **MRT-07-10 · P1** — Rikaktim i kontrolluar shoferi me informim të klientit.
   **Pranimi:** Një shofer aktiv për ride dhe histori të plotë.
-- [ ] **MRT-07-11 · P2** — Auto-dispatch opsional brenda flotës, fillimisht determinist.  
+- [ ] **MRT-07-11 · P2** — Auto-dispatch opsional brenda flotës, fillimisht determinist.
   **Pranimi:** Renditje e shpjegueshme dhe override manual.
 
 ### 08 — Tarifat, pagesat dhe komisionet
 
-- [ ] **MRT-08-01 · P0** — Konfirmojmë modelin: taksimetër, pagesë direkte cash/POS, komision B2B ndaj kompanisë.  
+- [ ] **MRT-08-01 · P0** — Konfirmojmë modelin: taksimetër, pagesë direkte cash/POS, komision B2B ndaj kompanisë.
   **Pranimi:** PRD dhe termat tregtarë e përshkruajnë saktë.
-- [ ] **MRT-08-02 · P0** — Përcaktojmë çfarë është udhëtim i faturueshëm dhe trajtimin e anulimeve/no-show.  
+- [ ] **MRT-08-02 · P0** — Përcaktojmë çfarë është udhëtim i faturueshëm dhe trajtimin e anulimeve/no-show.
   **Pranimi:** Politikë versionuar dhe teste.
-- [ ] **MRT-08-03 · P0** — Ndajmë Ride COMPLETED nga payment status dhe commission status.  
+- [ ] **MRT-08-03 · P0** — Ndajmë Ride COMPLETED nga payment status dhe commission status.
   **Pranimi:** Gjendjet nuk ngatërrohen në API/databazë.
-- [ ] **MRT-08-04 · P0** — Shuma e taksimetrit futet nga shoferi ose kompania sipas rolit dhe politikës.  
+- [ ] **MRT-08-04 · P0** — Shuma e taksimetrit futet nga shoferi ose kompania sipas rolit dhe politikës.
   **Pranimi:** Validohet shuma/monedha/metoda dhe actor-i.
-- [ ] **MRT-08-05 · P0** — Rregulla për korrigjime fare me audit, arsye dhe autorizim.  
+- [ ] **MRT-08-05 · P0** — Rregulla për korrigjime fare me audit, arsye dhe autorizim.
   **Pranimi:** Nuk mbishkruhet historia pa gjurmë.
-- [ ] **MRT-08-06 · P0** — Ledger i pandryshueshëm për komisionin për ride, jo vetëm kolonë balance.  
+- [ ] **MRT-08-06 · P0** — Ledger i pandryshueshëm për komisionin për ride, jo vetëm kolonë balance.
   **Pranimi:** Një komision unik për ride; reversals si entries të reja.
-- [ ] **MRT-08-07 · P0** — Raporte për kompani: udhëtime, bruto e deklaruar, komisione, korrigjime.  
+- [ ] **MRT-08-07 · P0** — Raporte për kompani: udhëtime, bruto e deklaruar, komisione, korrigjime.
   **Pranimi:** Shumat rakordohen me ledger.
-- [ ] **MRT-08-08 · P0** — Faturim periodik B2B, afatet, statusi paguar/pa paguar dhe rakordim bankar.  
+- [ ] **MRT-08-08 · P0** — Faturim periodik B2B, afatet, statusi paguar/pa paguar dhe rakordim bankar.
   **Pranimi:** Admin verifikon pagesën; eksport i auditueshëm.
-- [ ] **MRT-08-09 · P0** — Verifikojmë tatimet, faturimin dhe modelin e arkëtimit me kontabilist/jurist shqiptar.  
+- [ ] **MRT-08-09 · P0** — Verifikojmë tatimet, faturimin dhe modelin e arkëtimit me kontabilist/jurist shqiptar.
   **Pranimi:** Përcaktohen TVSH, e-faturimi, përgjegjësitë.
-- [ ] **MRT-08-10 · P1** — Kujtesa për pagesat, mosmarrëveshje, kredit-note dhe pezullim i kontrolluar.  
+- [ ] **MRT-08-10 · P1** — Kujtesa për pagesat, mosmarrëveshje, kredit-note dhe pezullim i kontrolluar.
   **Pranimi:** Politikat testohen, ride aktive nuk prishen.
-- [ ] **MRT-08-11 · P1** — Monitorim i anomalive të shumave pa pretenduar që GPS provon taksimetrin.  
+- [ ] **MRT-08-11 · P1** — Monitorim i anomalive të shumave pa pretenduar që GPS provon taksimetrin.
   **Pranimi:** Alerts të verifikueshme dhe review manual.
-- [ ] **MRT-08-12 · P2** — Provider marketplace payouts për pagesë online, vetëm kur tregu e mbështet.  
+- [ ] **MRT-08-12 · P2** — Provider marketplace payouts për pagesë online, vetëm kur tregu e mbështet.
   **Pranimi:** KYC/AML, refund, settlement dhe procesimi testohen.
 
 ### 09 — Siguria, privatësia dhe besimi
 
-- [ ] **MRT-09-01 · P0** — RBAC dhe tenant isolation në çdo endpoint me company/driver/ride id.  
+- [ ] **MRT-09-01 · P0** — RBAC dhe tenant isolation në çdo endpoint me company/driver/ride id.
   **Pranimi:** Testet negative ndërmjet kompanive kalojnë.
-- [ ] **MRT-09-02 · P0** — Kontroll i lidhjes actor–driver–ride për GPS dhe statuset mobile.  
+- [ ] **MRT-09-02 · P0** — Kontroll i lidhjes actor–driver–ride për GPS dhe statuset mobile.
   **Pranimi:** Nuk lejohet spoof për driver tjetër.
-- [ ] **MRT-09-03 · P0** — Secure token storage/rotation/revocation për mobile.  
+- [ ] **MRT-09-03 · P0** — Secure token storage/rotation/revocation për mobile.
   **Pranimi:** Logout, device loss dhe 401 trajtohen.
-- [ ] **MRT-09-04 · P0** — Rate limiting, brute-force, audit access dhe secrets nga env/secret store.  
+- [ ] **MRT-09-04 · P0** — Rate limiting, brute-force, audit access dhe secrets nga env/secret store.
   **Pranimi:** Security regression + konfigurim staging.
-- [ ] **MRT-09-05 · P0** — Private object storage, upload validation, antivirus/file limits, signed download.  
+- [ ] **MRT-09-05 · P0** — Private object storage, upload validation, antivirus/file limits, signed download.
   **Pranimi:** Dokumentet nuk janë publikë dhe aksesohen me autorizim.
-- [ ] **MRT-09-06 · P0** — Data minimization dhe retention për GPS, ID dhe dokumente.  
+- [ ] **MRT-09-06 · P0** — Data minimization dhe retention për GPS, ID dhe dokumente.
   **Pranimi:** Politika me afate e bazë ligjore e dokumentuar.
-- [ ] **MRT-09-07 · P0** — Privatësia/GDPR kur aplikohet dhe ligji shqiptar; termat, njoftimet dhe të drejtat.  
+- [ ] **MRT-09-07 · P0** — Privatësia/GDPR kur aplikohet dhe ligji shqiptar; termat, njoftimet dhe të drejtat.
   **Pranimi:** Review ligjor dhe UX consent.
-- [ ] **MRT-09-08 · P0** — Monitorim dhe reagim ndaj incidenteve, backup dhe audit trail.  
+- [ ] **MRT-09-08 · P0** — Monitorim dhe reagim ndaj incidenteve, backup dhe audit trail.
   **Pranimi:** Procedurë e testuar në staging.
-- [ ] **MRT-09-09 · P1** — Foto, targa, identifikimi dhe raportim incidenti në aplikacion.  
+- [ ] **MRT-09-09 · P1** — Foto, targa, identifikimi dhe raportim incidenti në aplikacion.
   **Pranimi:** Klienti sheh informacionin e saktë të shoferit.
-- [ ] **MRT-09-10 · P1** — Share-trip/PIN dhe kanale të sigurta kontakti.  
+- [ ] **MRT-09-10 · P1** — Share-trip/PIN dhe kanale të sigurta kontakti.
   **Pranimi:** Test revokimi dhe kufizimesh.
-- [ ] **MRT-09-11 · P1** — Vlerësim penetrimi dhe dependency vulnerability checks.  
+- [ ] **MRT-09-11 · P1** — Vlerësim penetrimi dhe dependency vulnerability checks.
   **Pranimi:** Gjetjet kritike mbyllen para pilotit.
 
 ### 10 — Paneli Partner, Admin dhe suporti
 
-- [ ] **MRT-10-01 · P0** — Auditim i funksioneve ekzistuese dashboard, rides, drivers, vehicles dhe documents.  
+- [ ] **MRT-10-01 · P0** — Auditim i funksioneve ekzistuese dashboard, rides, drivers, vehicles dhe documents.
   **Pranimi:** Matrica implementim/test dhe screenshots.
-- [ ] **MRT-10-02 · P0** — Partner onboarding me wizard dhe indikator verifikimi.  
+- [ ] **MRT-10-02 · P0** — Partner onboarding me wizard dhe indikator verifikimi.
   **Pranimi:** Çdo hap rikthehet pas logout; gabimet janë të qarta.
-- [ ] **MRT-10-03 · P0** — Dispatch board mobile-friendly me udhëtime aktive dhe prioritete.  
+- [ ] **MRT-10-03 · P0** — Dispatch board mobile-friendly me udhëtime aktive dhe prioritete.
   **Pranimi:** Kërkesa e re është e dukshme dhe mund të caktohet shpejt.
-- [ ] **MRT-10-04 · P0** — Admin review për kompani, shoferë, automjete dhe dokumente.  
+- [ ] **MRT-10-04 · P0** — Admin review për kompani, shoferë, automjete dhe dokumente.
   **Pranimi:** Arsye refuzimi/approve ruhet me actor.
-- [ ] **MRT-10-05 · P0** — Support i lidhur me ride, partner dhe customer pa ekspozim të tepërt.  
+- [ ] **MRT-10-05 · P0** — Support i lidhur me ride, partner dhe customer pa ekspozim të tepërt.
   **Pranimi:** Gjurmim kërkese deri në zgjidhje.
-- [ ] **MRT-10-06 · P1** — KPI reale për disponueshmëri, pranim, përfundim, anulime, ankesa.  
+- [ ] **MRT-10-06 · P1** — KPI reale për disponueshmëri, pranim, përfundim, anulime, ankesa.
   **Pranimi:** Data të vërteta, përkufizime të shkruara.
-- [ ] **MRT-10-07 · P1** — Njoftime skadimi, faturimi dhe kërkesash me prioritete.  
+- [ ] **MRT-10-07 · P1** — Njoftime skadimi, faturimi dhe kërkesash me prioritete.
   **Pranimi:** Jo njoftime të përsëritura pa nevojë.
-- [ ] **MRT-10-08 · P1** — UI responsive, gjuhë shqip + anglisht, empty/error/loading states.  
+- [ ] **MRT-10-08 · P1** — UI responsive, gjuhë shqip + anglisht, empty/error/loading states.
   **Pranimi:** Teste UX në telefon dhe desktop.
-- [ ] **MRT-10-09 · P1** — Raportet financiare të kompanisë dhe eksportet.  
+- [ ] **MRT-10-09 · P1** — Raportet financiare të kompanisë dhe eksportet.
   **Pranimi:** Totalet rakordohen me backend ledger.
 
 ### 11 — Maps, ETA, performance dhe observability
 
-- [ ] **MRT-11-01 · P0** — Rishikojmë hartat dhe provider geocoding për përdorim komercial.  
+- [ ] **MRT-11-01 · P0** — Rishikojmë hartat dhe provider geocoding për përdorim komercial.
   **Pranimi:** API key, quota, TOS, caching dhe failover dokumentohen.
-- [ ] **MRT-11-02 · P0** — Nuk shfaqim distancën Haversine si ETA rrugore.  
+- [ ] **MRT-11-02 · P0** — Nuk shfaqim distancën Haversine si ETA rrugore.
   **Pranimi:** UI etiketon metrikat saktë.
-- [ ] **MRT-11-03 · P1** — Routing/ETA me rrugë reale për ardhjen e shoferit.  
+- [ ] **MRT-11-03 · P1** — Routing/ETA me rrugë reale për ardhjen e shoferit.
   **Pranimi:** Test i kohës dhe distancës me skenarë realë.
-- [ ] **MRT-11-04 · P0** — Dashboard për ride timeouts, GPS stale, dështime API, push dhe billing.  
+- [ ] **MRT-11-04 · P0** — Dashboard për ride timeouts, GPS stale, dështime API, push dhe billing.
   **Pranimi:** Alarmet dallojnë dështimet nga përdorimi normal.
-- [ ] **MRT-11-05 · P0** — Log-e strukturuara, correlation-id dhe redaktim i të dhënave sensitive.  
+- [ ] **MRT-11-05 · P0** — Log-e strukturuara, correlation-id dhe redaktim i të dhënave sensitive.
   **Pranimi:** Një ride ndiqet në log pa ekspozuar token/ID.
-- [ ] **MRT-11-06 · P1** — Performancë me ngarkesë test për kërkim, koordinata dhe rezervime.  
+- [ ] **MRT-11-06 · P1** — Performancë me ngarkesë test për kërkim, koordinata dhe rezervime.
   **Pranimi:** Objektiva SLO/P95 të dakorduara.
-- [ ] **MRT-11-07 · P2** — PostGIS/Redis vetëm pas profile/benchmark dhe dokumentimi ADR.  
+- [ ] **MRT-11-07 · P2** — PostGIS/Redis vetëm pas profile/benchmark dhe dokumentimi ADR.
   **Pranimi:** Ka prova matjesh që justifikojnë kompleksitetin.
 
 ### 12 — Testet, infrastruktura dhe release
 
-- [ ] **MRT-12-01 · P0** — Pipeline CI për build backend/frontend, testet unit dhe integration.  
+- [ ] **MRT-12-01 · P0** — Pipeline CI për build backend/frontend, testet unit dhe integration.
   **Pranimi:** PR i pasuksesshëm bllokohet.
-- [ ] **MRT-12-02 · P0** — Testcontainers PostgreSQL për invariants, Liquibase dhe konkurencë.  
+- [ ] **MRT-12-02 · P0** — Testcontainers PostgreSQL për invariants, Liquibase dhe konkurencë.
   **Pranimi:** Testet kalojnë në CI, jo vetëm lokal.
-- [ ] **MRT-12-03 · P0** — E2E për customer → company → driver → complete → ledger.  
+- [ ] **MRT-12-03 · P0** — E2E për customer → company → driver → complete → ledger.
   **Pranimi:** Udhëtim i plotë në staging.
-- [ ] **MRT-12-04 · P0** — Teste fizike iOS/Android për permissions, GPS, network loss dhe push.  
+- [ ] **MRT-12-04 · P0** — Teste fizike iOS/Android për permissions, GPS, network loss dhe push.
   **Pranimi:** Matrica pajisje/OS/evidence ruhet.
-- [ ] **MRT-12-05 · P0** — Mjedise të ndara dev, test, staging, prod me secrets të veçanta.  
+- [ ] **MRT-12-05 · P0** — Mjedise të ndara dev, test, staging, prod me secrets të veçanta.
   **Pranimi:** Asnjë demo seeder në DB reale.
-- [ ] **MRT-12-06 · P0** — Migrime backward-compatible, backup/restore i testuar dhe rollback.  
+- [ ] **MRT-12-06 · P0** — Migrime backward-compatible, backup/restore i testuar dhe rollback.
   **Pranimi:** Restore provë dokumentohet.
-- [ ] **MRT-12-07 · P0** — Konfigurim domain/TLS, DNS, monitoring, rate limits dhe backups.  
+- [ ] **MRT-12-07 · P0** — Konfigurim domain/TLS, DNS, monitoring, rate limits dhe backups.
   **Pranimi:** Runbook operational i testuar.
-- [ ] **MRT-12-08 · P0** — Release gates: security, E2E, performance baseline, dokumente ligjore.  
+- [ ] **MRT-12-08 · P0** — Release gates: security, E2E, performance baseline, dokumente ligjore.
   **Pranimi:** Checklist release firmoset para pilotit.
-- [ ] **MRT-12-09 · P1** — Pilot i kontrolluar me kompani, shoferë dhe klientë realë.  
+- [ ] **MRT-12-09 · P1** — Pilot i kontrolluar me kompani, shoferë dhe klientë realë.
   **Pranimi:** Mblidhen KPI dhe incidentet; vendim go/no-go.
-- [ ] **MRT-12-10 · P1** — App Store/Play Store compliance, privacy declarations dhe review.  
+- [ ] **MRT-12-10 · P1** — App Store/Play Store compliance, privacy declarations dhe review.
   **Pranimi:** Publikimet kalojnë review pa premtime të rreme GPS.
 
 ## C. Përmbledhje progresi
@@ -418,17 +418,43 @@ Log-u i fundit i lint-it tregoi 0 errors dhe 22 warnings. Rezultati i build-it p
 ### Lidhja me kërkesat e hapura
 
 - **MRT-03-02:** login individual, lidhja User–Driver dhe aktivizimi janë implementuar dhe testuar. Për mbyllje formale duhet bashkuar evidenca me review/DoD; nuk presim më implementimin nga zero.
-- **MRT-03-03 / MRT-09-02:** GPS dhe availability personale kanë kontrolle identiteti. Autorizimi i tranzicioneve të udhëtimit nga shoferi mbetet për t'u implementuar/verifikuar.
+- **MRT-03-03 / MRT-09-02:** GPS dhe availability personale kanë kontrolle identiteti. Autorizimi i tranzicioneve dhe përfundimit është implementuar më pas; shih seksionin E për evidencën e 2026-10-29.
 - **MRT-03-06 / MRT-06-04:** statusi Online/Offline ruhet në server dhe BUSY mbrohet. Sesioni i punës native, disconnect dhe background nuk janë përfunduar.
 - **MRT-06-01..03 / MRT-12-04:** aplikacionet native dhe matrica fizike iOS/Android mbeten të hapura. Testi iPhone Safari është provë foreground web.
 - **MRT-04-05:** ekzistenca e një caktimi automjeti nuk provon eligibility të plotë të automjetit/dokumenteve; nevojitet auditim dhe teste specifike.
 - **MRT-12-01..02:** CI dhe Testcontainers ekzistojnë. Mbyllja formale kërkon lidhjet e rezultateve CI dhe konfirmimin e bllokimit të merge-it kur kontrollet dështojnë.
 
-### Hapat e ardhshëm
+### Hapat e planifikuar në rakordimin e 2026-10-28
 
-1. Verifikim i endpoint-eve ekzistuese dhe matricës së aktorëve për udhëtimet.
-2. Leximi i udhëtimit të caktuar vetëm nga shoferi përkatës, me teste negative për shofer/kompani tjetër.
-3. Tranzicionet e autorizuara të shoferit përmes logjikës së përbashkët të udhëtimit; pa dyfishim të state machine.
-4. Ekranet përkatëse dhe testi me backend real.
+Leximi i udhëtimit, tranzicionet e autorizuara, ekranet përkatëse dhe testi me backend real u realizuan më pas. Evidenca është në seksionin E.
+
+## E. Rakordim i progresit — 2026-10-29
+
+Gjendja e konfirmuar nga log-u i pronarit: `main` është sinkronizuar me `origin/main` në `0e24563`. Ky është përditësim dokumentacioni; nuk është një ekzekutim i ri testesh.
+
+| Pjesa | Integrimi në main dhe prova | Kufiri i provës |
+|---|---|---|
+| Leximi i udhëtimit personal | Backend `2e35dac`, UI `ac28f6c`; suite backend 726 teste; 16 teste UI kaluan në fazën e leximit; testi me backend real kaloi | Vetëm udhëtimi i shoferit përkatës; nuk është aplikacion native |
+| Tranzicionet e shoferit | Backend `d6f0926`, UI `d303d1b`; suite backend 734 teste; testi me backend real kaloi | ASSIGNED → ARRIVING → ARRIVED → IN_PROGRESS; konfirmim në UI dhe autorizim në server |
+| Përfundimi me taksimetër | Backend `1ccbd9e`, UI `0e24563` (commit funksional UI `8e7de90`); suite backend 742 teste, 0 failures/errors/skipped, BUILD SUCCESS më 2026-10-29; testi browser me backend real kaloi | Regjistron shumën dhe COMPLETED; nuk provon arkëtim dhe nuk krijon ledger |
+
+Logjika e progresit (`RideProgression`) dhe përfundimit (`RideCompletion`) ndahet me shërbimin e partnerit. Përfundimi ruan shumën, kohën dhe statusin në të njëjtin transaksion dhe e kthen shoferin ONLINE sipas sjelljes ekzistuese. Kthimi ONLINE nuk provon GPS fresh ose eligibility të plotë të automjetit.
+
+Testi i izoluar kalon përmes ftesës, aktivizimit, login-it, availability, GPS, caktimit të udhëtimit, tranzicioneve dhe përfundimit nga UI; leximi i klientit kontrollon statusin COMPLETED dhe shumën 800.50. HTTP, autorizimi dhe PostgreSQL janë realë; SMS dhe koordinatat e browser-it simulohen. Nuk është provë staging, pagesash ose GPS native background.
+
+UI kërkon konfirmim për veprimet; pas POST-it rilexon gjendjen autoritative edhe në gabim. Nuk riprovon automatikisht mutacionin. Përfundimi i përsëritur refuzohet pa mbishkruar shumën/kohën; nuk ka ende protokoll me idempotency keys.
+
+### Lidhja me checklist-in
+
+- **MRT-03-02 / MRT-03-03:** login individual dhe veprime personale GPS/availability/ride janë implementuar me teste autorizimi. Checkbox-et mbeten të hapura deri në rakordimin e plotë të DoD dhe evidencës së review.
+- **MRT-01-04:** progresi dhe përfundimi përdorin komponentë të përbashkët backend për partnerin dhe shoferin; kanalet native mbeten për t'u realizuar.
+- **MRT-12-03:** pjesa web customer/company/driver/complete është testuar në mjedis të izoluar; ledger dhe staging mbeten të hapura.
+- Numërimi i checkbox-eve në seksionin C nuk ndryshon. Ai nuk mat përqindjen e implementimit.
+
+### Prioriteti teknik vijues
+
+1. Auditim i **MRT-04-05**: kontrollet aktuale për automjetin dhe dokumentet në ONLINE, kërkim dhe caktim. Identifikohen rregullat ekzistuese përpara ndryshimit të politikës.
+2. Harmonizim i kontrolleve të nevojshme dhe teste për automjet/dokument të skaduar ose joaktiv; shqyrtim i garave me ndryshimet e flotës.
+3. Dokumentim i matricës së aktorëve dhe tranzicioneve, si edhe përditësim i evidencës së CI/DoD.
 
 Go-live, native GPS, financat dhe gatishmëria production nuk shpallen të përfunduara nga ky përditësim.
