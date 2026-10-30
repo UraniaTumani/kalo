@@ -40,6 +40,21 @@ class RideLifecycleIntegrationTest extends AbstractIntegrationTest {
             }
             """.formatted(TestDataFactory.TIRANA_LAT, TestDataFactory.TIRANA_LNG);
 
+    @Test void vehicleExpiryAfterSearchRefusesAcceptance() throws Exception {
+        var taxi = fixtures.bookableCompany();
+        long rideId = requestRide(tokenFor(fixtures.customer()));
+        for (String column : new String[]{"registration_expiry_date", "insurance_expiry_date", "technical_inspection_expiry_date"}) {
+            jdbcTemplate.update("UPDATE vehicles SET " + column + "=? WHERE id=?", com.kalo.common.util.LicenseValidity.today().minusDays(1), taxi.vehicle().getId());
+            mockMvc.perform(post("/api/v1/partner/rides/" + rideId + "/accept")
+                    .header("Authorization", bearer(tokenFor(taxi.company().getOwner())))
+                    .contentType(APPLICATION_JSON).content("{\"driverId\":" + taxi.driver().getId() + "}"))
+                    .andExpect(status().isBadRequest());
+            assertThat(jdbcTemplate.queryForObject("SELECT status FROM rides WHERE id=?", String.class, rideId)).isEqualTo("REQUESTED");
+            assertThat(jdbcTemplate.queryForObject("SELECT availability_status FROM drivers WHERE id=?", String.class, taxi.driver().getId())).isEqualTo("ONLINE");
+            jdbcTemplate.update("UPDATE vehicles SET " + column + "=? WHERE id=?", com.kalo.common.util.LicenseValidity.today().plusYears(1), taxi.vehicle().getId());
+        }
+    }
+
     @Test
     @DisplayName("a ride runs from request to completion and frees the driver")
     void happyPath() throws Exception {

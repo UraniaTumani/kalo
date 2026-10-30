@@ -1,6 +1,7 @@
 package com.kalo.driver.service;
 
 import com.kalo.assignment.repository.DriverVehicleAssignmentRepository;
+import com.kalo.vehicle.service.VehicleEligibility;
 import com.kalo.common.util.LicenseValidity;
 import com.kalo.common.exception.ConflictException;
 import com.kalo.common.util.PhoneNumberNormalizer;
@@ -149,19 +150,13 @@ public class DriverServiceImpl
         if (requestedStatus
                 == DriverAvailabilityStatus.ONLINE) {
 
-            boolean hasActiveVehicle =
-                    assignmentRepository
-                            .findByDriverIdAndActiveTrue(
-                                    driver.getId()
-                            )
-                            .isPresent();
-
-            if (!hasActiveVehicle) {
-
-                throw new InvalidOperationException(
-                        "Driver must have an active vehicle assignment before going online"
-                );
-            }
+            var assignment = assignmentRepository.findByDriverIdAndActiveTrue(driver.getId())
+                    .orElseThrow(() -> new InvalidOperationException(
+                            "Driver must have an active vehicle assignment before going online"));
+            var vehicle = assignment.getVehicle();
+            VehicleEligibility.requireEligible(company.getId(), vehicle.getCompany().getId(),
+                    vehicle.getStatus(), vehicle.getRegistrationExpiryDate(), vehicle.getInsuranceExpiryDate(),
+                    vehicle.getTechnicalInspectionExpiryDate());
 
             /*
              * An expired licence must not be brought back online (F36).

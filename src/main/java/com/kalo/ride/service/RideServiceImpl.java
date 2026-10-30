@@ -2,6 +2,7 @@ package com.kalo.ride.service;
 
 import com.kalo.assignment.entity.DriverVehicleAssignment;
 import com.kalo.assignment.repository.DriverVehicleAssignmentRepository;
+import com.kalo.vehicle.service.VehicleEligibility;
 import com.kalo.common.util.LicenseValidity;
 import com.kalo.common.exception.ConflictException;
 import com.kalo.common.exception.InvalidOperationException;
@@ -378,6 +379,10 @@ public class RideServiceImpl implements RideService {
                     "Assigned vehicle is not active"
             );
         }
+
+        VehicleEligibility.requireEligible(company.getId(), vehicle.getCompany().getId(),
+                vehicle.getStatus(), vehicle.getRegistrationExpiryDate(), vehicle.getInsuranceExpiryDate(),
+                vehicle.getTechnicalInspectionExpiryDate());
 
         ride.setDriver(
                 driver

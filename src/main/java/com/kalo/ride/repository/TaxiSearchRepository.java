@@ -44,6 +44,10 @@ public interface TaxiSearchRepository
               AND c.status = :companyStatus
               AND c.bookingEnabled = true
               AND dl.locationUpdatedAt >= :minimumLocationTime
+              AND v.company.id = c.id
+              AND v.registrationExpiryDate >= :today
+              AND v.insuranceExpiryDate >= :today
+              AND v.technicalInspectionExpiryDate >= :today
               AND d.licenseExpiryDate >= :today
               AND c.licenseExpiryDate IS NOT NULL
               AND c.licenseExpiryDate >= :today
@@ -105,6 +109,10 @@ public interface TaxiSearchRepository
               AND c.status = com.kalo.partner.enums.CompanyStatus.ACTIVE
               AND c.bookingEnabled = true
               AND dl.locationUpdatedAt >= :minimumLocationTime
+              AND v.company.id = c.id
+              AND v.registrationExpiryDate >= :today
+              AND v.insuranceExpiryDate >= :today
+              AND v.technicalInspectionExpiryDate >= :today
               AND d.licenseExpiryDate >= :today
               AND c.licenseExpiryDate IS NOT NULL
               AND c.licenseExpiryDate >= :today
