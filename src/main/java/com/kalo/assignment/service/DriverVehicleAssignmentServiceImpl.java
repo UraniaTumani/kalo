@@ -18,6 +18,7 @@ import com.kalo.partner.repository.TaxiCompanyRepository;
 import com.kalo.vehicle.entity.Vehicle;
 import com.kalo.vehicle.enums.VehicleStatus;
 import com.kalo.vehicle.repository.VehicleRepository;
+import com.kalo.assignment.service.FleetMutationLock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,8 @@ public class DriverVehicleAssignmentServiceImpl
     private final DriverRepository driverRepository;
     private final VehicleRepository vehicleRepository;
     private final TaxiCompanyRepository taxiCompanyRepository;
+    private final FleetMutationLock fleetMutationLock;
+    private final jakarta.persistence.EntityManager entities;
 
     @Override
     @Transactional
@@ -46,6 +49,7 @@ public class DriverVehicleAssignmentServiceImpl
 
         TaxiCompany company = getCurrentCompany();
 
+        fleetMutationLock.acquire(company);
         validateCompanyCanManageAssignments(company);
 
         Driver driver = driverRepository
@@ -70,6 +74,7 @@ public class DriverVehicleAssignmentServiceImpl
                         )
                 );
 
+        entities.refresh(driver, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         validateDriver(driver);
         validateVehicle(vehicle);
 
@@ -152,6 +157,7 @@ public class DriverVehicleAssignmentServiceImpl
         TaxiCompany company =
                 getCurrentCompany();
 
+        fleetMutationLock.acquire(company);
         validateCompanyCanManageAssignments(
                 company
         );
@@ -177,6 +183,8 @@ public class DriverVehicleAssignmentServiceImpl
 
         Driver driver =
                 assignment.getDriver();
+        entities.refresh(driver, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        entities.refresh(assignment);
 
         /*
          * We do not automatically change the driver's

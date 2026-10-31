@@ -17,6 +17,7 @@ import com.kalo.vehicle.dto.VehicleResponse;
 import com.kalo.vehicle.entity.Vehicle;
 import com.kalo.vehicle.enums.VehicleStatus;
 import com.kalo.vehicle.repository.VehicleRepository;
+import com.kalo.assignment.service.FleetMutationLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -38,6 +39,8 @@ public class VehicleServiceImpl
 
     private final VehicleRepository vehicleRepository;
     private final TaxiCompanyRepository taxiCompanyRepository;
+    private final FleetMutationLock fleetMutationLock;
+    private final jakarta.persistence.EntityManager entities;
     private final DriverVehicleAssignmentRepository assignmentRepository;
 
     @Override
@@ -49,6 +52,7 @@ public class VehicleServiceImpl
         TaxiCompany company =
                 getCurrentCompany();
 
+        fleetMutationLock.acquire(company);
         validateCompanyCanManageVehicles(company);
 
         validateManufactureYear(
@@ -170,6 +174,7 @@ public class VehicleServiceImpl
         TaxiCompany company =
                 getCurrentCompany();
 
+        fleetMutationLock.acquire(company);
         validateCompanyCanManageVehicles(company);
 
         Vehicle vehicle =
@@ -267,6 +272,7 @@ public class VehicleServiceImpl
         TaxiCompany company =
                 getCurrentCompany();
 
+        fleetMutationLock.acquire(company);
         validateCompanyCanManageVehicles(company);
 
         Vehicle vehicle =
@@ -311,6 +317,8 @@ public class VehicleServiceImpl
 
         Driver driver =
                 assignment.getDriver();
+        entities.refresh(driver, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        entities.refresh(assignment);
 
         if (driver.getAvailabilityStatus()
                 == DriverAvailabilityStatus.BUSY) {
@@ -409,7 +417,7 @@ public class VehicleServiceImpl
             LocalDate technicalInspectionExpiryDate
     ) {
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = com.kalo.common.util.LicenseValidity.today();
 
         if (registrationExpiryDate != null
                 && registrationExpiryDate.isBefore(today)) {
