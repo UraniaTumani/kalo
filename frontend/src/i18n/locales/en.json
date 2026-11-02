@@ -902,4 +902,33 @@
     "fareError": "Enter a positive amount with at most 10 digits and 2 decimal places.",
     "completeConfirm": "Complete this ride with a taximeter amount of {{amount}} ALL? Check the amount before confirming."
   }
+,
+  "fleetReview": {
+    "open": "Fleet documents",
+    "title": "Review fleet documents",
+    "hint": "Choose a driver or vehicle, download and inspect the document, then record your decision.",
+    "ownerType": "Fleet category",
+    "drivers": "Drivers",
+    "vehicles": "Vehicles",
+    "owner": "Driver or vehicle",
+    "choose": "Choose an item",
+    "previous": "Previous",
+    "next": "Next",
+    "loading": "Loading documents…",
+    "loadError": "Could not load this information. Refresh to try again.",
+    "refresh": "Refresh documents",
+    "noOwners": "No items on this page.",
+    "documents": "Fleet document review",
+    "noDocuments": "No documents uploaded.",
+    "number": "Document number",
+    "issued": "Issued",
+    "expires": "Expires",
+    "reason": "Rejection reason",
+    "download": "Download document",
+    "approve": "Approve document",
+    "reject": "Reject document",
+    "actionError": "Could not confirm the operation. Check the refreshed status before trying again.",
+    "confirmTitle": "Confirm document decision",
+    "confirmHint": "This decision cannot be changed from this screen. Approval records your review; it does not automatically make the driver eligible for work."
+}
 }
