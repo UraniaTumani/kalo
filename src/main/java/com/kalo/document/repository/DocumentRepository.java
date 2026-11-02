@@ -12,6 +12,18 @@ import java.util.Optional;
 public interface DocumentRepository
         extends JpaRepository<Document, Long> {
 
+    /** Current version of each document type; older IDs remain available as history. */
+    @org.springframework.data.jpa.repository.Query("""
+        SELECT d FROM Document d WHERE d.ownerType = :type AND d.ownerId = :owner
+          AND NOT EXISTS (SELECT newer.id FROM Document newer
+              WHERE newer.ownerType = d.ownerType AND newer.ownerId = d.ownerId
+                AND newer.documentType = d.documentType AND newer.id > d.id)
+        ORDER BY d.id
+        """)
+    List<Document> findCurrentByOwner(
+            @org.springframework.data.repository.query.Param("type") DocumentOwnerType type,
+            @org.springframework.data.repository.query.Param("owner") Long owner);
+
     List<Document> findAllByOwnerTypeAndOwnerId(
             DocumentOwnerType ownerType,
             Long ownerId

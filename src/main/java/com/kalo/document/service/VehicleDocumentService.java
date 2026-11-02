@@ -80,7 +80,7 @@ public class VehicleDocumentService {
     @Transactional(readOnly = true)
     public List<DocumentResponse> list(Long vehicleId) {
         requireOwnedVehicle(vehicleId);
-        return documentRepository.findAllByOwnerTypeAndOwnerId(DocumentOwnerType.VEHICLE, vehicleId)
+        return documentRepository.findCurrentByOwner(DocumentOwnerType.VEHICLE, vehicleId)
                 .stream().map(this::toResponse).toList();
     }
 
