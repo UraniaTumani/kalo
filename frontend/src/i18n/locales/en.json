@@ -1,4 +1,18 @@
 {
+  "fleetBlockers": {
+      "title": "Documents blocking new work",
+      "MISSING": "Missing. Ask the partner to upload it.",
+      "DRAFT": "Awaiting administrator review.",
+      "PENDING": "Replacement awaiting administrator review.",
+      "REJECTED": "Rejected. A replacement must be uploaded and approved.",
+      "UNAPPROVED": "Administrator approval is required.",
+      "EXPIRY_MISSING": "Expiry date is missing. Ask the partner to correct the evidence.",
+      "EXPIRED": "Expired. A renewed document must be uploaded and approved.",
+      "FUTURE_ISSUE_DATE": "Issue date is in the future. Ask the partner to check it.",
+      "driverHelp": "Contact your taxi company to resolve these documents, then refresh status.",
+      "partnerHelp": "Open Documents for this driver or assigned vehicle. Upload missing evidence or renew rejected/expired evidence, then obtain administrator approval.",
+      "snapshot": "These reasons describe the refused request. Refresh status after the documents are corrected."
+  },
   "common": {
     "appName": "MR TAXI",
     "save": "Save",

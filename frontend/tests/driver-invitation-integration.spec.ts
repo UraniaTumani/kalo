@@ -89,6 +89,10 @@ test('partner invitation activates exactly one driver who can log in', async ({ 
       data: { availabilityStatus: 'ONLINE' },
     })
     expect(beforeDocuments.status()).toBe(400)
+    const blockers = await beforeDocuments.json()
+    expect(blockers.code).toBe('FLEET_DOCUMENTS_REQUIRED')
+    expect(blockers.documentIssues).toHaveLength(4)
+    expect(blockers.documentIssues.every((issue: { reason: string }) => issue.reason === 'MISSING')).toBe(true)
     const profile = await request.get('http://127.0.0.1:18881/api/v1/partner/me', { headers })
     expect(profile.status()).toBe(200)
     const { companyId } = await profile.json()

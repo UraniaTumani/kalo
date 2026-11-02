@@ -5,6 +5,7 @@ import { Button } from '@/components/ui'
 import { api } from '@/lib/api/client'
 import { watchPosition, type Position } from '@/lib/geolocation'
 import { isFreshGpsFix } from '@/lib/gpsFreshness'
+import { FleetDocumentBlockers } from '@/components/FleetDocumentBlockers'
 import { AuthShell } from './AuthShell'
 import { DriverCurrentRideCard } from './DriverCurrentRideCard'
 
@@ -19,6 +20,7 @@ export function DriverAccountPage() {
   const [lastSent, setLastSent] = useState<number | null>(null)
   const [availability, setAvailability] = useState<Availability | null>(null)
   const [availabilityError, setAvailabilityError] = useState(false)
+  const [availabilityFailure, setAvailabilityFailure] = useState<unknown>(null)
   const [changingAvailability, setChangingAvailability] = useState(false)
   const changingRef = useRef(false)
   const availabilityEpoch = useRef(0)
@@ -62,6 +64,7 @@ export function DriverAccountPage() {
         if (mounted && !changingRef.current && epoch === availabilityEpoch.current && ['ONLINE', 'OFFLINE', 'BUSY'].includes(data.availabilityStatus)) {
           setAvailability(data.availabilityStatus)
           setAvailabilityError(false)
+          setAvailabilityFailure(null)
         }
       } catch {
         if (mounted && !changingRef.current && epoch === availabilityEpoch.current) { setAvailability(null); setAvailabilityError(true) }
@@ -80,10 +83,12 @@ export function DriverAccountPage() {
     availabilityEpoch.current++
     setChangingAvailability(true)
     setAvailabilityError(false)
+    setAvailabilityFailure(null)
     try {
       const result = await api.put<{ availabilityStatus: Availability }>('/api/v1/driver/me/availability', { availabilityStatus: next })
       setAvailability(result.availabilityStatus)
-    } catch {
+    } catch (error) {
+      setAvailabilityFailure(error)
       // The server may have applied a request even if its response was lost.
       setAvailability(null)
       setAvailabilityError(true)
@@ -112,6 +117,7 @@ export function DriverAccountPage() {
       <p className="text-sm font-semibold">{t('driverAvailability.title')}</p>
       <p className="text-sm text-ink-600">{availability ? t(`driverAvailability.${availability}`) : t('driverAvailability.unknown')}</p>
       {availabilityError && <div><p role="alert" className="text-sm text-ink-600">{t('driverAvailability.error')}</p><Button onClick={() => setRefreshAvailability(value => value + 1)}>{t('driverAvailability.refresh')}</Button></div>}
+      <FleetDocumentBlockers error={availabilityFailure} driver />
       <div className="flex flex-wrap gap-2">
         <Button disabled={changingAvailability || availability === null || availability === 'ONLINE' || availability === 'BUSY'} onClick={() => { void changeAvailability('ONLINE') }}>{t('driverAvailability.goOnline')}</Button>
         <Button disabled={changingAvailability || availability === null || availability === 'OFFLINE' || availability === 'BUSY'} onClick={() => { void changeAvailability('OFFLINE') }}>{t('driverAvailability.goOffline')}</Button>

@@ -77,6 +77,18 @@ public class GlobalExceptionHandler {
      * =========================================================
      */
 
+    public record FleetDocumentError(int status, String error, String message, String path,
+            Instant timestamp, String code,
+            java.util.List<com.kalo.document.service.FleetDocumentRequiredException.Issue> documentIssues) {}
+
+    @ExceptionHandler(com.kalo.document.service.FleetDocumentRequiredException.class)
+    public ResponseEntity<FleetDocumentError> handleRequiredFleetDocuments(
+            com.kalo.document.service.FleetDocumentRequiredException exception, HttpServletRequest request) {
+        return ResponseEntity.badRequest().header("Cache-Control", "no-store").body(new FleetDocumentError(
+                400, "Bad Request", exception.getMessage(), request.getRequestURI(), Instant.now(),
+                "FLEET_DOCUMENTS_REQUIRED", exception.getIssues()));
+    }
+
     @ExceptionHandler(InvalidOperationException.class)
     public ResponseEntity<ErrorResponse> handleInvalidOperation(
             InvalidOperationException exception,
