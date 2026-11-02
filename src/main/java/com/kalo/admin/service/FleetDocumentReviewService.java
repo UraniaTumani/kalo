@@ -36,7 +36,7 @@ public class FleetDocumentReviewService {
     @Transactional(readOnly = true)
     public List<FleetDocumentReviewResponse> list(Long company, DocumentOwnerType type, Long owner) {
         requireAdmin(); requireOwner(company, type, owner);
-        return documents.findAllByOwnerTypeAndOwnerId(type, owner).stream()
+        return documents.findCurrentByOwner(type, owner).stream()
                 .sorted(java.util.Comparator.comparing(Document::getId)).map(this::response).toList();
     }
 
@@ -56,6 +56,10 @@ public class FleetDocumentReviewService {
         var document = document(type, owner, id);
         entities.refresh(document, LockModeType.PESSIMISTIC_WRITE);
         if (document.getOwnerType() != type || !owner.equals(document.getOwnerId())) throw missing();
+        Long newer = jdbc.queryForObject("""
+            SELECT count(*) FROM documents WHERE owner_type=? AND owner_id=? AND document_type=? AND id>?
+            """, Long.class, type.name(), owner, document.getDocumentType().name(), id);
+        if (newer != null && newer > 0) throw new InvalidOperationException("A newer document version exists; refresh before review");
         if (document.getVerificationStatus() != DocumentVerificationStatus.DRAFT
                 && document.getVerificationStatus() != DocumentVerificationStatus.PENDING)
             throw new InvalidOperationException("Only draft or pending fleet documents can be reviewed");

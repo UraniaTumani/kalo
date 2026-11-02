@@ -61,18 +61,27 @@ public class DocumentExpiryNotificationSweepService {
               FROM documents doc
               JOIN taxi_companies c ON doc.owner_type = 'COMPANY' AND doc.owner_id = c.id
              WHERE doc.expires_at IS NOT NULL
+               AND NOT EXISTS (SELECT 1 FROM documents newer
+                   WHERE newer.owner_type=doc.owner_type AND newer.owner_id=doc.owner_id
+                     AND newer.document_type=doc.document_type AND newer.id>doc.id)
             UNION ALL
             SELECT drv.company_id, 'document:' || doc.id, 'Driver document ' || doc.document_type ||
                    ': ' || drv.first_name || ' ' || drv.last_name, doc.expires_at
               FROM documents doc
               JOIN drivers drv ON doc.owner_type = 'DRIVER' AND doc.owner_id = drv.id
              WHERE doc.expires_at IS NOT NULL
+               AND NOT EXISTS (SELECT 1 FROM documents newer
+                   WHERE newer.owner_type=doc.owner_type AND newer.owner_id=doc.owner_id
+                     AND newer.document_type=doc.document_type AND newer.id>doc.id)
             UNION ALL
             SELECT v.company_id, 'document:' || doc.id, 'Vehicle document ' || doc.document_type ||
                    ': ' || v.plate_number, doc.expires_at
               FROM documents doc
               JOIN vehicles v ON doc.owner_type = 'VEHICLE' AND doc.owner_id = v.id
              WHERE doc.expires_at IS NOT NULL
+               AND NOT EXISTS (SELECT 1 FROM documents newer
+                   WHERE newer.owner_type=doc.owner_type AND newer.owner_id=doc.owner_id
+                     AND newer.document_type=doc.document_type AND newer.id>doc.id)
             """;
 
     private static final String SELECT_DUE = """

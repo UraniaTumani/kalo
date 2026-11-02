@@ -77,7 +77,7 @@ public class DriverDocumentService {
     @Transactional(readOnly = true)
     public List<DocumentResponse> list(Long driverId) {
         requireOwnedDriver(driverId);
-        return documentRepository.findAllByOwnerTypeAndOwnerId(DocumentOwnerType.DRIVER, driverId)
+        return documentRepository.findCurrentByOwner(DocumentOwnerType.DRIVER, driverId)
                 .stream().map(this::toResponse).toList();
     }
 
