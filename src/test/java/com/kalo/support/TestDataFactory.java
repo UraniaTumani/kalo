@@ -253,7 +253,26 @@ public class TestDataFactory {
         assignment.setAssignedFrom(Instant.now().minus(Duration.ofDays(1)));
         assignment.setActive(true);
 
+        // A usable assigned fleet fixture includes its verified evidence. Tests
+        // for missing/rejected documents explicitly remove or change these rows.
+        approvedFleetDocument(DocumentOwnerType.DRIVER, driver.getId(), DocumentType.DRIVING_LICENSE);
+        for (var type : java.util.List.of(DocumentType.VEHICLE_REGISTRATION, DocumentType.INSURANCE, DocumentType.TECHNICAL_INSPECTION))
+            approvedFleetDocument(DocumentOwnerType.VEHICLE, vehicle.getId(), type);
         return assignmentRepository.save(assignment);
+    }
+
+    private void approvedFleetDocument(DocumentOwnerType owner, Long ownerId, DocumentType type) {
+        if (documentRepository.existsByOwnerTypeAndOwnerIdAndDocumentType(owner, ownerId, type)) return;
+        var document = new Document();
+        document.setOwnerType(owner);
+        document.setOwnerId(ownerId);
+        document.setDocumentType(type);
+        document.setDocumentNumber("VERIFIED-FIXTURE-" + next());
+        document.setFileUrl("test-fixture:verified-evidence");
+        document.setIssuedAt(com.kalo.common.util.LicenseValidity.today().minusYears(1));
+        document.setExpiresAt(com.kalo.common.util.LicenseValidity.today().plusYears(1));
+        document.setVerificationStatus(DocumentVerificationStatus.APPROVED);
+        documentRepository.save(document);
     }
 
     /** Persists a change made to an assignment, e.g. retiring it. */

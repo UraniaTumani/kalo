@@ -125,4 +125,48 @@ class DriverSelfAvailabilityIntegrationTest extends AbstractIntegrationTest {
         } finally { pool.shutdownNow(); }
     }
 
+
+    @Test void everyRequiredCurrentDocumentMustBeApprovedAndValid() throws Exception {
+        var a = account(true);
+        var today = com.kalo.common.util.LicenseValidity.today();
+        var ids = jdbcTemplate.queryForList("""
+            SELECT id FROM documents WHERE (owner_type='DRIVER' AND owner_id=?)
+              OR (owner_type='VEHICLE' AND owner_id=(SELECT vehicle_id FROM driver_vehicle_assignments WHERE driver_id=? AND active=true))
+            """, Long.class, a.driverId(), a.driverId());
+        assertThat(ids).hasSize(4);
+        for (Long id : ids) {
+            for (String invalid : new String[]{"DRAFT", "PENDING", "REJECTED"}) {
+                jdbcTemplate.update("UPDATE documents SET verification_status=? WHERE id=?", invalid, id);
+                change(a, "ONLINE").andExpect(status().isBadRequest());
+                change(a, "OFFLINE").andExpect(status().isOk());
+            }
+            jdbcTemplate.update("UPDATE documents SET verification_status='APPROVED' WHERE id=?", id);
+            for (java.time.LocalDate invalid : new java.time.LocalDate[]{null, today.minusDays(1)}) {
+                jdbcTemplate.update("UPDATE documents SET expires_at=? WHERE id=?", invalid, id);
+                change(a, "ONLINE").andExpect(status().isBadRequest());
+            }
+            jdbcTemplate.update("UPDATE documents SET expires_at=?, issued_at=? WHERE id=?", today.plusYears(1), today.plusDays(1), id);
+            change(a, "ONLINE").andExpect(status().isBadRequest());
+            jdbcTemplate.update("UPDATE documents SET expires_at=?, issued_at=NULL WHERE id=?", today, id);
+            change(a, "ONLINE").andExpect(status().isOk());
+            change(a, "OFFLINE").andExpect(status().isOk());
+        }
+        jdbcTemplate.update("DELETE FROM documents WHERE id=?", ids.get(0));
+        change(a, "ONLINE").andExpect(status().isBadRequest());
+        assertThat(state(a)).isEqualTo("OFFLINE");
+    }
+
+
+    @Test void pendingRenewalCannotReuseHistoricalApproval() throws Exception {
+        var a = account(true);
+        Long old = jdbcTemplate.queryForObject("SELECT id FROM documents WHERE owner_type='DRIVER' AND owner_id=?", Long.class, a.driverId());
+        jdbcTemplate.update("""
+            INSERT INTO documents (owner_type,owner_id,document_type,file_url,expires_at,verification_status,created_at,updated_at)
+            SELECT owner_type,owner_id,document_type,file_url,expires_at,'PENDING',now(),now() FROM documents WHERE id=?
+            """, old);
+        change(a, "ONLINE").andExpect(status().isBadRequest());
+        jdbcTemplate.update("UPDATE documents SET verification_status='APPROVED' WHERE owner_type='DRIVER' AND owner_id=? AND id<>?", a.driverId(), old);
+        change(a, "ONLINE").andExpect(status().isOk());
+        assertThat(jdbcTemplate.queryForObject("SELECT verification_status FROM documents WHERE id=?", String.class, old)).isEqualTo("APPROVED");
+    }
 }

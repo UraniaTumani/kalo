@@ -30,12 +30,13 @@ public class VehicleDocumentService {
     private final VehicleRepository vehicleRepository;
     private final TaxiCompanyRepository taxiCompanyRepository;
     private final LocalDocumentStorage localDocumentStorage;
+    private final com.kalo.assignment.service.FleetMutationLock fleetMutationLock;
 
     @Transactional
     public DocumentResponse upload(Long vehicleId, DocumentType documentType,
                                    String documentNumber, LocalDate issuedAt,
                                    LocalDate expiresAt, MultipartFile file) {
-        requireOwnedVehicle(vehicleId);
+        fleetMutationLock.acquire(requireOwnedVehicle(vehicleId));
         if (documentType != DocumentType.VEHICLE_REGISTRATION
                 && documentType != DocumentType.INSURANCE
                 && documentType != DocumentType.PASSENGER_INSURANCE
@@ -93,7 +94,7 @@ public class VehicleDocumentService {
         return localDocumentStorage.read(document.getFileUrl());
     }
 
-    private void requireOwnedVehicle(Long vehicleId) {
+    private com.kalo.partner.entity.TaxiCompany requireOwnedVehicle(Long vehicleId) {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new ResourceNotFoundException("Vehicle not found");
@@ -102,6 +103,7 @@ public class VehicleDocumentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Taxi company not found"));
         vehicleRepository.findByIdAndCompanyId(vehicleId, company.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found"));
+        return company;
     }
 
     private DocumentResponse toResponse(Document document) {

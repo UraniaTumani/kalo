@@ -51,7 +51,7 @@ public interface TaxiSearchRepository
               AND d.licenseExpiryDate >= :today
               AND c.licenseExpiryDate IS NOT NULL
               AND c.licenseExpiryDate >= :today
-            """)
+            """ + com.kalo.document.service.FleetDocumentEligibility.SEARCH_PREDICATE)
     List<AvailableTaxiRow> findAvailableTaxis(
             @Param("driverStatus")
             DriverStatus driverStatus,
@@ -116,7 +116,7 @@ public interface TaxiSearchRepository
               AND d.licenseExpiryDate >= :today
               AND c.licenseExpiryDate IS NOT NULL
               AND c.licenseExpiryDate >= :today
-            """)
+            """ + com.kalo.document.service.FleetDocumentEligibility.SEARCH_PREDICATE)
     boolean hasEligibleTaxiForCompany(
             @Param("companyId") Long companyId,
             @Param("minimumLocationTime") Instant minimumLocationTime,

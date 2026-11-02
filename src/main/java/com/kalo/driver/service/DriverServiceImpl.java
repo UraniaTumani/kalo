@@ -41,6 +41,7 @@ public class DriverServiceImpl
     private final DriverRepository driverRepository;
     private final TaxiCompanyRepository taxiCompanyRepository;
     private final FleetMutationLock fleetMutationLock;
+    private final com.kalo.document.service.FleetDocumentEligibility fleetDocuments;
     private final DriverVehicleAssignmentRepository assignmentRepository;
 
     @Override
@@ -161,6 +162,7 @@ public class DriverServiceImpl
             VehicleEligibility.requireEligible(company.getId(), vehicle.getCompany().getId(),
                     vehicle.getStatus(), vehicle.getRegistrationExpiryDate(), vehicle.getInsuranceExpiryDate(),
                     vehicle.getTechnicalInspectionExpiryDate());
+            fleetDocuments.requireEligible(driver.getId(), vehicle.getId());
 
             /*
              * An expired licence must not be brought back online (F36).

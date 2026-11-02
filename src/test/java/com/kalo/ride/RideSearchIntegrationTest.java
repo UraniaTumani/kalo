@@ -347,4 +347,32 @@ class RideSearchIntegrationTest extends AbstractIntegrationTest {
         fixtures.assign(driver, fixtures.vehicle(company, VehicleStatus.ACTIVE));
         fixtures.freshLocation(driver);
     }
+
+    @Test void invalidCurrentDocumentsAreExcludedFromSearchAndDashboard() throws Exception {
+        var taxi = fixtures.bookableCompany();
+        var ids = jdbcTemplate.queryForList("""
+            SELECT id FROM documents WHERE (owner_type='DRIVER' AND owner_id=?)
+              OR (owner_type='VEHICLE' AND owner_id=?)
+            """, Long.class, taxi.driver().getId(), taxi.vehicle().getId());
+        org.assertj.core.api.Assertions.assertThat(ids).hasSize(4);
+        for (Long id : ids) {
+            jdbcTemplate.update("UPDATE documents SET verification_status='PENDING' WHERE id=?", id);
+            expectOptions(fixtures.customer(), 0);
+            org.assertj.core.api.Assertions.assertThat(taxiSearchRepository.hasEligibleTaxiForCompany(
+                    taxi.company().getId(), java.time.Instant.now().minusSeconds(120), com.kalo.common.util.LicenseValidity.today())).isFalse();
+            jdbcTemplate.update("UPDATE documents SET verification_status='APPROVED' WHERE id=?", id);
+            jdbcTemplate.update("UPDATE documents SET expires_at=? WHERE id=?", com.kalo.common.util.LicenseValidity.today().minusDays(1), id);
+            expectOptions(fixtures.customer(), 0);
+            jdbcTemplate.update("UPDATE documents SET expires_at=? WHERE id=?", com.kalo.common.util.LicenseValidity.today(), id);
+        }
+        expectOptions(fixtures.customer(), 1);
+        Long old = ids.get(0);
+        jdbcTemplate.update("""
+            INSERT INTO documents (owner_type,owner_id,document_type,file_url,expires_at,verification_status,created_at,updated_at)
+            SELECT owner_type,owner_id,document_type,file_url,expires_at,'PENDING',now(),now() FROM documents WHERE id=?
+            """, old);
+        // The old APPROVED row must not rescue a newer PENDING version.
+        expectOptions(fixtures.customer(), 0);
+    }
+
 }

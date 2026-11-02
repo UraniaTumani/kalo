@@ -30,12 +30,13 @@ public class DriverDocumentService {
     private final DriverRepository driverRepository;
     private final TaxiCompanyRepository taxiCompanyRepository;
     private final LocalDocumentStorage localDocumentStorage;
+    private final com.kalo.assignment.service.FleetMutationLock fleetMutationLock;
 
     @Transactional
     public DocumentResponse upload(Long driverId, DocumentType documentType,
                                    String documentNumber, LocalDate issuedAt,
                                    LocalDate expiresAt, MultipartFile file) {
-        requireOwnedDriver(driverId);
+        fleetMutationLock.acquire(requireOwnedDriver(driverId));
         if (documentType != DocumentType.DRIVING_LICENSE
                 && documentType != DocumentType.PROFESSIONAL_CERTIFICATE) {
             throw new InvalidOperationException("Invalid driver document type");
@@ -90,7 +91,7 @@ public class DriverDocumentService {
         return localDocumentStorage.read(document.getFileUrl());
     }
 
-    private void requireOwnedDriver(Long driverId) {
+    private com.kalo.partner.entity.TaxiCompany requireOwnedDriver(Long driverId) {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new ResourceNotFoundException("Driver not found");
@@ -99,6 +100,7 @@ public class DriverDocumentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Taxi company not found"));
         driverRepository.findByIdAndCompanyId(driverId, company.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Driver not found"));
+        return company;
     }
 
     private DocumentResponse toResponse(Document document) {
