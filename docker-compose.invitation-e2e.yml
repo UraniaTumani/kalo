@@ -25,7 +25,8 @@ services:
       DB_PASSWORD: invitation-test-only
       GEOCODING_PROVIDER: static
       SPRING_APPLICATION_JSON: >-
-        {"app.rate-limit.enabled":false,
+        {"app.documents.local-directory":"/tmp/kalo-invitation-documents",
+         "app.rate-limit.enabled":false,
          "app.ride.timeout-sweep.enabled":false,
          "app.driver-invitation.issuance-api-enabled":true,
          "app.driver-invitation.activation-api-enabled":true,

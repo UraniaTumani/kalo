@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests',
-  testMatch: 'driver-invitation-integration.spec.ts',
+  testMatch: ['driver-invitation-integration.spec.ts', 'fleet-document-renewal-integration.spec.ts'],
   workers: 1,
   retries: 0,
   timeout: 60_000,
