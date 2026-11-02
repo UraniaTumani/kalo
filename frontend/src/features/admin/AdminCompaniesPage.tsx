@@ -1,3 +1,4 @@
+import { FleetDocumentReviewPanel } from './FleetDocumentReviewPanel'
 import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -28,6 +29,8 @@ export function AdminCompaniesPage() {
   const label = useStatusLabel()
   const compact = useIsCompact()
   const queryClient = useQueryClient()
+  const [reviewBusy, setReviewBusy] = useState(false)
+  const [reviewCompany, setReviewCompany] = useState<AdminPartnerResponse | null>(null)
   const [page, setPage] = useState(0)
   const [verification, setVerification] = useState<VerificationStatus | 'ALL'>('ALL')
   const [companyStatus, setCompanyStatus] = useState<CompanyStatus | 'ALL'>('ALL')
@@ -66,6 +69,9 @@ export function AdminCompaniesPage() {
         title={t('admin.companiesTitle')}
         description={t('admin.companiesSubtitle')}
       />
+
+      {reviewCompany && <FleetDocumentReviewPanel key={reviewCompany.companyId} companyId={reviewCompany.companyId}
+        name={reviewCompany.displayName} onBusyChange={setReviewBusy} onClose={() => setReviewCompany(null)} />}
 
       {/* Labelled, and given room, rather than tucked beside the heading. */}
       <FilterBar className="mb-4">
@@ -151,6 +157,8 @@ export function AdminCompaniesPage() {
                     <div className="mt-3 flex justify-end">
                       <CompanyActions
                         company={company}
+                        reviewBusy={reviewBusy}
+                        onReview={() => { if (!reviewBusy) setReviewCompany(company) }}
                         onSuspend={() => setPendingSuspend(company)}
                         onReactivate={() => reactivateMutation.mutate(company.companyId)}
                       />
@@ -186,6 +194,8 @@ export function AdminCompaniesPage() {
                     <Td>
                       <CompanyActions
                         company={company}
+                        reviewBusy={reviewBusy}
+                        onReview={() => { if (!reviewBusy) setReviewCompany(company) }}
                         onSuspend={() => setPendingSuspend(company)}
                         onReactivate={() => reactivateMutation.mutate(company.companyId)}
                       />
@@ -230,7 +240,7 @@ export function AdminCompaniesPage() {
  * not already suspended, which let an admin push a DRAFT company into
  * DRAFT + SUSPENDED, a state nothing could undo.
  */
-function CompanyActions({
+function CompanyStatusActions({
   company,
   onSuspend,
   onReactivate,
@@ -271,4 +281,14 @@ function CompanyActions({
       {t('admin.suspend')}
     </Button>
   )
+}
+
+function CompanyActions({ company, onSuspend, onReactivate, onReview, reviewBusy }: {
+  company: AdminPartnerResponse; onSuspend: () => void; onReactivate: () => void; onReview: () => void; reviewBusy: boolean
+}) {
+  const { t } = useTranslation()
+  return <div className="flex flex-wrap items-center gap-2">
+    <Button size="sm" variant="secondary" disabled={reviewBusy} onClick={onReview}>{t('fleetReview.open')}</Button>
+    <CompanyStatusActions company={company} onSuspend={onSuspend} onReactivate={onReactivate} />
+  </div>
 }

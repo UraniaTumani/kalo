@@ -902,4 +902,33 @@
     "fareError": "Vendos një shumë pozitive me maksimum 10 shifra dhe 2 shifra pas presjes.",
     "completeConfirm": "Ta përfundosh udhëtimin me shumën {{amount}} ALL? Kontrollo shumën përpara konfirmimit."
   }
+,
+  "fleetReview": {
+    "open": "Dokumentet e flotës",
+    "title": "Verifiko dokumentet e flotës",
+    "hint": "Zgjidh shoferin ose automjetin, shkarko dhe kontrollo dokumentin, pastaj regjistro vendimin.",
+    "ownerType": "Kategoria e flotës",
+    "drivers": "Shoferët",
+    "vehicles": "Automjetet",
+    "owner": "Shoferi ose automjeti",
+    "choose": "Zgjidh një element",
+    "previous": "Mëparshëm",
+    "next": "Tjetër",
+    "loading": "Duke ngarkuar dokumentet…",
+    "loadError": "Informacioni nuk u ngarkua. Rifresko për të provuar sërish.",
+    "refresh": "Rifresko dokumentet",
+    "noOwners": "Nuk ka elemente në këtë faqe.",
+    "documents": "Verifikimi i dokumenteve të flotës",
+    "noDocuments": "Nuk ka dokumente të ngarkuara.",
+    "number": "Numri i dokumentit",
+    "issued": "Lëshuar",
+    "expires": "Skadon",
+    "reason": "Arsyeja e refuzimit",
+    "download": "Shkarko dokumentin",
+    "approve": "Mirato dokumentin",
+    "reject": "Refuzo dokumentin",
+    "actionError": "Veprimi nuk u konfirmua. Kontrollo statusin e rifreskuar para se të provosh sërish.",
+    "confirmTitle": "Konfirmo vendimin për dokumentin",
+    "confirmHint": "Vendimi nuk ndryshohet nga ky ekran. Miratimi regjistron kontrollin tënd; nuk e bën automatikisht shoferin të përshtatshëm për punë."
+}
 }
