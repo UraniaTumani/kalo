@@ -931,4 +931,26 @@
     "confirmTitle": "Confirm document decision",
     "confirmHint": "This decision cannot be changed from this screen. Approval records your review; it does not automatically make the driver eligible for work."
 }
+,
+  "fleetRenewal": {
+    "title": "Document renewal and history",
+    "hint": "Renew a rejected or expired document. The previous version is retained and the new version needs admin review.",
+    "renew": "Renew document",
+    "file": "Replacement file",
+    "number": "New document number",
+    "issued": "New issue date",
+    "expires": "New expiry date",
+    "submit": "Send for review",
+    "saved": "New document submitted for review.",
+    "error": "Could not confirm the operation. Check the refreshed documents before trying again.",
+    "validation": "Choose a PDF, JPG or PNG of up to 5 MB and a valid expiry date. The issue date cannot be in the future.",
+    "history": "Show document history",
+    "hideHistory": "Hide document history",
+    "loading": "Loading history…",
+    "historyError": "Could not load document history.",
+    "retry": "Refresh history",
+    "download": "Download this version",
+    "confirmTitle": "Confirm document renewal",
+    "confirmHint": "The new version will need admin approval. This does not update the driver or vehicle operational expiry dates."
+}
 }

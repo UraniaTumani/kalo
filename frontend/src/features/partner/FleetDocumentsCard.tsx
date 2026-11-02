@@ -1,3 +1,4 @@
+import { FleetDocumentRenewal } from './FleetDocumentRenewal'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -24,6 +25,7 @@ export function FleetDocumentsCard({ owner, ownerId, name, onClose }: {
   const label = useStatusLabel()
   const queryClient = useQueryClient()
   const queryKey = ['partner', owner, ownerId, 'documents']
+  const [renewalBusy, setRenewalBusy] = useState(false)
   const [documentType, setDocumentType] = useState<DocumentType>(TYPES[owner][0])
   const [file, setFile] = useState<File | null>(null)
   const [fileKey, setFileKey] = useState(0)
@@ -68,7 +70,7 @@ export function FleetDocumentsCard({ owner, ownerId, name, onClose }: {
       <CardHeader title={`${t('partner.documentsTitle')} · ${name}`} />
       <CardBody>
         <div className="space-y-4">
-          <Button variant="secondary" size="sm" onClick={onClose} disabled={upload.isPending}>
+          <Button variant="secondary" size="sm" onClick={onClose} disabled={upload.isPending || renewalBusy}>
             {t('common.close')}
           </Button>
           {documentsQuery.isPending && <Spinner />}
@@ -86,16 +88,18 @@ export function FleetDocumentsCard({ owner, ownerId, name, onClose }: {
                 <StatusBadge status={item.verificationStatus} namespace="documentStatus" />
                 {item.rejectionReason && <p className="break-words text-sm text-red-600">{item.rejectionReason}</p>}
                 <div className="mt-2">
-                  <Button size="sm" variant="secondary" disabled={download.isPending} onClick={() => download.mutate(item.id)}>
+                  <Button size="sm" variant="secondary" disabled={download.isPending || renewalBusy} onClick={() => download.mutate(item.id)}>
                     {t('partner.downloadDocument')}
                   </Button>
                 </div>
               </li>
             ))}
           </ul>
+          <FleetDocumentRenewal owner={owner} ownerId={ownerId} documents={documents}
+            loading={documentsQuery.isFetching || !documentsQuery.isSuccess || upload.isPending || download.isPending} onBusy={setRenewalBusy} />
           <form className="space-y-3" onSubmit={(event) => {
             event.preventDefault()
-            if (upload.isPending || duplicate || !documentsQuery.isSuccess) return
+            if (upload.isPending || renewalBusy || duplicate || !documentsQuery.isSuccess) return
             if (!file) {
               setFileError(t('partner.uploadFileRequired'))
               return
@@ -112,7 +116,7 @@ export function FleetDocumentsCard({ owner, ownerId, name, onClose }: {
             {upload.error && <ErrorMessage error={upload.error} />}
             {upload.isSuccess && <div role="status"><Alert tone="success" title={t('common.saved')} /></div>}
             <Field label={t('partner.type')} required>
-              <Select name="documentType" value={documentType} disabled={upload.isPending} onChange={(event) => {
+              <Select name="documentType" value={documentType} disabled={upload.isPending || renewalBusy} onChange={(event) => {
                 setDocumentType(event.target.value as DocumentType)
                 upload.reset()
               }}>
@@ -122,7 +126,7 @@ export function FleetDocumentsCard({ owner, ownerId, name, onClose }: {
             {duplicate && <p role="status" className="text-sm text-ink-500">{t('fleetDocuments.duplicate')}</p>}
             <Field label={t('partner.uploadFile')} error={fileError ?? undefined} hint={t('partner.documentUploadHint')} required>
               <input key={fileKey} type="file" name="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                disabled={upload.isPending} className="block w-full min-w-0 rounded-lg border border-ink-200 p-2 text-sm"
+                disabled={upload.isPending || renewalBusy} className="block w-full min-w-0 rounded-lg border border-ink-200 p-2 text-sm"
                 onChange={(event) => {
                   const selected = event.target.files?.[0] ?? null
                   let error: string | null = null
@@ -135,18 +139,18 @@ export function FleetDocumentsCard({ owner, ownerId, name, onClose }: {
                 }} />
             </Field>
             <Field label={t('partner.documentNumber')}>
-              <Input name="documentNumber" maxLength={100} disabled={upload.isPending} />
+              <Input name="documentNumber" maxLength={100} disabled={upload.isPending || renewalBusy} />
             </Field>
             <Field label={t('partner.issuedAt')}>
-              <Input name="issuedAt" type="date" disabled={upload.isPending} onChange={(event) => {
+              <Input name="issuedAt" type="date" disabled={upload.isPending || renewalBusy} onChange={(event) => {
                 const expiry = event.currentTarget.form?.elements.namedItem('expiresAt') as HTMLInputElement | null
                 if (expiry) expiry.min = event.currentTarget.value
               }} />
             </Field>
             <Field label={t('partner.expiresAt')}>
-              <Input name="expiresAt" type="date" disabled={upload.isPending} />
+              <Input name="expiresAt" type="date" disabled={upload.isPending || renewalBusy} />
             </Field>
-            <Button type="submit" className="w-full" loading={upload.isPending} disabled={!documentsQuery.isSuccess || duplicate || !file}>
+            <Button type="submit" className="w-full" loading={upload.isPending} disabled={renewalBusy || !documentsQuery.isSuccess || duplicate || !file}>
               {t('partner.addDocument')}
             </Button>
           </form>

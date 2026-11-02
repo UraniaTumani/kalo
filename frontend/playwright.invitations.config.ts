@@ -3,7 +3,7 @@ import { defineConfig } from '@playwright/test'
 // Dedicated preview: no backend, database, Docker, or SMS provider.
 export default defineConfig({
   testDir: './tests',
-  testMatch: ['driver-invitations.spec.ts', 'fleet-document-review.spec.ts'],
+  testMatch: ['driver-invitations.spec.ts', 'fleet-document-review.spec.ts', 'fleet-documents.spec.ts', 'fleet-document-renewal.spec.ts'],
   outputDir: './e2e/.results/invitations',
   use: { baseURL: 'http://localhost:5176', channel: 'chrome' },
   webServer: {
