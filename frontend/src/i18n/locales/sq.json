@@ -931,4 +931,26 @@
     "confirmTitle": "Konfirmo vendimin për dokumentin",
     "confirmHint": "Vendimi nuk ndryshohet nga ky ekran. Miratimi regjistron kontrollin tënd; nuk e bën automatikisht shoferin të përshtatshëm për punë."
 }
+,
+  "fleetRenewal": {
+    "title": "Rinovimi dhe historiku i dokumenteve",
+    "hint": "Rinovo dokumentin e refuzuar ose të skaduar. Versioni i vjetër ruhet dhe versioni i ri kërkon verifikimin e administratorit.",
+    "renew": "Rinovo dokumentin",
+    "file": "Skedari i ri",
+    "number": "Numri i dokumentit të ri",
+    "issued": "Data e re e lëshimit",
+    "expires": "Data e re e skadimit",
+    "submit": "Dërgo për verifikim",
+    "saved": "Dokumenti i ri u dërgua për verifikim.",
+    "error": "Veprimi nuk u konfirmua. Kontrollo dokumentet e rifreskuara para se të provosh sërish.",
+    "validation": "Zgjidh PDF, JPG ose PNG deri në 5 MB dhe datë skadimi të vlefshme. Data e lëshimit nuk mund të jetë në të ardhmen.",
+    "history": "Shfaq historikun e dokumenteve",
+    "hideHistory": "Fshih historikun e dokumenteve",
+    "loading": "Duke ngarkuar historikun…",
+    "historyError": "Historiku i dokumenteve nuk u ngarkua.",
+    "retry": "Rifresko historikun",
+    "download": "Shkarko këtë version",
+    "confirmTitle": "Konfirmo rinovimin e dokumentit",
+    "confirmHint": "Versioni i ri kërkon miratimin e administratorit. Kjo nuk ndryshon datat operative të patentës ose automjetit."
+}
 }
