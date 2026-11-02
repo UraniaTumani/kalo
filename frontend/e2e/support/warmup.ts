@@ -30,6 +30,39 @@ async function globalSetup(config: FullConfig) {
     tokensFor(SEEDED.admin.phone, SEEDED.admin.password),
   ])
 
+  // The disposable browser fixture must meet the same evidence policy as real fleets.
+  // Upload and review real files through the APIs; never disable the policy in tests.
+  const adminHeaders = { Authorization: `Bearer ${admin.accessToken}` }
+  for (const account of [SEEDED.partner, SEEDED.partnerB]) {
+    const tokens = account === SEEDED.partner ? partner : await tokensFor(account.phone, account.password)
+    const headers = { Authorization: `Bearer ${tokens.accessToken}` }
+    const profile = await api.get('/api/v1/partner/me', { headers })
+    if (!profile.ok()) throw new Error(`Fleet fixture profile failed: ${profile.status()}`)
+    const { companyId } = await profile.json()
+    for (const owner of ['drivers', 'vehicles'] as const) {
+      const owners = await api.get(`/api/v1/partner/${owner}?size=100`, { headers })
+      if (!owners.ok()) throw new Error(`Fleet fixture owner list failed: ${owners.status()}`)
+      for (const item of (await owners.json()).content) {
+        const base = `/api/v1/partner/${owner}/${item.id}/documents`
+        const listed = await api.get(base, { headers })
+        if (!listed.ok()) throw new Error(`Fleet fixture documents failed: ${listed.status()}`)
+        const current = await listed.json()
+        for (const documentType of owner === 'drivers' ? ['DRIVING_LICENSE'] : ['VEHICLE_REGISTRATION', 'INSURANCE', 'TECHNICAL_INSPECTION']) {
+          let document = current.find((d: { documentType: string }) => d.documentType === documentType)
+          if (!document) {
+            const upload = await api.post(`${base}/upload`, { headers, multipart: { documentType, expiresAt: '2099-12-31',
+              file: { name: 'e2e-evidence.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.7\ne2e fixture evidence\n%%EOF') } } })
+            if (upload.status() !== 201) throw new Error(`Fleet fixture upload failed: ${upload.status()}`)
+            document = await upload.json()
+          }
+          if (document.verificationStatus === 'APPROVED') continue
+          const reviewed = await api.post(`/api/v1/admin/partners/${companyId}/fleet/${owner === 'drivers' ? 'DRIVER' : 'VEHICLE'}/${item.id}/documents/${document.id}/approve`, { headers: adminHeaders })
+          if (!reviewed.ok()) throw new Error(`Fleet fixture approval failed: ${reviewed.status()}`)
+        }
+      }
+    }
+  }
+
   await api.dispose()
 
   const browser = await chromium.launch({ channel: process.env.E2E_CHANNEL ?? 'chrome' })

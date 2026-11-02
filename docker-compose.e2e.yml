@@ -42,6 +42,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: dev
       DB_URL: jdbc:postgresql://postgres:5432/kalo_e2e
+      APP_DOCUMENTS_LOCAL_DIRECTORY: /tmp/kalo-e2e-documents
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
       # The suite signs in far more often than a person does, and rate limiting

@@ -396,4 +396,24 @@ class RideLifecycleIntegrationTest extends AbstractIntegrationTest {
 
         return ((Number) JsonPath.read(ride, "$.rideId")).longValue();
     }
+
+    @Test void documentApprovalLostAfterSearchRefusesAcceptanceAndPartnerOnline() throws Exception {
+        var taxi = fixtures.bookableCompany();
+        long rideId = requestRide(tokenFor(fixtures.customer()));
+        var partner = bearer(tokenFor(taxi.company().getOwner()));
+        Long document = jdbcTemplate.queryForObject("SELECT id FROM documents WHERE owner_type='DRIVER' AND owner_id=?", Long.class, taxi.driver().getId());
+        jdbcTemplate.update("UPDATE documents SET verification_status='PENDING' WHERE id=?", document);
+        mockMvc.perform(post("/api/v1/partner/rides/" + rideId + "/accept")
+                .header("Authorization", partner).contentType(APPLICATION_JSON)
+                .content("{\"driverId\":" + taxi.driver().getId() + "}"))
+                .andExpect(status().isBadRequest());
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM rides WHERE id=?", String.class, rideId)).isEqualTo("REQUESTED");
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/partner/drivers/" + taxi.driver().getId() + "/availability")
+                .header("Authorization", partner).contentType(APPLICATION_JSON).content("{\"availabilityStatus\":\"ONLINE\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/partner/drivers/" + taxi.driver().getId() + "/availability")
+                .header("Authorization", partner).contentType(APPLICATION_JSON).content("{\"availabilityStatus\":\"OFFLINE\"}"))
+                .andExpect(status().isOk());
+    }
+
 }

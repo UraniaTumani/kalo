@@ -40,7 +40,7 @@ class DriverDocumentServiceTest {
     @BeforeEach
     void setUp() {
         service = new DriverDocumentService(
-                documentRepository, driverRepository, taxiCompanyRepository, localDocumentStorage);
+                documentRepository, driverRepository, taxiCompanyRepository, localDocumentStorage, org.mockito.Mockito.mock(com.kalo.assignment.service.FleetMutationLock.class));
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("+355690000000", null, java.util.List.of()));
     }

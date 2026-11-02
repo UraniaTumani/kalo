@@ -83,6 +83,36 @@ test('partner invitation activates exactly one driver who can log in', async ({ 
       headers, data: { driverId: driver.id, vehicleId: vehicle.id },
     })
     expect(assigned.status(), await assigned.text()).toBe(201)
+    // An assignment alone is insufficient: the four current documents need admin approval.
+    const beforeDocuments = await request.put('http://127.0.0.1:18881/api/v1/driver/me/availability', {
+      headers: { Authorization: `Bearer ${await driverPage.evaluate(() => localStorage.getItem('kalo.token'))}` },
+      data: { availabilityStatus: 'ONLINE' },
+    })
+    expect(beforeDocuments.status()).toBe(400)
+    const profile = await request.get('http://127.0.0.1:18881/api/v1/partner/me', { headers })
+    expect(profile.status()).toBe(200)
+    const { companyId } = await profile.json()
+    const adminLogin = await request.post('http://127.0.0.1:18881/api/v1/auth/login', {
+      data: { phone: '+355690000001', password: 'Admin123!' },
+    })
+    expect(adminLogin.status()).toBe(200)
+    const adminHeaders = { Authorization: `Bearer ${(await adminLogin.json()).accessToken}` }
+    for (const [owner, ownerType, ownerId, documentType] of [
+      ['drivers', 'DRIVER', driver.id, 'DRIVING_LICENSE'],
+      ['vehicles', 'VEHICLE', vehicle.id, 'VEHICLE_REGISTRATION'],
+      ['vehicles', 'VEHICLE', vehicle.id, 'INSURANCE'],
+      ['vehicles', 'VEHICLE', vehicle.id, 'TECHNICAL_INSPECTION'],
+    ] as const) {
+      const uploaded = await request.post(`http://127.0.0.1:18881/api/v1/partner/${owner}/${ownerId}/documents/upload`, {
+        headers, multipart: { documentType, expiresAt: '2035-01-01',
+          file: { name: 'verified.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.7\nverified test evidence\n%%EOF') } },
+      })
+      expect(uploaded.status(), await uploaded.text()).toBe(201)
+      const document = await uploaded.json()
+      const approved = await request.post(`http://127.0.0.1:18881/api/v1/admin/partners/${companyId}/fleet/${ownerType}/${ownerId}/documents/${document.id}/approve`, { headers: adminHeaders })
+      expect(approved.status(), await approved.text()).toBe(200)
+    }
+
     await driverPage.getByRole('button', { name: 'Refresh status', exact: true }).click()
     await expect(driverPage.getByRole('button', { name: 'Go online', exact: true })).toBeEnabled()
     for (const [button, next] of [['Go online', 'ONLINE'], ['Go offline', 'OFFLINE']] as const) {

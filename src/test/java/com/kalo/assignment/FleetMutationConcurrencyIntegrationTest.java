@@ -109,4 +109,15 @@ class FleetMutationConcurrencyIntegrationTest extends AbstractIntegrationTest {
         assertThat(selected.getStatus()).isEqualTo(201);
         return ((Number) JsonPath.read(selected.getContentAsString(), "$.rideId")).longValue();
     }
+
+    @Test void documentChangeCommittedWhileAcceptanceWaitsIsRechecked() throws Exception {
+        var taxi = fixtures.bookableCompany(); long ride = ride();
+        race(taxi.company().getId(), accept(taxi, ride), () -> {
+            jdbcTemplate.update("UPDATE documents SET verification_status='PENDING' WHERE owner_type='DRIVER' AND owner_id=?", taxi.driver().getId());
+            return 200;
+        }, 200, 400);
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM rides WHERE id=?", String.class, ride)).isEqualTo("REQUESTED");
+        assertThat(jdbcTemplate.queryForObject("SELECT availability_status FROM drivers WHERE id=?", String.class, taxi.driver().getId())).isEqualTo("ONLINE");
+    }
+
 }
