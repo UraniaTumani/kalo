@@ -86,4 +86,9 @@ public class Document extends BaseEntity {
             length = 1000
     )
     private String rejectionReason;
+    @Column(name = "reviewed_by_user_id")
+    private Long reviewedByUserId;
+
+    @Column(name = "reviewed_at")
+    private java.time.Instant reviewedAt;
 }

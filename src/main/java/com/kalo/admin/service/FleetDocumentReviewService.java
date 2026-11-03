@@ -32,12 +32,20 @@ public class FleetDocumentReviewService {
     private final JdbcTemplate jdbc;
     private final EntityManager entities;
     private final LocalDocumentStorage storage;
+    private final com.kalo.user.repository.UserRepository users;
 
     @Transactional(readOnly = true)
     public List<FleetDocumentReviewResponse> list(Long company, DocumentOwnerType type, Long owner) {
         requireAdmin(); requireOwner(company, type, owner);
         return documents.findCurrentByOwner(type, owner).stream()
                 .sorted(java.util.Comparator.comparing(Document::getId)).map(this::response).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<FleetDocumentReviewResponse> history(Long company, DocumentOwnerType type, Long owner) {
+        requireAdmin(); requireOwner(company, type, owner);
+        return documents.findAllByOwnerTypeAndOwnerId(type, owner).stream()
+                .sorted(java.util.Comparator.comparing(Document::getId).reversed()).map(this::response).toList();
     }
 
     @Transactional(readOnly = true)
@@ -79,6 +87,13 @@ public class FleetDocumentReviewService {
             document.setVerificationStatus(DocumentVerificationStatus.REJECTED);
             document.setRejectionReason(reason.trim());
         }
+        // Resolve the actor server-side. A client cannot supply reviewer identity or time.
+        var actor = users.findByPhone(SecurityContextHolder.getContext().getAuthentication().getName())
+                .filter(user -> user.getRole() == com.kalo.user.enums.UserRole.ADMIN
+                        && user.getStatus() == com.kalo.user.enums.UserStatus.ACTIVE)
+                .orElseThrow(() -> new AccessDeniedException("Admin account unavailable"));
+        document.setReviewedByUserId(actor.getId());
+        document.setReviewedAt(java.time.Instant.now());
         documents.saveAndFlush(document);
         log.info("Fleet document reviewed: companyId={} ownerType={} ownerId={} documentId={} decision={}",
                 company, type, owner, id,
@@ -105,6 +120,6 @@ public class FleetDocumentReviewService {
     private ResourceNotFoundException missing() { return new ResourceNotFoundException("Fleet document or owner not found"); }
     private FleetDocumentReviewResponse response(Document d) {
         return new FleetDocumentReviewResponse(d.getId(), d.getDocumentType(), d.getDocumentNumber(),
-                d.getIssuedAt(), d.getExpiresAt(), d.getVerificationStatus(), d.getRejectionReason());
+                d.getIssuedAt(), d.getExpiresAt(), d.getVerificationStatus(), d.getRejectionReason(), d.getReviewedByUserId(), d.getReviewedAt());
     }
 }

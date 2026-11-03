@@ -10,7 +10,8 @@ type OwnerType = 'DRIVER' | 'VEHICLE'
 type Owner = { id: number; label: string }
 type Owners = { items: Owner[]; hasMore: boolean }
 type Document = { id: number; documentType: string; documentNumber: string | null; issuedAt: string | null;
-  expiresAt: string | null; verificationStatus: DocumentVerificationStatus; rejectionReason: string | null }
+  expiresAt: string | null; verificationStatus: DocumentVerificationStatus; rejectionReason: string | null;
+  reviewedByUserId?: number | null; reviewedAt?: string | null }
 type Load<T> = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; data: T }
 
 export function FleetDocumentReviewPanel({ companyId, name, onClose, onBusyChange }: { companyId: number; name: string; onClose: () => void; onBusyChange: (busy: boolean) => void }) {
@@ -68,6 +69,7 @@ function Documents({ companyId, type, owner, onBusy }: { companyId: number; type
   const base = `/api/v1/admin/partners/${companyId}/fleet/${type}/${owner.id}/documents`
   const [result, setResult] = useState<Load<Document[]>>({ kind: 'loading' })
   const [refresh, setRefresh] = useState(0)
+  const [history, setHistory] = useState(false)
   const [reason, setReason] = useState<Record<number, string>>({})
   const [confirmation, setConfirmation] = useState<{ document: Document; action: 'approve' | 'reject'; reason: string } | null>(null)
   const [busy, setBusy] = useState(false)
@@ -79,17 +81,17 @@ function Documents({ companyId, type, owner, onBusy }: { companyId: number; type
   useEffect(() => {
     let mounted = true
     const version = epoch.current
-    void api.get<Document[]>(base).then(data => {
+    void api.get<Document[]>(`${base}${history ? "/history" : ""}`).then(data => {
       if (!Array.isArray(data) || !data.every(d => Number.isSafeInteger(d.id) && typeof d.documentType === 'string'
         && ['DRAFT', 'PENDING', 'APPROVED', 'REJECTED'].includes(d.verificationStatus))) throw new Error('Invalid documents')
       if (mounted && version === epoch.current) setResult({ kind: 'ready', data })
     }).catch(() => { if (mounted && version === epoch.current) setResult({ kind: 'error' }) })
     return () => { mounted = false }
-  }, [base, refresh])
+  }, [base, refresh, history])
   function pending(value: boolean) { busyRef.current = value; setBusy(value); onBusy(value) }
   function reload() { setConfirmation(null); setResult({ kind: 'loading' }); setRefresh(v => v + 1) }
   async function decide() {
-    if (busyRef.current || !confirmation || result.kind !== 'ready') return
+    if (history || busyRef.current || !confirmation || result.kind !== 'ready') return
     const current = result.data.find(d => d.id === confirmation.document.id)
     if (!current || !['DRAFT', 'PENDING'].includes(current.verificationStatus)) { reload(); return }
     pending(true); epoch.current++; setError(false)
@@ -115,14 +117,25 @@ function Documents({ companyId, type, owner, onBusy }: { companyId: number; type
   }
   return <section aria-label={t('fleetReview.documents')} className="space-y-3">
     <h3 className="font-semibold">{owner.label}</h3>
+    <Button disabled={busy || result.kind === 'loading'} onClick={() => {
+      if (busyRef.current) return
+      epoch.current++; setConfirmation(null); setReason({}); setError(false)
+      setResult({ kind: 'loading' }); setHistory(value => !value)
+    }}>{t(history ? 'fleetAudit.showCurrent' : 'fleetAudit.showHistory')}</Button>
+    {history && <p className="text-sm text-ink-600">{t('fleetAudit.historyHint')}</p>}
     {error && <p role="alert">{t('fleetReview.actionError')}</p>}
     {result.kind === 'loading' && <p>{t('fleetReview.loading')}</p>}
     {result.kind === 'error' && <p role="alert">{t('fleetReview.loadError')}</p>}
     {result.kind === 'ready' && (result.data.length === 0 ? <p>{t('fleetReview.noDocuments')}</p> : result.data.map(d => {
-      const reviewable = ['DRAFT', 'PENDING'].includes(d.verificationStatus)
+      const reviewable = !history && ['DRAFT', 'PENDING'].includes(d.verificationStatus)
+      const reviewedAt = typeof d.reviewedAt === 'string' && Number.isFinite(Date.parse(d.reviewedAt)) ? d.reviewedAt : null
+      const recorded = Number.isSafeInteger(d.reviewedByUserId) && (d.reviewedByUserId ?? 0) > 0 && reviewedAt
       return <article key={d.id} className="space-y-2 break-words rounded-lg border border-ink-200 p-3">
         <h4 className="font-medium">{label('documentType', d.documentType)}</h4>
         <StatusBadge status={d.verificationStatus} namespace="documentStatus" />
+        <p className="text-sm">{t('fleetAudit.version', { id: d.id })}</p>
+        {recorded && reviewedAt ? <p className="text-sm">{t('fleetAudit.reviewer', { id: d.reviewedByUserId })} · <time dateTime={reviewedAt}>{new Date(reviewedAt).toLocaleString()}</time></p>
+          : ['APPROVED', 'REJECTED'].includes(d.verificationStatus) && <p className="text-sm text-ink-600">{t('fleetAudit.unknown')}</p>}
         <p className="text-sm">{t('fleetReview.number')}: {d.documentNumber || '—'}</p>
         <p className="text-sm">{t('fleetReview.issued')}: {d.issuedAt || '—'} · {t('fleetReview.expires')}: {d.expiresAt || '—'}</p>
         {d.rejectionReason && <p className="text-sm">{t('fleetReview.reason')}: {d.rejectionReason}</p>}

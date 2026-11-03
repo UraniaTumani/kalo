@@ -13,6 +13,10 @@ for (const owner of ['drivers', 'vehicles'] as const) {
     const login = await request.post(`${base}/auth/login`, { data: { phone: '+355690000001', password: 'Admin123!' } })
     expect(login.status()).toBe(200)
     const admin = { Authorization: `Bearer ${(await login.json()).accessToken}` }
+    const administratorResponse = await request.get(`${base}/me`, { headers: admin })
+    expect(administratorResponse.status()).toBe(200)
+    const administrator = await administratorResponse.json()
+
     await page.addInitScript(() => localStorage.setItem('kalo.language', 'en'))
     await page.goto('/login')
     await page.locator('input[type="tel"]').fill('+355690000003')
@@ -64,6 +68,16 @@ for (const owner of ['drivers', 'vehicles'] as const) {
     expect(replacement.verificationStatus).toBe('PENDING')
     const approved = await request.post(`${review}/${replacement.id}/approve`, { headers: admin })
     expect(approved.status(), await approved.text()).toBe(200)
+    const audited = await approved.json()
+    expect(audited.reviewedByUserId).toBe(administrator.id)
+    expect(Number.isFinite(Date.parse(audited.reviewedAt))).toBe(true)
+    const auditHistory = await request.get(`${review}/history`, { headers: admin })
+    expect(auditHistory.status()).toBe(200)
+    const auditedVersions = await auditHistory.json()
+    expect(auditedVersions).toHaveLength(2)
+    expect(auditedVersions.find((d: { id: number }) => d.id === old.id)).toMatchObject({ verificationStatus: 'REJECTED', reviewedByUserId: administrator.id })
+    expect(auditedVersions.find((d: { id: number }) => d.id === replacement.id)).toMatchObject({ verificationStatus: 'APPROVED', reviewedByUserId: administrator.id })
+
     await page.reload()
     await page.getByRole('row').filter({ hasText: marker }).getByRole('button', { name: 'Documents', exact: true }).click()
     await panel.getByRole('button', { name: 'Show document history', exact: true }).click()

@@ -1,4 +1,12 @@
 {
+  "fleetAudit": {
+      "showHistory": "Show review history",
+      "showCurrent": "Show current documents",
+      "historyHint": "All document versions are shown. This history is read-only; review decisions are available under current documents.",
+      "version": "Document version #{{id}}",
+      "reviewer": "Administrator #{{id}}",
+      "unknown": "Reviewer and time were not recorded for this older decision."
+  },
   "fleetBlockers": {
       "title": "Documents blocking new work",
       "MISSING": "Missing. Ask the partner to upload it.",

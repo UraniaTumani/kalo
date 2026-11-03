@@ -141,4 +141,109 @@ class FleetDocumentReviewIntegrationTest extends AbstractIntegrationTest {
             assertThat(saved.getVerificationStatus()).isEqualTo(a==200 ? DocumentVerificationStatus.APPROVED : DocumentVerificationStatus.REJECTED);
         } finally { pool.shutdownNow(); pool.awaitTermination(15,TimeUnit.SECONDS); }
     }
+
+    @Autowired org.springframework.transaction.support.TransactionTemplate transactions;
+
+    @Test void decisionRecordsActualAdministratorAndTimeForBothOwnerTypes() throws Exception {
+        var actor = fixtures.user(UserRole.ADMIN, UserStatus.ACTIVE);
+        String auth = bearer(tokenFor(actor));
+        for (var type : new DocumentOwnerType[]{DocumentOwnerType.DRIVER, DocumentOwnerType.VEHICLE}) {
+            var f = fixture(type);
+            var before = java.time.Instant.now().minusSeconds(1);
+            var action = type == DocumentOwnerType.DRIVER ? "approve" : "reject";
+            var request = post(f.base()+"/"+f.document().getId()+"/"+action).header("Authorization", auth);
+            if (action.equals("reject")) request.contentType(APPLICATION_JSON).content("{\"reason\":\"Unreadable scan\"}");
+            mockMvc.perform(request).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.reviewedByUserId").value(actor.getId()))
+                    .andExpect(jsonPath("$.reviewedAt").isNotEmpty());
+            var saved = documents.findById(f.document().getId()).orElseThrow();
+            assertThat(saved.getReviewedByUserId()).isEqualTo(actor.getId());
+            var recordedAt = saved.getReviewedAt();
+            assertThat(recordedAt).isBetween(before, java.time.Instant.now().plusSeconds(1));
+            mockMvc.perform(post(f.base()+"/"+f.document().getId()+"/approve").header("Authorization", auth))
+                    .andExpect(status().isBadRequest());
+            assertThat(documents.findById(f.document().getId()).orElseThrow().getReviewedAt()).isEqualTo(recordedAt);
+        }
+    }
+
+    @Test void decisionAndAttributionRollBackTogether() throws Exception {
+        var f = fixture(DocumentOwnerType.DRIVER); String auth = admin();
+        transactions.execute(status -> {
+            try {
+                mockMvc.perform(post(f.base()+"/"+f.document().getId()+"/approve").header("Authorization", auth))
+                        .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+            } catch (Exception exception) { throw new AssertionError(exception); }
+            status.setRollbackOnly(); return null;
+        });
+        var saved = documents.findById(f.document().getId()).orElseThrow();
+        assertThat(saved.getVerificationStatus()).isEqualTo(DocumentVerificationStatus.DRAFT);
+        assertThat(saved.getReviewedByUserId()).isNull();
+        assertThat(saved.getReviewedAt()).isNull();
+    }
+
+    @Test void adminHistoryRetainsEachVersionsReviewer() throws Exception {
+        var f = fixture(DocumentOwnerType.DRIVER);
+        var first = fixtures.user(UserRole.ADMIN, UserStatus.ACTIVE);
+        var second = fixtures.user(UserRole.ADMIN, UserStatus.ACTIVE);
+        String firstAuth = bearer(tokenFor(first)), secondAuth = bearer(tokenFor(second));
+        mockMvc.perform(post(f.base()+"/"+f.document().getId()+"/approve").header("Authorization", firstAuth))
+                .andExpect(status().isOk());
+        var renewal = new Document();
+        renewal.setOwnerType(DocumentOwnerType.DRIVER); renewal.setOwnerId(f.owner());
+        renewal.setDocumentType(f.document().getDocumentType()); renewal.setFileUrl(f.document().getFileUrl());
+        renewal.setVerificationStatus(DocumentVerificationStatus.PENDING);
+        renewal.setExpiresAt(LicenseValidity.today().plusYears(2));
+        documents.saveAndFlush(renewal);
+        assertThat(renewal.getReviewedByUserId()).isNull();
+        mockMvc.perform(post(f.base()+"/"+renewal.getId()+"/approve").header("Authorization", secondAuth))
+                .andExpect(status().isOk());
+        mockMvc.perform(get(f.base()+"/history").header("Authorization", firstAuth))
+                .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(renewal.getId()))
+                .andExpect(jsonPath("$[0].reviewedByUserId").value(second.getId()))
+                .andExpect(jsonPath("$[1].reviewedByUserId").value(first.getId()))
+                .andExpect(jsonPath("$[0].fileUrl").doesNotExist());
+        mockMvc.perform(get(f.base()).header("Authorization", firstAuth))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(renewal.getId()));
+    }
+
+    @Test void historyDoesNotExposeDataToOtherRolesOrWrongOwners() throws Exception {
+        var f = fixture(DocumentOwnerType.DRIVER);
+        mockMvc.perform(get(f.base()+"/history")).andExpect(status().isUnauthorized());
+        for (var role : new UserRole[]{UserRole.PARTNER, UserRole.CUSTOMER, UserRole.DRIVER}) {
+            var user = fixtures.user(role, UserStatus.ACTIVE);
+            if (role == UserRole.DRIVER) {
+                var company = fixtures.approvedCompany();
+                var driver = fixtures.driver(company, DriverStatus.ACTIVE, DriverAvailabilityStatus.OFFLINE);
+                jdbcTemplate.update("UPDATE drivers SET user_id=?,phone=? WHERE id=?", user.getId(), user.getPhone(), driver.getId());
+            }
+            mockMvc.perform(get(f.base()+"/history").header("Authorization", bearer(tokenFor(user))))
+                    .andExpect(status().isForbidden());
+        }
+        var other = fixtures.approvedCompany();
+        mockMvc.perform(get(f.base().replace("partners/"+f.company()+"/", "partners/"+other.getId()+"/")+"/history")
+                .header("Authorization", admin())).andExpect(status().isNotFound());
+    }
+
+    @Test void migrationGuardPreventsRewritingRecordedReview() throws Exception {
+        var f = fixture(DocumentOwnerType.DRIVER);
+        mockMvc.perform(post(f.base()+"/"+f.document().getId()+"/approve").header("Authorization", admin()))
+                .andExpect(status().isOk());
+        assertThat(org.assertj.core.api.Assertions.catchThrowable(() -> jdbcTemplate.update(
+                "UPDATE documents SET reviewed_at=NULL, reviewed_by_user_id=NULL WHERE id=?", f.document().getId())))
+                .isInstanceOf(org.springframework.dao.DataAccessException.class);
+        assertThat(documents.findById(f.document().getId()).orElseThrow().getReviewedAt()).isNotNull();
+    }
+
+    @Test void historicalDecisionIsNotAssignedAFabricatedReviewer() throws Exception {
+        var f = fixture(DocumentOwnerType.DRIVER);
+        jdbcTemplate.update("UPDATE documents SET verification_status='APPROVED' WHERE id=?", f.document().getId());
+        mockMvc.perform(get(f.base()+"/history").header("Authorization", admin()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].verificationStatus").value("APPROVED"))
+                .andExpect(jsonPath("$[0].reviewedByUserId").doesNotExist())
+                .andExpect(jsonPath("$[0].reviewedAt").doesNotExist());
+        assertThat(documents.findById(f.document().getId()).orElseThrow().getReviewedByUserId()).isNull();
+    }
 }

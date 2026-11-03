@@ -1,0 +1,72 @@
+databaseChangeLog:
+  - changeSet:
+      id: 032-fleet-document-review-audit
+      author: kalo
+      comment: Preserve reviewer identity and time per document version; historical attribution remains unknown.
+      changes:
+        - addColumn:
+            tableName: documents
+            columns:
+              - column:
+                  name: reviewed_by_user_id
+                  type: BIGINT
+              - column:
+                  name: reviewed_at
+                  type: TIMESTAMP WITH TIME ZONE
+        - addForeignKeyConstraint:
+            baseTableName: documents
+            baseColumnNames: reviewed_by_user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_document_reviewer
+            onDelete: RESTRICT
+        - createIndex:
+            tableName: documents
+            indexName: idx_documents_reviewer
+            columns:
+              - column:
+                  name: reviewed_by_user_id
+        - sql:
+            sql: >-
+              ALTER TABLE documents ADD CONSTRAINT ck_document_review_audit
+              CHECK ((reviewed_by_user_id IS NULL AND reviewed_at IS NULL)
+                OR (reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL
+                    AND verification_status IN ('APPROVED','REJECTED')))
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE FUNCTION protect_document_review_audit() RETURNS trigger AS $$
+              BEGIN
+                IF OLD.reviewed_at IS NOT NULL AND (
+                    NEW.reviewed_at IS DISTINCT FROM OLD.reviewed_at
+                    OR NEW.reviewed_by_user_id IS DISTINCT FROM OLD.reviewed_by_user_id
+                    OR NEW.verification_status IS DISTINCT FROM OLD.verification_status
+                    OR NEW.rejection_reason IS DISTINCT FROM OLD.rejection_reason) THEN
+                  RAISE EXCEPTION 'Recorded document review cannot be changed';
+                END IF;
+                RETURN NEW;
+              END;
+              $$ LANGUAGE plpgsql;
+        - sql:
+            sql: >-
+              CREATE TRIGGER trg_protect_document_review_audit BEFORE UPDATE ON documents
+              FOR EACH ROW EXECUTE FUNCTION protect_document_review_audit()
+      rollback:
+        - sql:
+            sql: DROP TRIGGER trg_protect_document_review_audit ON documents
+        - sql:
+            sql: DROP FUNCTION protect_document_review_audit()
+        - sql:
+            sql: ALTER TABLE documents DROP CONSTRAINT ck_document_review_audit
+        - dropForeignKeyConstraint:
+            baseTableName: documents
+            constraintName: fk_document_reviewer
+        - dropIndex:
+            tableName: documents
+            indexName: idx_documents_reviewer
+        - dropColumn:
+            tableName: documents
+            columnName: reviewed_by_user_id
+        - dropColumn:
+            tableName: documents
+            columnName: reviewed_at
