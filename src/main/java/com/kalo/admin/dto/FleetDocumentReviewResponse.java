@@ -7,4 +7,4 @@ import java.time.LocalDate;
 /** Deliberately excludes storage references; bytes use the authorized file endpoint. */
 public record FleetDocumentReviewResponse(Long id, DocumentType documentType, String documentNumber,
         LocalDate issuedAt, LocalDate expiresAt, DocumentVerificationStatus verificationStatus,
-        String rejectionReason) {}
+        String rejectionReason, Long reviewedByUserId, java.time.Instant reviewedAt) {}

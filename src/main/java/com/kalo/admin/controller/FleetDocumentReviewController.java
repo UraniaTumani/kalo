@@ -22,6 +22,11 @@ public class FleetDocumentReviewController {
             @PathVariable DocumentOwnerType ownerType, @PathVariable Long ownerId) {
         return ResponseEntity.ok().header("Cache-Control", "no-store").body(review.list(companyId, ownerType, ownerId));
     }
+    @GetMapping("/history")
+    public ResponseEntity<List<FleetDocumentReviewResponse>> history(@PathVariable Long companyId,
+            @PathVariable DocumentOwnerType ownerType, @PathVariable Long ownerId) {
+        return ResponseEntity.ok().header("Cache-Control", "no-store").body(review.history(companyId, ownerType, ownerId));
+    }
     @GetMapping("/{documentId}/file")
     public ResponseEntity<byte[]> file(@PathVariable Long companyId, @PathVariable DocumentOwnerType ownerType,
             @PathVariable Long ownerId, @PathVariable Long documentId) {

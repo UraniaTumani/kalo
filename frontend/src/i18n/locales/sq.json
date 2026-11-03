@@ -1,4 +1,12 @@
 {
+  "fleetAudit": {
+      "showHistory": "Shfaq historikun e shqyrtimit",
+      "showCurrent": "Shfaq dokumentet aktuale",
+      "historyHint": "Shfaqen të gjitha versionet e dokumenteve. Historiku është vetëm për lexim; vendimet merren te dokumentet aktuale.",
+      "version": "Versioni i dokumentit #{{id}}",
+      "reviewer": "Administratori #{{id}}",
+      "unknown": "Administratori dhe koha nuk janë regjistruar për këtë vendim të vjetër."
+  },
   "fleetBlockers": {
       "title": "Dokumentet që bllokojnë punë të reja",
       "MISSING": "Mungon. Kërkoji partnerit ta ngarkojë.",
