@@ -3,7 +3,7 @@ package com.kalo.document.controller;
 import com.kalo.document.dto.DocumentResponse;
 import com.kalo.document.enums.DocumentType;
 import com.kalo.document.service.DriverDocumentService;
-import com.kalo.document.service.LocalDocumentStorage;
+import com.kalo.document.service.DocumentStorage;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -53,7 +53,7 @@ public class PartnerDriverDocumentController {
             @PathVariable Long driverId,
             @PathVariable Long documentId
     ) {
-        LocalDocumentStorage.StoredDocument stored =
+        DocumentStorage.StoredDocument stored =
                 driverDocumentService.download(driverId, documentId);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(stored.contentType()))

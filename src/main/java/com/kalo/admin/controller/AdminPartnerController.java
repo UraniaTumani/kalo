@@ -19,7 +19,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ContentDisposition;
 import com.kalo.document.service.DocumentService;
-import com.kalo.document.service.LocalDocumentStorage;
+import com.kalo.document.service.DocumentStorage;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Admin")
@@ -74,7 +74,7 @@ public class AdminPartnerController {
     public ResponseEntity<byte[]> downloadCompanyDocument(
             @PathVariable Long companyId, @PathVariable Long documentId
     ) {
-        LocalDocumentStorage.StoredDocument stored =
+        DocumentStorage.StoredDocument stored =
                 documentService.getCompanyDocumentFileForAdmin(companyId, documentId);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(stored.contentType()))

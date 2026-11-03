@@ -33,7 +33,7 @@ class DriverDocumentServiceTest {
     @Mock DocumentRepository documentRepository;
     @Mock DriverRepository driverRepository;
     @Mock TaxiCompanyRepository taxiCompanyRepository;
-    @Mock LocalDocumentStorage localDocumentStorage;
+    @Mock DocumentStorage localDocumentStorage;
 
     private DriverDocumentService service;
 

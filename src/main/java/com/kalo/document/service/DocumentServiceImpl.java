@@ -31,7 +31,7 @@ public class DocumentServiceImpl
 
     private final DocumentRepository documentRepository;
     private final TaxiCompanyRepository taxiCompanyRepository;
-    private final LocalDocumentStorage localDocumentStorage;
+    private final DocumentStorage localDocumentStorage;
 
     @Override
     @Transactional
@@ -180,7 +180,7 @@ public class DocumentServiceImpl
 
     @Override
     @Transactional(readOnly = true)
-    public LocalDocumentStorage.StoredDocument getCurrentCompanyDocumentFile(Long documentId) {
+    public DocumentStorage.StoredDocument getCurrentCompanyDocumentFile(Long documentId) {
         TaxiCompany company = getCurrentCompany();
         Document document = documentRepository.findByIdAndOwnerTypeAndOwnerId(
                 documentId, DocumentOwnerType.COMPANY, company.getId()
@@ -190,7 +190,7 @@ public class DocumentServiceImpl
 
     @Override
     @Transactional(readOnly = true)
-    public LocalDocumentStorage.StoredDocument getCompanyDocumentFileForAdmin(
+    public DocumentStorage.StoredDocument getCompanyDocumentFileForAdmin(
             Long companyId, Long documentId
     ) {
         Document document = documentRepository.findByIdAndOwnerTypeAndOwnerId(

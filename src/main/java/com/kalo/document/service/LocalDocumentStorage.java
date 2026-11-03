@@ -21,9 +21,8 @@ import java.util.UUID;
  * before uploads are enabled; it must not silently use ephemeral container FS.
  */
 @Component
-public class LocalDocumentStorage {
+public class LocalDocumentStorage implements DocumentStorage {
 
-    public static final long MAX_FILE_BYTES = 5L * 1024 * 1024;
     private static final String PREFIX = "local:";
     private final Path root;
     private final Environment environment;
@@ -36,6 +35,7 @@ public class LocalDocumentStorage {
         this.environment = environment;
     }
 
+    @Override
     public String store(MultipartFile file) {
         requireDevStorage();
 
@@ -70,6 +70,7 @@ public class LocalDocumentStorage {
         }
     }
 
+    @Override
     public StoredDocument read(String reference) {
         requireDevStorage();
         String key = checkedKey(reference);
@@ -105,6 +106,7 @@ public class LocalDocumentStorage {
      * Best-effort cleanup for an upload that never committed its database row.
      * Only generated opaque keys in the private directory are accepted.
      */
+    @Override
     public void discard(String reference) {
         if (!isLocalReference(reference)) {
             return;
@@ -163,5 +165,4 @@ public class LocalDocumentStorage {
         return null;
     }
 
-    public record StoredDocument(byte[] bytes, String contentType, String extension) {}
 }
