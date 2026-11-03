@@ -89,6 +89,13 @@ public class GlobalExceptionHandler {
                 "FLEET_DOCUMENTS_REQUIRED", exception.getIssues()));
     }
 
+    @ExceptionHandler(com.kalo.document.service.DocumentStorageUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleDocumentStorageUnavailable(HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).header("Cache-Control", "no-store")
+                .body(new ErrorResponse(503, "Service Unavailable", "Document storage is temporarily unavailable",
+                        request.getRequestURI(), Instant.now()));
+    }
+
     @ExceptionHandler(InvalidOperationException.class)
     public ResponseEntity<ErrorResponse> handleInvalidOperation(
             InvalidOperationException exception,

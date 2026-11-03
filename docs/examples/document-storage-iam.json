@@ -1,0 +1,24 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadAndCleanupDocumentObjects",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:DeleteObject"],
+      "Resource": "arn:aws:s3:::REPLACE_WITH_PRIVATE_DOCUMENT_BUCKET/documents/*"
+    },
+    {
+      "Sid": "WriteEncryptedDocumentObjects",
+      "Effect": "Allow",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::REPLACE_WITH_PRIVATE_DOCUMENT_BUCKET/documents/*",
+      "Condition": {"StringEquals": {"s3:x-amz-server-side-encryption": "AES256"}}
+    },
+    {
+      "Sid": "MissingObjectStatusForDedicatedDocumentBucket",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::REPLACE_WITH_PRIVATE_DOCUMENT_BUCKET"
+    }
+  ]
+}

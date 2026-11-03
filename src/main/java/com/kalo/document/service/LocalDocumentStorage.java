@@ -21,6 +21,7 @@ import java.util.UUID;
  * before uploads are enabled; it must not silently use ephemeral container FS.
  */
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.documents.provider", havingValue = "local", matchIfMissing = true)
 public class LocalDocumentStorage implements DocumentStorage {
 
     private static final String PREFIX = "local:";
@@ -39,22 +40,10 @@ public class LocalDocumentStorage implements DocumentStorage {
     public String store(MultipartFile file) {
         requireDevStorage();
 
-        if (file == null || file.isEmpty() || file.getSize() > MAX_FILE_BYTES) {
-            throw new InvalidOperationException("Choose a PDF, JPG or PNG file of at most 5 MB");
-        }
-
+        var content = DocumentFilePolicy.upload(file);
         try {
-            byte[] bytes = file.getBytes();
-            if (bytes.length == 0 || bytes.length > MAX_FILE_BYTES) {
-                throw new InvalidOperationException("Document exceeds the 5 MB limit");
-            }
-
-            // Inspect the actual bytes, never trust a browser-supplied MIME type
-            // or extension. All files are served as attachments, with nosniff.
-            String extension = detectExtension(bytes);
-            if (extension == null) {
-                throw new InvalidOperationException("Only PDF, JPG and PNG documents are accepted");
-            }
+            byte[] bytes = content.bytes();
+            String extension = content.extension();
 
             Files.createDirectories(root);
             if (Files.isSymbolicLink(root)) {
@@ -87,15 +76,11 @@ public class LocalDocumentStorage implements DocumentStorage {
             if (bytes.length == 0 || bytes.length > MAX_FILE_BYTES) {
                 throw new ResourceNotFoundException("Document file not found");
             }
-            String extension = detectExtension(bytes);
+            String extension = DocumentFilePolicy.extension(bytes);
             if (extension == null || !key.endsWith("." + extension)) {
                 throw new ResourceNotFoundException("Document file not found");
             }
-            String contentType = switch (extension) {
-                case "pdf" -> "application/pdf";
-                case "png" -> "image/png";
-                default -> "image/jpeg";
-            };
+            String contentType = DocumentFilePolicy.contentType(extension);
             return new StoredDocument(bytes, contentType, extension);
         } catch (IOException exception) {
             throw new ResourceNotFoundException("Document file not found");
@@ -145,24 +130,6 @@ public class LocalDocumentStorage implements DocumentStorage {
             throw new ResourceNotFoundException("Document file not found");
         }
         return key;
-    }
-
-    private String detectExtension(byte[] b) {
-        if (b.length >= 5 && b[0] == '%' && b[1] == 'P'
-                && b[2] == 'D' && b[3] == 'F' && b[4] == '-') {
-            return "pdf";
-        }
-        if (b.length >= 8 && (b[0] & 0xff) == 0x89 && b[1] == 'P'
-                && b[2] == 'N' && b[3] == 'G' && (b[4] & 0xff) == 13
-                && (b[5] & 0xff) == 10 && (b[6] & 0xff) == 26
-                && (b[7] & 0xff) == 10) {
-            return "png";
-        }
-        if (b.length >= 4 && (b[0] & 0xff) == 0xff
-                && (b[1] & 0xff) == 0xd8 && (b[2] & 0xff) == 0xff) {
-            return "jpg";
-        }
-        return null;
     }
 
 }
