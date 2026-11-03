@@ -33,7 +33,7 @@ class VehicleDocumentServiceTest {
     @Mock DocumentRepository documentRepository;
     @Mock VehicleRepository vehicleRepository;
     @Mock TaxiCompanyRepository taxiCompanyRepository;
-    @Mock LocalDocumentStorage localDocumentStorage;
+    @Mock DocumentStorage localDocumentStorage;
 
     private VehicleDocumentService service;
 

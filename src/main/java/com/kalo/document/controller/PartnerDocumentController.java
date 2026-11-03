@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.time.LocalDate;
 import com.kalo.document.enums.DocumentType;
-import com.kalo.document.service.LocalDocumentStorage;
+import com.kalo.document.service.DocumentStorage;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -64,7 +64,7 @@ public class PartnerDocumentController {
 
     @GetMapping("/{documentId}/file")
     public ResponseEntity<byte[]> downloadDocument(@PathVariable Long documentId) {
-        LocalDocumentStorage.StoredDocument stored =
+        DocumentStorage.StoredDocument stored =
                 documentService.getCurrentCompanyDocumentFile(documentId);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(stored.contentType()))

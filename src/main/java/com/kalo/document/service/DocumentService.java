@@ -17,9 +17,9 @@ public interface DocumentService {
     DocumentResponse uploadCompanyDocument(DocumentType documentType, String documentNumber,
             LocalDate issuedAt, LocalDate expiresAt, MultipartFile file);
 
-    LocalDocumentStorage.StoredDocument getCurrentCompanyDocumentFile(Long documentId);
+    DocumentStorage.StoredDocument getCurrentCompanyDocumentFile(Long documentId);
 
-    LocalDocumentStorage.StoredDocument getCompanyDocumentFileForAdmin(Long companyId, Long documentId);
+    DocumentStorage.StoredDocument getCompanyDocumentFileForAdmin(Long companyId, Long documentId);
 
     List<DocumentResponse> getCurrentCompanyDocuments();
 

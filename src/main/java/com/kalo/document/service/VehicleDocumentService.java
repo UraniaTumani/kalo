@@ -29,7 +29,7 @@ public class VehicleDocumentService {
     private final DocumentRepository documentRepository;
     private final VehicleRepository vehicleRepository;
     private final TaxiCompanyRepository taxiCompanyRepository;
-    private final LocalDocumentStorage localDocumentStorage;
+    private final DocumentStorage localDocumentStorage;
     private final com.kalo.assignment.service.FleetMutationLock fleetMutationLock;
 
     @Transactional
@@ -86,7 +86,7 @@ public class VehicleDocumentService {
     }
 
     @Transactional(readOnly = true)
-    public LocalDocumentStorage.StoredDocument download(Long vehicleId, Long documentId) {
+    public DocumentStorage.StoredDocument download(Long vehicleId, Long documentId) {
         requireOwnedVehicle(vehicleId);
         Document document = documentRepository.findByIdAndOwnerTypeAndOwnerId(
                 documentId, DocumentOwnerType.VEHICLE, vehicleId

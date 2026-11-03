@@ -2,7 +2,7 @@ package com.kalo.document.controller;
 
 import com.kalo.document.dto.DocumentResponse;
 import com.kalo.document.enums.DocumentType;
-import com.kalo.document.service.LocalDocumentStorage;
+import com.kalo.document.service.DocumentStorage;
 import com.kalo.document.service.VehicleDocumentService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -53,7 +53,7 @@ public class PartnerVehicleDocumentController {
             @PathVariable Long vehicleId,
             @PathVariable Long documentId
     ) {
-        LocalDocumentStorage.StoredDocument stored =
+        DocumentStorage.StoredDocument stored =
                 vehicleDocumentService.download(vehicleId, documentId);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(stored.contentType()))

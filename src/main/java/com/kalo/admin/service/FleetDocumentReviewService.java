@@ -9,7 +9,7 @@ import com.kalo.document.entity.Document;
 import com.kalo.document.enums.DocumentOwnerType;
 import com.kalo.document.enums.DocumentVerificationStatus;
 import com.kalo.document.repository.DocumentRepository;
-import com.kalo.document.service.LocalDocumentStorage;
+import com.kalo.document.service.DocumentStorage;
 import com.kalo.partner.repository.TaxiCompanyRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
@@ -31,7 +31,7 @@ public class FleetDocumentReviewService {
     private final FleetMutationLock fleetLock;
     private final JdbcTemplate jdbc;
     private final EntityManager entities;
-    private final LocalDocumentStorage storage;
+    private final DocumentStorage storage;
     private final com.kalo.user.repository.UserRepository users;
 
     @Transactional(readOnly = true)
@@ -49,7 +49,7 @@ public class FleetDocumentReviewService {
     }
 
     @Transactional(readOnly = true)
-    public LocalDocumentStorage.StoredDocument file(Long company, DocumentOwnerType type, Long owner, Long id) {
+    public DocumentStorage.StoredDocument file(Long company, DocumentOwnerType type, Long owner, Long id) {
         requireAdmin(); requireOwner(company, type, owner);
         return storage.read(document(type, owner, id).getFileUrl());
     }

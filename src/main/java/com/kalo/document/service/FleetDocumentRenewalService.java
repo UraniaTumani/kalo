@@ -33,7 +33,7 @@ public class FleetDocumentRenewalService {
     private final FleetMutationLock fleetLock;
     private final JdbcTemplate jdbc;
     private final EntityManager entities;
-    private final LocalDocumentStorage storage;
+    private final DocumentStorage storage;
 
     @Transactional
     public DocumentResponse renew(DocumentOwnerType type, Long owner, Long id, String number,
