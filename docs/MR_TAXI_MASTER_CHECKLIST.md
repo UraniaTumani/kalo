@@ -1,8 +1,8 @@
 # MR TAXI — MASTER PRODUCT & ENGINEERING CHECKLIST
 
-**Version:** 1.2 (baseline 2026-10-23; reconciliation 2026-10-29)
+**Version:** 1.3 (baseline 2026-10-23; reconciliation 2026-11-03)
 **Repository:** `UraniaTumani/kalo`
-**Baza historike:** `feature/f42-real-gps-freshness`; progresi i fundit i konfirmuar në `main`: `0e24563`.
+**Baza historike:** `feature/f42-real-gps-freshness`; progresi i fundit i konfirmuar në `main`: `297b2b4`.
 **Status:** AKTIV — dokumenti është në `main`; shënimet historike më poshtë përshkruajnë gjendjen në datën përkatëse.
 **Pronësia:** MR TAXI project owner.
 
@@ -139,6 +139,7 @@ Një item shënohet `[x]` **vetëm kur**: (1) kërkesa dhe edge cases janë të 
   **Pranimi:** Teste negative për id të huaj dhe kompani tjetër.
 - [ ] **MRT-03-04 · P0** — Dokumente shoferi: patentë + certifikatë profesionale, me status verifikimi.
   **Pranimi:** Skadimi/pezullimi bllokon eligibility sipas politikës.
+  **Progres 2026-11-03:** Patenta aktuale APPROVED me skadim të vlefshëm kërkohet për punë të re; certifikata profesionale nuk është bërë kusht i detyrueshëm. Review/rinovim/historik janë implementuar; shih seksionin F.
 - [ ] **MRT-03-05 · P0** — Shtojmë verifikim identiteti dhe foto profili të përshtatshme për shfaqje.
   **Pranimi:** Identiteti përputhet me dokumentet dhe respektohet privatësia.
 - [ ] **MRT-03-06 · P0** — Përcaktojmë kuptimin e `ONLINE`, `BUSY`, `OFFLINE` dhe kohën e sesionit të punës.
@@ -158,10 +159,12 @@ Një item shënohet `[x]` **vetëm kur**: (1) kërkesa dhe edge cases janë të 
   **Pranimi:** Input invalid refuzohet në API dhe UI.
 - [ ] **MRT-04-03 · P0** — Dokumentet ekzistuese të mjetit: regjistrim, sigurim, pasagjerë, kontroll teknik, taksimetër.
   **Pranimi:** Upload/approve/expiry verifikohen për secilin tip.
+  **Progres 2026-11-03:** Regjistrimi, sigurimi dhe kontrolli teknik janë të detyrueshëm për eligibility. Mbulimi i pasagjerëve dhe kërkesat e taksimetrit mbeten për vlerësim; nuk barazohen me sigurimin gjenerik.
 - [ ] **MRT-04-04 · P0** — Verifikim i mbulimit të sigurimit për transport pasagjerësh kundrejt pagesës.
   **Pranimi:** Nuk mjafton vetëm një emërtim gjenerik sigurimi.
 - [ ] **MRT-04-05 · P0** — Kontroll eligibility për çdo çift shofer–automjet para ONLINE/caktimit.
   **Pranimi:** Test për automjet ose dokument të skaduar.
+  **Progres 2026-11-03:** Kontrollet në ONLINE, kërkim/dashboard dhe pranim, si edhe mbrojtja nga mutacionet konkurruese të flotës, janë implementuar dhe testuar. Politika e saktë dhe kufijtë e provës janë në seksionin F; checkbox-i pret rakordimin e plotë të DoD.
 - [ ] **MRT-04-06 · P1** — Shtojmë VIN, ngjyrë, pronar ligjor, prova përdorimi dhe leje të veçantë taksie kur kërkohet.
   **Pranimi:** Fushat lidhen me regjistrimin e automjetit dhe dokumentet.
 - [ ] **MRT-04-07 · P1** — Mbështetje për automjet rezervë dhe rikaktim me historik.
@@ -170,6 +173,7 @@ Një item shënohet `[x]` **vetëm kur**: (1) kërkesa dhe edge cases janë të 
   **Pranimi:** Njoftimet dhe ndryshimi i eligibility testohen.
 - [ ] **MRT-04-09 · P1** — Versionim dhe auditim dokumentesh në vend të fshirjes pa gjurmë.
   **Pranimi:** Historiku i vendimeve dhe ndryshimeve mbetet i verifikueshëm.
+  **Progres 2026-11-03:** Rinovimi ruan versionin e vjetër; review i ri ruan administratorin/kohën dhe mbrohet nga ndryshimi me trigger DB. Nuk është ledger i plotë, politikë retention ose mbrojtje nga administratori i privilegjuar i DB-së.
 
 ### 05 — Customer App iOS/Android dhe UX
 
@@ -293,6 +297,7 @@ Një item shënohet `[x]` **vetëm kur**: (1) kërkesa dhe edge cases janë të 
   **Pranimi:** Security regression + konfigurim staging.
 - [ ] **MRT-09-05 · P0** — Private object storage, upload validation, antivirus/file limits, signed download.
   **Pranimi:** Dokumentet nuk janë publikë dhe aksesohen me autorizim.
+  **Progres 2026-11-03:** Adapteri S3, validimi i signature/limitit dhe download i autentikuar janë testuar me emulator. Antivirus, signed download, privatësia/IAM dhe rikuperimi në cloud nuk janë provuar; shih seksionin F.
 - [ ] **MRT-09-06 · P0** — Data minimization dhe retention për GPS, ID dhe dokumente.
   **Pranimi:** Politika me afate e bazë ligjore e dokumentuar.
 - [ ] **MRT-09-07 · P0** — Privatësia/GDPR kur aplikohet dhe ligji shqiptar; termat, njoftimet dhe të drejtat.
@@ -316,6 +321,7 @@ Një item shënohet `[x]` **vetëm kur**: (1) kërkesa dhe edge cases janë të 
   **Pranimi:** Kërkesa e re është e dukshme dhe mund të caktohet shpejt.
 - [ ] **MRT-10-04 · P0** — Admin review për kompani, shoferë, automjete dhe dokumente.
   **Pranimi:** Arsye refuzimi/approve ruhet me actor.
+  **Progres 2026-11-03:** Review i dokumenteve të flotës me actor, kohë, arsye refuzimi dhe UI është integruar. Evidenca nuk shpall të përfunduar auditimin e të gjithë onboarding-ut të kompanisë.
 - [ ] **MRT-10-05 · P0** — Support i lidhur me ride, partner dhe customer pa ekspozim të tepërt.
   **Pranimi:** Gjurmim kërkese deri në zgjidhje.
 - [ ] **MRT-10-06 · P1** — KPI reale për disponueshmëri, pranim, përfundim, anulime, ankesa.
@@ -395,6 +401,7 @@ Një item shënohet `[x]` **vetëm kur**: (1) kërkesa dhe edge cases janë të 
 | Data | Versioni | Ndryshimi | Evidence / miratimi |
 |---|---|---|---|
 | 2026-10-23 | 1.0 | Krijimi dhe vendosja e master checklist në branch-in F42 | Miratuar në bisedë; MRT-00-01 |
+| 2026-11-03 | 1.3 | Rakordim i eligibility, review/rinovimit/auditimit të flotës dhe adapterit/testeve S3 | Log-et e pronarit; main `297b2b4`; seksioni F |
 
 
 ## D. Rakordim i progresit — 2026-10-28
@@ -451,10 +458,89 @@ UI kërkon konfirmim për veprimet; pas POST-it rilexon gjendjen autoritative ed
 - **MRT-12-03:** pjesa web customer/company/driver/complete është testuar në mjedis të izoluar; ledger dhe staging mbeten të hapura.
 - Numërimi i checkbox-eve në seksionin C nuk ndryshon. Ai nuk mat përqindjen e implementimit.
 
-### Prioriteti teknik vijues
+### Prioriteti teknik i planifikuar më 2026-10-29
 
 1. Auditim i **MRT-04-05**: kontrollet aktuale për automjetin dhe dokumentet në ONLINE, kërkim dhe caktim. Identifikohen rregullat ekzistuese përpara ndryshimit të politikës.
 2. Harmonizim i kontrolleve të nevojshme dhe teste për automjet/dokument të skaduar ose joaktiv; shqyrtim i garave me ndryshimet e flotës.
 3. Dokumentim i matricës së aktorëve dhe tranzicioneve, si edhe përditësim i evidencës së CI/DoD.
 
 Go-live, native GPS, financat dhe gatishmëria production nuk shpallen të përfunduara nga ky përditësim.
+
+## F. Rakordim i flotës dhe storage — 2026-11-03
+
+Pronari konfirmoi merge-et dhe sinkronizimin `main...origin/main` në `297b2b4`.
+Ky përditësim dokumenton prova ekzistuese; nuk është ekzekutim i ri testesh.
+Prioritetet e eligibility të seksionit E u trajtuan në punën më poshtë.
+
+### Implementimi dhe evidenca
+
+| Pjesa | Evidenca në repository dhe rezultatet e konfirmuara | Kufiri |
+|---|---|---|
+| Eligibility automjeti | `MR_TAXI_VEHICLE_ELIGIBILITY.md`; suite backend 749 teste, BUILD SUCCESS | Kontrollet operacionale nuk zëvendësojnë dokumentet e detyrueshme |
+| Konkurrenca e flotës | `MR_TAXI_FLEET_CONCURRENCY.md`; company gate për mutacionet dhe pranimin; 33 teste të targetuara kaluan; merge konfirmuar | Nuk pretendohet provë e çdo gare ose benchmark performance |
+| Review dhe UI admin | `MR_TAXI_FLEET_DOCUMENT_REVIEW.md`, `MR_TAXI_FLEET_DOCUMENT_REVIEW_UI.md`; integrim UI në `8ed72a3`; 764 teste backend dhe 26 teste browser kaluan | Numrat janë të fazës përkatëse; browser testet e UI-së përdorin përgjigje të simuluara |
+| Rinovimi dhe historiku | `MR_TAXI_FLEET_DOCUMENT_RENEWAL.md`, `MR_TAXI_FLEET_DOCUMENT_RENEWAL_UI.md`; backend `8866323`, UI `b91d19a`; 38 teste browser kaluan; suite backend konfirmuar e rregulluar nga pronari pas një dështimi fillestar | Nuk është politikë retention ose migrim i provave në cloud |
+| Rinovim me backend real | `MR_TAXI_FLEET_DOCUMENT_RENEWAL_INTEGRATION.md`, integruar në `a04674a`; 3 teste browser me backend/PostgreSQL real kaluan | Storage lokal; prova e ruajtjes së dy versioneve, jo staging |
+| Dokumentet e detyrueshme dhe feedback | `MR_TAXI_REQUIRED_FLEET_DOCUMENTS.md`, commit `4320e76`, main `e1ef711`; `MR_TAXI_FLEET_DOCUMENT_FEEDBACK.md`, commit `d7e3de1`, main `5e1764e`; testet dhe merge-et konfirmuar nga pronari | Vetëm katër dokumentet bazë më poshtë; nuk është verifikim ligjor |
+| Auditimi i review | `MR_TAXI_FLEET_REVIEW_AUDIT.md`, main `d6659db`, migration `032-fleet-document-review-audit.yaml`; 3 teste browser reale kaluan pas integrimit | Vendimet historike pa actor/kohë mbeten të panjohura; nuk bëhet backfill i shpikur |
+| Kufiri i storage | `MR_TAXI_DOCUMENT_STORAGE_BOUNDARY.md`, main `e3adad5`; shërbimet varen nga `DocumentStorage`; 3 teste browser reale kaluan | Vetëm ndarje e implementimit nga shërbimet |
+| Adapteri S3 | `MR_TAXI_S3_DOCUMENT_STORAGE.md`, main `6c15264`; suite backend 806 teste dhe 3 teste browser kaluan | SDK/HTTP kundrejt LocalStack; browser ende me storage lokal; pa aktivizim cloud |
+| Rrjedha e aplikacionit me S3 aktiv | `MR_TAXI_S3_DOCUMENT_FLOW.md`, main `297b2b4`; `S3DocumentFlowIntegrationTest` shton 11 raste; suite backend 817 teste, 0 failures/errors/skipped, BUILD SUCCESS, 04:40 min, më 2026-11-03 | MockMvc/security/shërbime/PostgreSQL realë dhe SDK/HTTP te LocalStack; nuk është test browser me S3 ose test AWS |
+
+Dokumentet e tabelës ndodhen te `docs/`. Rezultatet e datuara vijnë nga log-et
+ose konfirmimet e pronarit, sipas përshkrimit; nuk janë auditim i pavarur CI.
+Log-u i fundit backend dhe `git diff --check` kaluan para merge-it të testeve S3.
+Një ekzekutim i ri frontend build/lint/E2E nuk pretendohet për këtë ndryshim vetëm dokumentacioni.
+
+### Politika aktuale e punës së re
+
+- Shoferi: versioni aktual i `DRIVING_LICENSE`.
+- Automjeti: versionet aktuale të `VEHICLE_REGISTRATION`, `INSURANCE` dhe `TECHNICAL_INSPECTION`.
+- Secili duhet të jetë APPROVED, me skadim jo bosh në ose pas ditës së sotme;
+  data e lëshimit, kur jepet, nuk mund të jetë në të ardhmen. Përdoret dita në Europe/Tirane.
+- Versioni më i ri sipas ID-së është aktual. Një version i vjetër APPROVED nuk
+  kompenson një version të ri PENDING, REJECTED ose të skaduar.
+- Kontrollet zbatohen në partner/self ONLINE, kërkim/dashboard dhe pranim
+  udhëtimi. Pranimi rilexon kushtet nën company gate; kërkimi është snapshot.
+- Kompania, statuset/datat operacionale, caktimi dhe GPS freshness kontrollohen
+  veçmas. Skadimi nuk anulon ose bllokon progresin e një udhëtimi ekzistues.
+
+Review/rinovimi ruajnë historikun dhe refuzojnë versionet e superseduara.
+UI jep arsye të kontrolluara për bllokim dhe rilexon gjendjen pas përgjigjeve të
+pasigurta, pa riprovuar automatikisht mutacionin. Ky është kontroll i politikës
+së produktit; sigurimi për pasagjerë, certifikata profesionale dhe kërkesat e tjera
+ligjore mbeten për verifikim më vete.
+
+### Çfarë provon S3 dhe çfarë mbetet
+
+Testet provojnë përzgjedhjen e adapterit pa fallback lokal, upload/shkarkim të
+autorizuar, review/rinovim për DRIVER dhe VEHICLE, dy versione me byte të sakta,
+refuzim për aktorë të paautorizuar dhe mungesë aprovimi kur prova mungon.
+Rollback-u i njohur i DB-së fshin objektin e ri; rollback-u i rinovimit ruan të
+vjetërin. Këto janë prova me LocalStack, jo garanci të infrastrukturës cloud.
+
+Para aktivizimit në një mjedis real duhen ende:
+
+1. Zgjedhja dhe konfigurimi i bucket-it privat/rajonit, TLS, IAM me privilegje
+   minimale dhe credentials të deployment-it; verifikim që akseset anonime dhe
+   jashtë prefix-it refuzohen. Adapteri nuk krijon ose certifikon këto politika.
+2. Vendim për retention/versioning dhe migrim i verifikuar i referencave `local:`
+   ose URL-ve ekzistuese. Ndërrimi i provider-it nuk migron skedarët.
+3. Provë staging për upload, download, review/rinovim, restart, gabime provider-i,
+   rotacion credentials dhe backup/restore; evidencë për konfigurimin real.
+4. Rakordim i objekteve pa referencë me periudhë tolerance: PUT me përgjigje të
+   humbur ose cleanup i dështuar mund të lërë objekte. Nuk ka sweep automatik.
+5. Plotësimi i kërkesave ende të hapura të MRT-09-05, përfshirë antivirus dhe
+   vendimin/implementimin e signed download. Sot përdoren endpoint-e të autentikuara.
+
+### Gjendja e checklist-it dhe rendi vijues
+
+Numërimi në seksionin C mbetet **128 të hapura / 3 të mbyllura** sipas checkbox-eve.
+Nuk nënkupton 128 funksione të pandërtuara: disa kërkesa kanë implementim dhe
+teste, por mungon rakordimi i plotë i kritereve të pranimit/DoD. Ky ndryshim nuk
+ndryshon kriteret e tyre dhe nuk shpall mbyllje pa prova për të gjithë shtrirjen.
+
+Rendi vijues: përcaktim i mjedisit dhe politikës cloud, prova staging e storage,
+evidenca CI/branch protection dhe rakordimi i DoD për kërkesat e implementuara.
+Native iOS/Android/background GPS, ledger/faturimi B2B, kontrollet ligjore dhe
+release gates mbeten punë të veçanta. Go-live nuk miratohet nga ky rakordim.
