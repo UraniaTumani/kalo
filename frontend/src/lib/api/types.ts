@@ -480,6 +480,8 @@ export interface Page<T> {
 
 /** The shared error body produced by GlobalExceptionHandler. */
 export interface ErrorResponse {
+  code?: string
+  documentIssues?: unknown
   status: number
   error: string
   message: string

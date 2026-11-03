@@ -4,6 +4,7 @@ import { GeolocationError } from '@/lib/geolocation'
 import { UnexpectedResponseError } from '@/lib/api/page'
 import { backendMessageKey } from '@/lib/api/backendMessages'
 import { Alert } from './ui'
+import { FleetDocumentBlockers, isFleetDocumentFailure } from './FleetDocumentBlockers'
 
 /**
  * Turns anything thrown into a translated sentence.
@@ -75,6 +76,8 @@ export function ErrorMessage({ error, title }: { error: unknown; title?: string 
   const errorMessage = useErrorMessage()
 
   if (!error) return null
+
+  if (isFleetDocumentFailure(error)) return <Alert tone="danger" title={title}><FleetDocumentBlockers error={error} /></Alert>
 
   return (
     <Alert tone="danger" title={title}>

@@ -1,4 +1,18 @@
 {
+  "fleetBlockers": {
+      "title": "Dokumentet që bllokojnë punë të reja",
+      "MISSING": "Mungon. Kërkoji partnerit ta ngarkojë.",
+      "DRAFT": "Në pritje të shqyrtimit nga administratori.",
+      "PENDING": "Dokumenti zëvendësues pret shqyrtimin nga administratori.",
+      "REJECTED": "I refuzuar. Duhet ngarkuar dhe miratuar një dokument zëvendësues.",
+      "UNAPPROVED": "Kërkohet miratimi i administratorit.",
+      "EXPIRY_MISSING": "Mungon data e skadimit. Kërkoji partnerit të korrigjojë dokumentin.",
+      "EXPIRED": "I skaduar. Duhet ngarkuar dhe miratuar dokumenti i rinovuar.",
+      "FUTURE_ISSUE_DATE": "Data e lëshimit është në të ardhmen. Kërkoji partnerit ta kontrollojë.",
+      "driverHelp": "Kontakto kompaninë tënde për zgjidhjen e këtyre dokumenteve, pastaj rifresko statusin.",
+      "partnerHelp": "Hap Dokumentet për këtë shofer ose automjetin e caktuar. Ngarko dokumentet që mungojnë ose rinovo ato të refuzuara/skaduara, pastaj kërko miratimin e administratorit.",
+      "snapshot": "Këto arsye i përkasin kërkesës së refuzuar. Rifresko statusin pasi të korrigjohen dokumentet."
+  },
   "common": {
     "appName": "MR TAXI",
     "save": "Ruaj",
