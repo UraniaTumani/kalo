@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 
-// No HTTP mocks: real authorization, PostgreSQL and private local test storage.
+// No HTTP mocks: real authorization, PostgreSQL and selected local/S3 test storage.
+const expectedProvider = process.env.KALO_EXPECTED_DOCUMENT_PROVIDER ?? 'local'
+if (!['local', 's3'].includes(expectedProvider)) throw new Error('Invalid expected document provider')
 for (const owner of ['drivers', 'vehicles'] as const) {
   test(`${owner}: rejected document renewed through UI preserves both files`, async ({ page, request }) => {
     for (const base of ['http://127.0.0.1:18881', 'http://localhost:5177']) {
@@ -44,6 +46,7 @@ for (const owner of ['drivers', 'vehicles'] as const) {
     } })
     expect(uploaded.status(), await uploaded.text()).toBe(201)
     const old = await uploaded.json()
+    expect(old.fileUrl).toMatch(new RegExp(`^${expectedProvider}:[0-9a-f-]{36}\\.pdf$`))
     const review = `${base}/admin/partners/${companyId}/fleet/${owner === 'drivers' ? 'DRIVER' : 'VEHICLE'}/${id}/documents`
     const rejected = await request.post(`${review}/${old.id}/reject`, { headers: admin, data: { reason: 'Replacement scan required' } })
     expect(rejected.status(), await rejected.text()).toBe(200)
@@ -64,6 +67,8 @@ for (const owner of ['drivers', 'vehicles'] as const) {
     const versions = await current.json()
     expect(versions).toHaveLength(1)
     const replacement = versions[0]
+    expect(replacement.fileUrl).toMatch(new RegExp(`^${expectedProvider}:[0-9a-f-]{36}\\.pdf$`))
+    expect(replacement.fileUrl).not.toBe(old.fileUrl)
     expect(replacement.id).not.toBe(old.id)
     expect(replacement.verificationStatus).toBe('PENDING')
     const approved = await request.post(`${review}/${replacement.id}/approve`, { headers: admin })

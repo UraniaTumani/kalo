@@ -1,0 +1,42 @@
+# Add only to the disposable invitation stack; never use with developer/prod Compose.
+services:
+  object-store:
+    image: localstack/localstack:4.10.0
+    environment:
+      SERVICES: s3
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    healthcheck:
+      test: ["CMD-SHELL", "awslocal s3api list-buckets >/dev/null 2>&1"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 10s
+  object-store-init:
+    image: localstack/localstack:4.10.0
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - awslocal --endpoint-url=http://object-store:4566 s3api create-bucket --bucket kalo-invitation-documents
+    environment:
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    depends_on:
+      object-store:
+        condition: service_healthy
+  backend:
+    environment:
+      DOCUMENTS_PROVIDER: s3
+      DOCUMENTS_S3_BUCKET: kalo-invitation-documents
+      DOCUMENTS_S3_REGION: us-east-1
+      DOCUMENTS_S3_ENDPOINT: http://object-store:4566
+      DOCUMENTS_S3_PREFIX: browser-documents/
+      DOCUMENTS_S3_PATH_STYLE: "true"
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_SESSION_TOKEN: ""
+      AWS_EC2_METADATA_DISABLED: "true"
+    depends_on:
+      object-store-init:
+        condition: service_completed_successfully
