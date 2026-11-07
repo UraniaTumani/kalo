@@ -1,0 +1,16 @@
+# Optional override for the production-shaped rehearsal. Does not provision S3.
+# Supply bucket/region explicitly; there is no local fallback in this override.
+services:
+  backend:
+    environment:
+      DOCUMENTS_PROVIDER: s3
+      DOCUMENTS_S3_BUCKET: ${DOCUMENTS_S3_BUCKET:?Set DOCUMENTS_S3_BUCKET}
+      DOCUMENTS_S3_REGION: ${DOCUMENTS_S3_REGION:?Set DOCUMENTS_S3_REGION}
+      DOCUMENTS_S3_ENDPOINT: ${DOCUMENTS_S3_ENDPOINT:-}
+      DOCUMENTS_S3_PREFIX: ${DOCUMENTS_S3_PREFIX:-documents/}
+      DOCUMENTS_S3_PATH_STYLE: ${DOCUMENTS_S3_PATH_STYLE:-false}
+      # Optional temporary credentials supplied outside version control.
+      # Empty values allow the SDK to continue to other credential providers.
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
