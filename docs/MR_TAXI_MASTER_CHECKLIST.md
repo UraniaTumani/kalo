@@ -556,7 +556,7 @@ ndahet nga rezultati i testit. Rakordimi nuk ekzekuton teste të reja.
 | Konfigurimi për provën me S3 | [Override Compose](MR_TAXI_S3_REHEARSAL_CONFIGURATION.md) në `d7b6b73`; `docker compose … config --quiet` dha exit code 0 me vlera shembull | Ende pa bucket testimi, pa provë të lidhjes me S3 real dhe pa vendosje në staging |
 | Backup/restore PostgreSQL 17 | [Prova me të dhëna fiktive](MR_TAXI_POSTGRES_BACKUP_REHEARSAL.md) në `8b63f77`; rreshtat, shumat dhe ID-ja pasuese u verifikuan | Ende pa backup të planifikuar dhe pa provë staging |
 | Rikthimi i skemës së aplikacionit | [Prova e aplikacionit](MR_TAXI_APPLICATION_DATABASE_RESTORE.md) në `21b7de1`; `PostgresApplicationRestoreRehearsalIT`: 1 test, 0 dështime/gabime/skip, BUILD SUCCESS, 2026-11-09; login dhe profili funksionuan në databazën e rikthyer | PostgreSQL i izoluar me të dhëna testimi; nuk provon rikthimin e objekteve ose staging |
-| Rollback dhe riaplikim i migrimit 032 | `LiquibaseRollbackRehearsalIT`: 1 test, 0 dështime/gabime/skip, BUILD SUCCESS, 2026-11-09 në `test/liquibase-rollback-rehearsal`; merge i pakonfirmuar në këtë rakordim | Dokumenti mbetet, por ID-ja dhe koha e shqyrtimit humbasin; riaplikimi rikthen mbrojtjen, jo vlerat e auditimit |
+| Rollback dhe riaplikim i migrimit 032 | `LiquibaseRollbackRehearsalIT`: 1 test, 0 dështime/gabime/skip, BUILD SUCCESS, 2026-11-09 në `test/liquibase-rollback-rehearsal`; PR #120 u bashkua me `main` në `6d59652` | Dokumenti mbetet, por ID-ja dhe koha e shqyrtimit humbasin; riaplikimi rikthen mbrojtjen, jo vlerat e auditimit |
 
 ### Çfarë duhet për ta mbyllur punën
 
@@ -567,5 +567,4 @@ ndahet nga rezultati i testit. Rakordimi nuk ekzekuton teste të reja.
 | Implementim dhe vendime ende të nevojshme | **MRT-09-05, MRT-05-01, MRT-06-01..07, MRT-08-06..09** | Plotëso kontrollet e dokumenteve dhe provo bucket-in real; përgatit provën native në pajisje dhe përcakto rregullat e ledger-it dhe faturimit B2B |
 
 Kjo ndarje mbulon pikat e trajtuara këtu dhe varësitë kryesore të pilotit.
-Numërimi formal mbetet **128 të hapura / 3 të mbyllura**. Kur të konfirmohet
-merge-i i testit të rollback-ut, regjistro commit-in në këtë tabelë.
+Numërimi formal mbetet **128 të hapura / 3 të mbyllura**.
